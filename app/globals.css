@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+/* Bascule Dark/Light pilotée manuellement (cf. components/theme-toggle.tsx),
+   pas seulement par la préférence système : `dark:` s'active dès qu'un
+   ancêtre porte la classe `.dark` sur <html> (posée par le script anti-FOUC
+   dans app/layout.tsx et par le toggle lui-même). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Charte graphique alignée sur le logo (monogramme "t" dégradé bleu → sarcelle). */
+@theme {
+  --color-brand-50: #eef6fc;
+  --color-brand-100: #d9ebf8;
+  --color-brand-500: #2e86de;
+  --color-brand-600: #1f6fc4;
+  --color-brand-700: #1a5aa0;
+  --color-brand-teal: #14b8a6;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Classes utilitaires partagées pour une apparence cohérente (formulaires,
+   boutons, cartes) sans dupliquer les mêmes chaînes Tailwind partout. */
+@layer components {
+  .input-field {
+    @apply w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-stone-900 shadow-sm transition placeholder:text-stone-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:placeholder:text-stone-500;
+  }
+  /* Dégradé aux couleurs du logo (bleu → sarcelle) — bouton d'action
+     principale dans toute l'application (Enregistrer, Se connecter,
+     Exporter...). Les boutons secondaires/destructeurs (.btn-secondary,
+     Supprimer, Déconnexion) gardent leurs couleurs propres pour préserver la
+     hiérarchie visuelle et les conventions de sécurité (rouge = danger). */
+  .btn-primary {
+    @apply rounded-lg bg-gradient-to-r from-brand-600 to-brand-teal px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:brightness-105 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100;
+  }
+  .btn-secondary {
+    @apply rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 shadow-sm transition hover:bg-stone-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800;
+  }
+  .card {
+    @apply rounded-xl border border-stone-200 bg-white shadow-sm shadow-stone-200/60 dark:border-stone-800 dark:bg-stone-900 dark:shadow-none;
+  }
+}
+
+/* Animation de découverte au défilement (cf. components/reveal.tsx) : masqué
+   + décalé vers le bas tant que l'élément n'est pas entré dans le viewport,
+   révélé en fondu une fois observé. */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Arrière-plan du héros (sas de connexion) : grille de points estompée vers
+   les bords + halos dégradés qui dérivent doucement (cf. app/(auth)/login). */
+.hero-grid {
+  background-image: radial-gradient(circle, rgb(46 134 222 / 0.16) 1px, transparent 1px);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 20%, black 45%, transparent 100%);
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 20%, black 45%, transparent 100%);
+}
+
+@keyframes drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, 20px) scale(1.08); }
+}
+@keyframes drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-25px, -15px) scale(1.05); }
+}
+@keyframes drift-c {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.12); }
+}
+.animate-drift-a {
+  animation: drift-a 14s ease-in-out infinite;
+}
+.animate-drift-b {
+  animation: drift-b 18s ease-in-out infinite;
+}
+.animate-drift-c {
+  animation: drift-c 20s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-drift-a,
+  .animate-drift-b,
+  .animate-drift-c {
+    animation: none;
+  }
+}
+
+/* Nuages du rideau derrière le sidebar (cf. components/nav.tsx) : effet de
+   vol à travers les nuages façon pare-brise d'avion — chaque nuage grossit
+   et s'approche du centre en boucle, décalé en phase par rapport aux autres
+   pour un flux continu (distinct des halos du héro drift-* qui oscillent
+   sur place sans grossir). Les éléments animés portent aussi les classes
+   Tailwind -translate-x-1/2 -translate-y-1/2 pour se centrer sur leur point
+   d'ancrage : ce décalage est donc repris tel quel dans chaque keyframe, sans
+   quoi l'animation écraserait le `transform` composé par Tailwind et ferait
+   sauter le nuage à l'origine du conteneur au démarrage. */
+@keyframes cloud-approach {
+  0% { transform: translate(-50%, -50%) scale(0.15); opacity: 0; }
+  12% { opacity: 0.85; }
+  75% { opacity: 0.55; }
+  100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+}
+.animate-cloud-fly-a {
+  animation: cloud-approach 7s linear infinite;
+}
+.animate-cloud-fly-b {
+  animation: cloud-approach 9s linear infinite;
+  animation-delay: -3s;
+}
+.animate-cloud-fly-c {
+  animation: cloud-approach 8s linear infinite;
+  animation-delay: -5.5s;
+}
+
+/* Apparition/disparition du rideau de nuages (cf. components/nav.tsx) : une
+   vraie `animation` à durée fixe plutôt qu'une `transition-opacity` — un
+   `transition` recalcule sa progression à partir du style courant, ce qui
+   s'est révélé peu fiable ici : les 5 nuages enfants arrêtent net leur propre
+   animation (`animate-cloud-fly-*`) exactement au même instant, et ce
+   recalcul simultané pouvait faire terminer la transition du parent bien
+   avant sa durée réelle. Une `animation` à keyframes fixes n'a pas ce
+   problème : sa progression ne dépend que du temps écoulé, jamais du style
+   des éléments voisins.
+*/
+@keyframes curtain-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes curtain-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.animate-curtain-fade-in {
+  animation: curtain-fade-in 0.7s ease-in-out forwards;
+}
+.animate-curtain-fade-out {
+  animation: curtain-fade-out 0.7s ease-in-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-cloud-fly-a,
+  .animate-cloud-fly-b,
+  .animate-cloud-fly-c,
+  .animate-curtain-fade-in,
+  .animate-curtain-fade-out {
+    animation: none;
+  }
+}

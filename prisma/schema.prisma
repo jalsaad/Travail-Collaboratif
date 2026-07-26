@@ -1,0 +1,538 @@
+// ---------------------------------------------------------------------------
+// Modèle de données — App de travail collaboratif (Circulaire 8894 / 7167)
+// PostgreSQL + Prisma
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------------------------
+
+/// Rôle d'un membre au sein d'UNE école donnée.
+/// Un même User peut avoir des rôles différents selon l'école (ex: référent
+/// dans son école principale, enseignant dans une école secondaire).
+enum Role {
+  DIRECTION
+  REFERENT_NUMERIQUE
+  ENSEIGNANT
+}
+
+enum Sex {
+  M
+  F
+}
+
+enum MembershipStatus {
+  ACTIVE
+  REMOVED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  CANCELLED
+  EXPIRED
+}
+
+/// École créée via le flux public "créer mon école" : reste PENDING tant
+/// que la plateforme ne l'a pas validée (aucune fonctionnalité opérationnelle
+/// pour ses membres avant ça — cf. app/(app)/layout.tsx). Les écoles déjà
+/// existantes (seed, création manuelle) restent APPROVED par défaut.
+enum SchoolStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Correspond aux deux formes de travail collaboratif définies par le
+/// vade-mecum : réunions d'équipe (initiative direction) et collaboration
+/// pédagogique (initiative enseignants).
+enum PeriodType {
+  REUNION_EQUIPE
+  COLLABORATION_PEDAGOGIQUE
+}
+
+/// Statut de confirmation d'UN participant sur une période. Le statut
+/// "global" affiché à l'écran (validée / en attente) se déduit de l'état
+/// de l'ensemble des PeriodParticipant liés à la période.
+enum ParticipantStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+}
+
+enum ExportFormat {
+  PDF
+  XLSX
+}
+
+enum ExportScope {
+  INDIVIDUAL
+  SCHOOL
+  /// Export ciblé sur un sous-ensemble choisi de personnes (ni une seule, ni
+  /// la totalité de l'école) — cf. ExportLog.targetUserIds.
+  BATCH
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
+enum DonationStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+// ---------------------------------------------------------------------------
+// IDENTITÉ & ÉCOLES
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  firstName    String
+  lastName     String
+  passwordHash String?
+  dateOfBirth  DateTime?
+  sex          Sex?
+  /// Numéro à 11 chiffres calculé à la création du compte (cf. lib/matricule.ts) :
+  /// 1 chiffre sexe + 2 chiffres décennie de naissance + 2 chiffres mois +
+  /// 2 chiffres jour + 4 chiffres encodés manuellement par l'utilisateur.
+  /// Nullable : les comptes créés avant l'introduction de ce champ n'en ont pas.
+  matricule    String?  @unique
+  /// Compte plateforme, transverse à toutes les écoles — distinct des rôles
+  /// Membership (qui restent scopés à une école). Réservé à l'équipe produit
+  /// pour assister les directions ; ne pas confondre avec Role.DIRECTION.
+  isSuperAdmin Boolean  @default(false)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships       Membership[]
+  createdPeriods    CollaborativePeriod[] @relation("PeriodAuthor")
+  periodParticipations PeriodParticipant[]
+  invitationsSent   Invitation[]           @relation("InvitationsSentBy")
+  exportsRequested  ExportLog[]
+  auditLogs         AuditLog[]
+  announcementsCreated Announcement[]
+  announcementReads AnnouncementRead[]
+  donations         Donation[]
+
+  @@map("users")
+}
+
+model School {
+  id          String   @id @default(cuid())
+  name        String
+  /// Réseau d'enseignement (WBE, officiel subventionné, libre subventionné...)
+  reseau      String?
+  /// Numéro FASE / matricule officiel de l'établissement
+  numeroFase  String?  @unique
+  address     String?
+  phone       String?
+  /// Logo affiché dans l'espace école (personnalisation par la direction)
+  logoUrl     String?
+  status      SchoolStatus @default(APPROVED)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  implantations Implantation[]
+  memberships   Membership[]
+  invitations   Invitation[]
+  joinCodes     JoinCode[]
+  exportLogs    ExportLog[]
+  auditLogs     AuditLog[]
+  announcementTargets AnnouncementTarget[]
+
+  @@map("schools")
+}
+
+/// Site/implantation d'une école à adresses multiples.
+model Implantation {
+  id       String @id @default(cuid())
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name     String
+  address  String?
+
+  memberships Membership[]
+
+  @@map("implantations")
+}
+
+/// Année scolaire de référence, partagée par toutes les écoles (calendrier
+/// commun FWB), utilisée pour scoper quotas, périodes et exports.
+model SchoolYear {
+  id        String   @id @default(cuid())
+  /// Ex: "2025-2026"
+  label     String   @unique
+  startDate DateTime
+  endDate   DateTime
+
+  annualAssignments   AnnualAssignment[]
+  collaborativePeriods CollaborativePeriod[]
+  exportLogs          ExportLog[]
+
+  @@map("school_years")
+}
+
+// ---------------------------------------------------------------------------
+// APPARTENANCE & RÔLES
+// ---------------------------------------------------------------------------
+
+/// Rattachement d'un User à une School, avec son rôle. Un enseignant
+/// partagé entre plusieurs écoles a une Membership par école.
+model Membership {
+  id             String           @id @default(cuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId       String
+  school         School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  implantationId String?
+  implantation   Implantation?    @relation(fields: [implantationId], references: [id])
+  role           Role
+  status         MembershipStatus @default(ACTIVE)
+  /// true pour le compte ayant créé l'espace école (non rétrogradable)
+  isAccountOwner Boolean          @default(false)
+  joinedAt       DateTime         @default(now())
+  removedAt      DateTime?
+
+  annualAssignments  AnnualAssignment[]
+  authoredInvitation Invitation[]        @relation("InvitationAcceptedAs")
+  periodParticipants PeriodParticipant[]
+  disciplines        MembershipDiscipline[]
+
+  @@unique([userId, schoolId])
+  @@map("memberships")
+}
+
+/// Discipline/matière enseignée. Rattachée à la Membership (et non au User)
+/// car un même enseignant peut enseigner des matières différentes selon
+/// l'école — cohérent avec le reste du modèle (rôle, ETP déjà scopés par
+/// Membership). Sert principalement au ciblage des annonces plateforme.
+model Discipline {
+  id   String @id @default(cuid())
+  name String @unique
+
+  memberships MembershipDiscipline[]
+  targets     AnnouncementTarget[]
+
+  @@map("disciplines")
+}
+
+model MembershipDiscipline {
+  id           String     @id @default(cuid())
+  membershipId String
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  disciplineId String
+  discipline   Discipline @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, disciplineId])
+  @@map("membership_disciplines")
+}
+
+/// ETP et objectif annuel de périodes pour une Membership donnée, recalculés
+/// chaque année scolaire (l'ETP d'un enseignant peut varier d'une année à
+/// l'autre, tout comme sa répartition entre écoles).
+///
+/// Règles Circulaire 8894 à appliquer en couche applicative :
+/// - objectifPeriodes = 60 * etp (temps plein => 60 périodes/an)
+/// - somme des (objectifPeriodes / 36 semaines) sur toutes les écoles d'un
+///   même User, pour une même SchoolYear, ne peut dépasser l'équivalent de
+///   2 périodes/semaine.
+model AnnualAssignment {
+  id             String     @id @default(cuid())
+  membershipId   String
+  membership     Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  schoolYearId   String
+  schoolYear     SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  etp            Decimal    @db.Decimal(4, 2)
+  objectifPeriodes Decimal  @db.Decimal(5, 2)
+
+  @@unique([membershipId, schoolYearId])
+  @@map("annual_assignments")
+}
+
+// ---------------------------------------------------------------------------
+// INVITATIONS & CODE D'ACCÈS
+// ---------------------------------------------------------------------------
+
+/// Code générique permettant à un enseignant de rejoindre une école
+/// (flux "code d'école", distinct des invitations nominatives par email).
+model JoinCode {
+  id          String   @id @default(cuid())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  code        String   @unique
+  active      Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+  /// Régénérer un code désactive l'ancien plutôt que de le supprimer,
+  /// pour conserver la traçabilité des rattachements passés.
+  deactivatedAt DateTime?
+
+  @@index([schoolId, active])
+  @@map("join_codes")
+}
+
+/// Invitation nominative par email, avec attribution du rôle cible.
+model Invitation {
+  id             String           @id @default(cuid())
+  schoolId       String
+  school         School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  email          String
+  role           Role
+  status         InvitationStatus @default(PENDING)
+  invitedById    String
+  invitedBy      User             @relation("InvitationsSentBy", fields: [invitedById], references: [id])
+  token          String           @unique
+  createdAt      DateTime         @default(now())
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  acceptedAsId   String?
+  acceptedAs     Membership?      @relation("InvitationAcceptedAs", fields: [acceptedAsId], references: [id])
+
+  @@index([schoolId, status])
+  @@map("invitations")
+}
+
+// ---------------------------------------------------------------------------
+// TRAVAIL COLLABORATIF
+// ---------------------------------------------------------------------------
+
+/// Une période de travail collaboratif déclarée par un enseignant.
+/// Le statut global affiché à l'écran se déduit des PeriodParticipant liés :
+/// VALIDEE si tous les participants requis ont CONFIRMED, EN_ATTENTE sinon.
+model CollaborativePeriod {
+  id             String     @id @default(cuid())
+  type           PeriodType
+  date           DateTime
+  /// Nombre de périodes, incréments de 0.5 possibles
+  dureePeriodes  Decimal    @db.Decimal(4, 2)
+  description    String
+  schoolYearId   String
+  schoolYear     SchoolYear @relation(fields: [schoolYearId], references: [id])
+  createdByUserId String
+  createdBy      User       @relation("PeriodAuthor", fields: [createdByUserId], references: [id])
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  participants PeriodParticipant[]
+  attachments  Attachment[]
+
+  @@index([schoolYearId, type])
+  @@map("collaborative_periods")
+}
+
+/// Lien entre une période et chacun de ses participants. Le membershipId
+/// fixe le contexte école dans lequel CETTE période compte pour CE
+/// participant — c'est ce qui permet à une direction de ne voir, pour une
+/// période inter-écoles, que la part concernant son propre personnel.
+model PeriodParticipant {
+  id           String            @id @default(cuid())
+  periodId     String
+  period       CollaborativePeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  membershipId String
+  membership   Membership        @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  status       ParticipantStatus @default(PENDING)
+  isInitiator  Boolean           @default(false)
+  confirmedAt  DateTime?
+
+  @@unique([periodId, userId])
+  @@index([membershipId, status])
+  @@map("period_participants")
+}
+
+model Attachment {
+  id           String              @id @default(cuid())
+  periodId     String
+  period       CollaborativePeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  fileName     String
+  fileUrl      String
+  mimeType     String
+  uploadedById String
+  createdAt    DateTime            @default(now())
+
+  @@map("attachments")
+}
+
+// ---------------------------------------------------------------------------
+// EXPORTS & TRAÇABILITÉ
+// ---------------------------------------------------------------------------
+
+/// Historique des exports générés (individuel ou école entière), en fin de
+/// période scolaire — conservé pour audit et re-téléchargement.
+model ExportLog {
+  id             String       @id @default(cuid())
+  schoolId       String
+  school         School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolYearId   String
+  schoolYear     SchoolYear   @relation(fields: [schoolYearId], references: [id])
+  scope          ExportScope
+  format         ExportFormat
+  /// Renseigné si scope = INDIVIDUAL
+  targetUserId   String?
+  /// Renseigné si scope = BATCH (liste des personnes sélectionnées par la
+  /// direction/le·la référent·e — jamais utilisé pour INDIVIDUAL/SCHOOL)
+  targetUserIds  String[]     @default([])
+  /// Bornes de la période chronologique demandée (filtre optionnel sur
+  /// CollaborativePeriod.date) — nulles si l'export ne restreint pas les
+  /// dates (ex: relevé collectif complet).
+  rangeStart     DateTime?
+  rangeEnd       DateTime?
+  requestedById  String
+  requestedBy    User         @relation(fields: [requestedById], references: [id])
+  fileUrl        String
+  createdAt      DateTime     @default(now())
+
+  @@map("export_logs")
+}
+
+/// Journal d'audit : accès et actions sensibles (changement de rôle, retrait
+/// d'un membre, régénération de code, consultation de données par la
+/// direction) — exigence de traçabilité RGPD évoquée dans le cahier des
+/// charges.
+model AuditLog {
+  id         String   @id @default(cuid())
+  /// Nullable : une action superadmin transverse (ex. publication d'une
+  /// annonce plateforme) n'est pas rattachée à une école précise. Une
+  /// action d'assistance à une école donnée doit, elle, renseigner schoolId.
+  schoolId   String?
+  school     School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([schoolId, createdAt])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// PLATEFORME (SUPERADMIN)
+// ---------------------------------------------------------------------------
+
+/// Annonce diffusée par le compte superadmin (ex: information de service,
+/// future campagne de dons). Le ciblage se fait via AnnouncementTarget.
+model Announcement {
+  id          String             @id @default(cuid())
+  title       String
+  body        String
+  status      AnnouncementStatus @default(DRAFT)
+  publishAt   DateTime?
+  expiresAt   DateTime?
+  createdById String
+  createdBy   User               @relation(fields: [createdById], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  targets AnnouncementTarget[]
+  reads   AnnouncementRead[]
+  media   AnnouncementMedia[]
+
+  @@index([status, publishAt])
+  @@map("announcements")
+}
+
+/// Pièce jointe média (image, vidéo, audio) intégrée à une annonce —
+/// plusieurs fichiers possibles par annonce, de types mélangés.
+model AnnouncementMedia {
+  id             String       @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  type           MediaType
+  url            String
+  mimeType       String
+  createdAt      DateTime     @default(now())
+
+  @@map("announcement_media")
+}
+
+/// Un groupe de ciblage : les critères renseignés sur UNE ligne se
+/// combinent en ET (ex: role=ENSEIGNANT + disciplineId=maths => seulement
+/// les profs de maths). Plusieurs lignes pour une même Announcement se
+/// combinent en OU (ex: élargir à un deuxième réseau). Un critère laissé
+/// à null = pas de restriction sur ce critère.
+model AnnouncementTarget {
+  id             String @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  role           Role?
+  schoolId       String?
+  school         School?     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  /// Filtre sur School.reseau (ex: "WBE") — indépendant de schoolId, pour
+  /// cibler tout un réseau sans lister chaque école.
+  reseau         String?
+  disciplineId   String?
+  discipline     Discipline? @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([reseau])
+  @@index([disciplineId])
+  @@map("announcement_targets")
+}
+
+/// Traçabilité de lecture/fermeture d'une annonce par destinataire.
+model AnnouncementRead {
+  id             String       @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seenAt         DateTime     @default(now())
+  dismissedAt    DateTime?
+
+  @@unique([announcementId, userId])
+  @@map("announcement_reads")
+}
+
+/// Don ponctuel pour soutenir la gratuité du service. Modélisé dès
+/// maintenant mais la fonctionnalité reste masquée côté UI tant que le
+/// FeatureFlag correspondant (clé "donations") n'est pas activé.
+model Donation {
+  id          String         @id @default(cuid())
+  userId      String?
+  user        User?          @relation(fields: [userId], references: [id])
+  amountCents Int
+  currency    String         @default("EUR")
+  status      DonationStatus @default(PENDING)
+  createdAt   DateTime       @default(now())
+
+  @@map("donations")
+}
+
+/// Interrupteur générique pour masquer une fonctionnalité déjà modélisée
+/// (ex: "donations") sans nécessiter de déploiement pour l'activer plus
+/// tard. Vérifié côté service avant d'exposer toute route/écran concerné.
+model FeatureFlag {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  enabled   Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@map("feature_flags")
+}

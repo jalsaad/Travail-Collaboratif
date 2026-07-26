@@ -1,0 +1,49 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { resolveActiveMembership } from "@/lib/active-school";
+import { PeriodCard } from "@/components/period-card";
+import { NoActiveSchoolNotice } from "@/components/no-active-school-notice";
+import { ExportPanel } from "@/components/export-panel";
+
+export default async function MesPeriodesPage() {
+  const session = await auth();
+  if (!session) redirect("/login");
+
+  const active = await resolveActiveMembership(session.userId);
+  if (!active) return <NoActiveSchoolNotice />;
+
+  const periods = await prisma.collaborativePeriod.findMany({
+    where: {
+      participants: { some: { membershipId: active.membershipId } },
+    },
+    include: {
+      participants: {
+        include: { user: true, membership: { include: { school: true } } },
+      },
+    },
+    orderBy: { date: "desc" },
+  });
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-lg font-semibold tracking-tight text-stone-900 dark:text-stone-100">
+        Mes périodes — {active.schoolName}
+      </h1>
+
+      <ExportPanel action="/api/export/mine" />
+
+      {periods.length === 0 && (
+        <div className="card p-6 text-sm text-stone-500 dark:text-stone-400">
+          Aucune période déclarée pour cette école pour le moment.
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {periods.map((period, index) => (
+          <PeriodCard key={period.id} period={period} currentUserId={session.userId} index={index} />
+        ))}
+      </div>
+    </div>
+  );
+}

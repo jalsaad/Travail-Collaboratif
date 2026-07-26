@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(yes)",
+      "Bash(npx prisma *)",
+      "Bash(curl -s -o /dev/null -w \"login page: %{http_code}\\\\n\" http://localhost:3000/login)"
+    ]
+  }
+}

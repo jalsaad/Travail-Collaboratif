@@ -1,0 +1,36 @@
+import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+
+export const AuditAction = {
+  UPDATE_SCHOOL_INFO: "UPDATE_SCHOOL_INFO",
+  REGENERATE_JOIN_CODE: "REGENERATE_JOIN_CODE",
+  UPDATE_MEMBER_ROLE: "UPDATE_MEMBER_ROLE",
+  REMOVE_MEMBER: "REMOVE_MEMBER",
+  UPDATE_MEMBER_PROFILE: "UPDATE_MEMBER_PROFILE",
+  JOIN_VIA_CODE: "JOIN_VIA_CODE",
+  PUBLISH_ANNOUNCEMENT: "PUBLISH_ANNOUNCEMENT",
+  UPDATE_ANNOUNCEMENT: "UPDATE_ANNOUNCEMENT",
+  DELETE_ANNOUNCEMENT: "DELETE_ANNOUNCEMENT",
+  REPUBLISH_ANNOUNCEMENT: "REPUBLISH_ANNOUNCEMENT",
+  CANCEL_ANNOUNCEMENT: "CANCEL_ANNOUNCEMENT",
+  TOGGLE_DONATIONS_FLAG: "TOGGLE_DONATIONS_FLAG",
+  CREATE_SCHOOL: "CREATE_SCHOOL",
+  APPROVE_SCHOOL: "APPROVE_SCHOOL",
+  REJECT_SCHOOL: "REJECT_SCHOOL",
+  DELETE_SCHOOL: "DELETE_SCHOOL",
+  UPDATE_PERIOD: "UPDATE_PERIOD",
+  DELETE_PERIOD: "DELETE_PERIOD",
+} as const;
+
+export async function logAudit(params: {
+  // null pour les actions transverses superadmin, non rattachées à une école
+  // précise (cf. commentaire de AuditLog.schoolId dans schema.prisma).
+  schoolId: string | null;
+  actorId: string;
+  action: string;
+  targetType?: string;
+  targetId?: string;
+  metadata?: Prisma.InputJsonValue;
+}) {
+  await prisma.auditLog.create({ data: params });
+}

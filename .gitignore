@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.next/
+next-env.d.ts
+tsconfig.tsbuildinfo
+.env
+.env.*
+!.env.example
+public/uploads/
