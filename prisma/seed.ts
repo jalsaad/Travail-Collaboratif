@@ -212,15 +212,40 @@ async function main() {
     prisma.discipline.upsert({ where: { name: "Français" }, update: {}, create: { name: "Français" } }),
   ]);
 
-  await prisma.membershipDiscipline.upsert({
-    where: { membershipId_disciplineId: { membershipId: memberSophieTilleuls.id, disciplineId: maths.id } },
+  // La discipline se rattache désormais à une ligne niveau/heures (pas à la
+  // Membership globalement) : on déclare donc un niveau plausible pour
+  // rattacher ces deux disciplines de démo.
+  await prisma.membershipLevelHours.upsert({
+    where: {
+      membershipId_level_disciplineId: {
+        membershipId: memberSophieTilleuls.id,
+        level: "SECONDAIRE_INFERIEUR",
+        disciplineId: maths.id,
+      },
+    },
     update: {},
-    create: { membershipId: memberSophieTilleuls.id, disciplineId: maths.id },
+    create: {
+      membershipId: memberSophieTilleuls.id,
+      level: "SECONDAIRE_INFERIEUR",
+      hours: 11,
+      disciplineId: maths.id,
+    },
   });
-  await prisma.membershipDiscipline.upsert({
-    where: { membershipId_disciplineId: { membershipId: memberThomasVal.id, disciplineId: francais.id } },
+  await prisma.membershipLevelHours.upsert({
+    where: {
+      membershipId_level_disciplineId: {
+        membershipId: memberThomasVal.id,
+        level: "SECONDAIRE_SUPERIEUR",
+        disciplineId: francais.id,
+      },
+    },
     update: {},
-    create: { membershipId: memberThomasVal.id, disciplineId: francais.id },
+    create: {
+      membershipId: memberThomasVal.id,
+      level: "SECONDAIRE_SUPERIEUR",
+      hours: 21,
+      disciplineId: francais.id,
+    },
   });
 
   // --- Contenu de démo à usage unique --------------------------------------

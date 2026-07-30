@@ -29,3 +29,16 @@ export async function dismissAnnouncement(announcementId: string) {
 
   revalidatePath("/", "layout");
 }
+
+// Une seule note "courante" par compte (pas un historique) : reclique à tout
+// moment pour changer d'avis, cf. components/satisfaction-stars.tsx.
+export async function setSatisfactionRating(rating: number) {
+  const session = await auth();
+  if (!session) return;
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return;
+
+  await prisma.user.update({
+    where: { id: session.userId },
+    data: { satisfactionRating: rating, satisfactionRatedAt: new Date() },
+  });
+}

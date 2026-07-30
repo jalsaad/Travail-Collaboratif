@@ -45,3 +45,51 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
     `,
   });
 }
+
+const SUPPORT_CATEGORY_LABEL = { ASSISTANCE: "Demande d'assistance", INCIDENT: "Signalement d'incident" };
+
+// Envoyée à tous les administrateurs plateforme (User.isSuperAdmin) à la
+// création d'un ticket (cf. app/(app)/assistance/actions.ts) — même fallback
+// console en dev que sendPasswordResetEmail, pas de nouvelle variable
+// d'environnement dédiée.
+export async function sendSupportTicketNotification(params: {
+  to: string[];
+  category: "ASSISTANCE" | "INCIDENT";
+  subject: string;
+  message: string;
+  requesterName: string;
+  requesterEmail: string;
+  adminUrl: string;
+}) {
+  const { to, category, subject, message, requesterName, requesterEmail, adminUrl } = params;
+  const categoryLabel = SUPPORT_CATEGORY_LABEL[category];
+
+  if (to.length === 0) return;
+
+  if (!SMTP_HOST) {
+    console.log(
+      `[dev] Nouveau ticket (${categoryLabel}) de ${requesterName} <${requesterEmail}> : "${subject}" — destinataires : ${to.join(", ")} — ${adminUrl}`
+    );
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: SMTP_USER ? { user: SMTP_USER, pass: SMTP_PASSWORD } : undefined,
+  });
+
+  await transporter.sendMail({
+    from: SMTP_FROM,
+    to,
+    subject: `[${categoryLabel}] ${subject}`,
+    text: `${requesterName} <${requesterEmail}> a ouvert un ticket (${categoryLabel}) :\n\n${subject}\n\n${message}\n\nVoir dans l'administration : ${adminUrl}`,
+    html: `
+      <p><strong>${requesterName}</strong> (${requesterEmail}) a ouvert un ticket — ${categoryLabel}.</p>
+      <p><strong>${subject}</strong></p>
+      <p>${message.replace(/\n/g, "<br/>")}</p>
+      <p><a href="${adminUrl}">Voir dans l'administration</a></p>
+    `,
+  });
+}

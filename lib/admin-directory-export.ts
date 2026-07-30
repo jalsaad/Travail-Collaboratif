@@ -2,7 +2,7 @@ import ExcelJS from "exceljs";
 
 // Une ligne = une Membership (pas un User) : un enseignant partagé entre
 // écoles apparaît une fois par école, avec le rôle/les disciplines propres à
-// cette école — cf. MembershipDiscipline, déjà scopé par membership.
+// cette école — cf. MembershipLevelHours.discipline, déjà scopé par membership.
 export const ADMIN_DIRECTORY_COLUMNS = [
   { key: "firstName", label: "Prénom" },
   { key: "lastName", label: "Nom" },

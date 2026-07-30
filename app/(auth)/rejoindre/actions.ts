@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { logAudit, AuditAction } from "@/lib/audit-log";
 import { computeMatricule, MATRICULE_MANUAL_PATTERN } from "@/lib/matricule";
 import { parseLevelHoursFromFormData } from "@/lib/teaching-levels";
+import { resolveOrCreateDiscipline } from "@/lib/discipline-form";
 import { recomputeUserQuotas } from "@/lib/quota-engine";
 
 export type JoinState = { error?: string };
@@ -90,9 +91,12 @@ export async function joinViaCode(
       const membership = await tx.membership.create({
         data: { userId: user.id, schoolId: joinCode.schoolId, role: "ENSEIGNANT", status: "ACTIVE" },
       });
-      await tx.membershipLevelHours.createMany({
-        data: parsedLevels.data.map((l) => ({ membershipId: membership.id, level: l.level, hours: l.hours })),
-      });
+      for (const l of parsedLevels.data) {
+        const discipline = await resolveOrCreateDiscipline(tx, l.discipline);
+        await tx.membershipLevelHours.create({
+          data: { membershipId: membership.id, level: l.level, hours: l.hours, disciplineId: discipline.id },
+        });
+      }
       return { user, membership };
     });
   } catch (error) {

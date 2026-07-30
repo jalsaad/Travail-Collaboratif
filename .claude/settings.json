@@ -4,7 +4,16 @@
       "Bash(node -e ' *)",
       "Bash(yes)",
       "Bash(npx prisma *)",
-      "Bash(curl -s -o /dev/null -w \"login page: %{http_code}\\\\n\" http://localhost:3000/login)"
+      "Bash(curl -s -o /dev/null -w \"login page: %{http_code}\\\\n\" http://localhost:3000/login)",
+      "Bash(node test-direction-teaching.js)",
+      "Bash(node debug-login.js)",
+      "Bash(xargs -I{} sh -c 'echo \"--- {} ---\"; cat {}')",
+      "Bash(npx ts-node *)",
+      "Bash(echo \"exit code: $?\")",
+      "Bash(node test-discipline-per-level.js)",
+      "Bash(node test-signup-two-levels.js)",
+      "Bash(awk '{$1=\"\"; print substr\\($0,2\\)}')",
+      "Bash(git add *)"
     ]
   }
 }

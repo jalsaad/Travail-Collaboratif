@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Reveal } from "@/components/reveal";
 import { AboutUsSection } from "@/components/about-us-section";
+import { ReseauxEnseignementSection } from "@/components/reseaux-enseignement-section";
 
 export default function LoginGatewayPage() {
   return (
@@ -110,6 +111,7 @@ export default function LoginGatewayPage() {
           <p className="mt-4 text-base font-semibold text-brand-700 dark:text-brand-400">Gagnez en productivité ! </p>
         </Reveal>
 
+        <ReseauxEnseignementSection />
         <AboutUsSection />
       </div>
     </div>

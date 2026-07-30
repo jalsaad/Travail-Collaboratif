@@ -3,10 +3,11 @@
 import { useActionState } from "react";
 import { joinViaCode, type JoinState } from "@/app/(auth)/rejoindre/actions";
 import { LevelHoursPicker } from "@/components/level-hours-picker";
+import { PasswordInput } from "@/components/password-input";
 
 const initialState: JoinState = {};
 
-export function JoinForm({ defaultCode }: { defaultCode: string }) {
+export function JoinForm({ defaultCode, disciplines }: { defaultCode: string; disciplines: string[] }) {
   const [state, formAction, pending] = useActionState(joinViaCode, initialState);
 
   return (
@@ -88,7 +89,7 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
       </div>
 
       <div className="border-t border-stone-100 pt-4 dark:border-stone-800">
-        <LevelHoursPicker />
+        <LevelHoursPicker disciplines={disciplines} />
       </div>
 
       <div>
@@ -110,28 +111,18 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
           <label htmlFor="password" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
             Mot de passe
           </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            className="input-field mt-1.5"
-          />
+          <PasswordInput id="password" name="password" required minLength={8} autoComplete="new-password" />
         </div>
         <div>
           <label htmlFor="passwordConfirmation" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
             Confirmer le mot de passe
           </label>
-          <input
+          <PasswordInput
             id="passwordConfirmation"
             name="passwordConfirmation"
-            type="password"
             required
             minLength={8}
             autoComplete="new-password"
-            className="input-field mt-1.5"
           />
         </div>
       </div>

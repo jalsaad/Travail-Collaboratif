@@ -139,6 +139,11 @@ model User {
   /// pour assister les directions ; ne pas confondre avec Role.DIRECTION.
   isSuperAdmin Boolean  @default(false)
   lastLoginAt  DateTime?
+  /// Note de satisfaction courante (1 à 5), modifiable à tout moment depuis
+  /// le widget étoiles du menu (cf. components/satisfaction-stars.tsx) — une
+  /// seule valeur "actuelle" par compte, pas un historique.
+  satisfactionRating  Int?
+  satisfactionRatedAt DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -152,6 +157,7 @@ model User {
   announcementReads AnnouncementRead[]
   donations         Donation[]
   passwordResetTokens PasswordResetToken[]
+  supportTickets    SupportTicket[]
 
   @@map("users")
 }
@@ -172,6 +178,44 @@ model PasswordResetToken {
 
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+/// Ticket de support créé depuis le bouton "Assistance" du menu (cf.
+/// components/nav.tsx) — catégorise une demande d'aide ou un signalement
+/// d'incident, traité depuis /admin/assistance par l'administrateur
+/// plateforme. L'email de contact est celui du compte (pas resaisi dans le
+/// formulaire), cf. app/(app)/assistance/actions.ts.
+enum SupportTicketCategory {
+  ASSISTANCE
+  INCIDENT
+}
+
+enum SupportTicketStatus {
+  OPEN
+  RESOLVED
+}
+
+model SupportTicket {
+  id         String                @id @default(cuid())
+  userId     String
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// École et rôle actifs de l'auteur au moment de la création du ticket —
+  /// déduits automatiquement de sa Membership active (cf.
+  /// lib/active-school.ts::resolveActiveMembership), jamais demandés dans le
+  /// formulaire. Nullables : un compte sans école active peut aussi ouvrir un
+  /// ticket (ex: administrateur plateforme pur).
+  schoolId   String?
+  school     School?               @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  role       Role?
+  category   SupportTicketCategory
+  subject    String
+  message    String
+  status     SupportTicketStatus   @default(OPEN)
+  createdAt  DateTime              @default(now())
+  resolvedAt DateTime?
+
+  @@index([status])
+  @@map("support_tickets")
 }
 
 model School {
@@ -203,6 +247,7 @@ model School {
   exportLogs    ExportLog[]
   auditLogs     AuditLog[]
   announcementTargets AnnouncementTarget[]
+  supportTickets SupportTicket[]
 
   @@map("schools")
 }
@@ -260,36 +305,26 @@ model Membership {
   annualAssignments  AnnualAssignment[]
   authoredInvitation Invitation[]        @relation("InvitationAcceptedAs")
   periodParticipants PeriodParticipant[]
-  disciplines        MembershipDiscipline[]
   levelHours         MembershipLevelHours[]
 
   @@unique([userId, schoolId])
   @@map("memberships")
 }
 
-/// Discipline/matière enseignée. Rattachée à la Membership (et non au User)
-/// car un même enseignant peut enseigner des matières différentes selon
-/// l'école — cohérent avec le reste du modèle (rôle, ETP déjà scopés par
-/// Membership). Sert principalement au ciblage des annonces plateforme.
+/// Discipline/matière enseignée. Rattachée à chaque MembershipLevelHours (et
+/// non à la Membership globalement) car un même enseignant peut donner des
+/// disciplines différentes selon le niveau, y compris plusieurs disciplines
+/// dans le MÊME niveau (plusieurs lignes de même niveau, discipline
+/// différente) — cf. commentaire de MembershipLevelHours. Sert aussi au
+/// ciblage des annonces plateforme.
 model Discipline {
   id   String @id @default(cuid())
   name String @unique
 
-  memberships MembershipDiscipline[]
-  targets     AnnouncementTarget[]
+  levelHours MembershipLevelHours[]
+  targets    AnnouncementTarget[]
 
   @@map("disciplines")
-}
-
-model MembershipDiscipline {
-  id           String     @id @default(cuid())
-  membershipId String
-  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
-  disciplineId String
-  discipline   Discipline @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
-
-  @@unique([membershipId, disciplineId])
-  @@map("membership_disciplines")
 }
 
 /// ETP et objectif annuel de périodes pour une Membership donnée, recalculés
@@ -321,11 +356,14 @@ model AnnualAssignment {
 }
 
 /// Niveau(x) enseigné(s) déclarés pour UNE Membership, avec les heures/semaine
-/// correspondantes — saisis à l'inscription (cf. LevelHoursPicker), une
-/// Membership pouvant combiner plusieurs niveaux (ex: mi-temps primaire +
-/// mi-temps secondaire inférieur dans la même école). Sert de base au calcul
-/// de l'ETP (lib/quota-engine.ts), jamais recalculé automatiquement après
-/// l'inscription.
+/// et la discipline correspondantes — saisis à l'inscription (cf.
+/// LevelHoursPicker), une Membership pouvant combiner plusieurs niveaux (ex:
+/// mi-temps primaire + mi-temps secondaire inférieur dans la même école).
+/// Un même niveau peut apparaître plusieurs fois (sur des lignes distinctes)
+/// si l'enseignant y donne plusieurs disciplines — @@unique porte donc sur
+/// (membership, niveau, discipline), pas sur (membership, niveau) seul.
+/// Sert de base au calcul de l'ETP (lib/quota-engine.ts), jamais recalculé
+/// automatiquement après l'inscription.
 enum TeachingLevel {
   MATERNELLE
   PRIMAIRE
@@ -339,7 +377,10 @@ model MembershipLevelHours {
   membership   Membership    @relation(fields: [membershipId], references: [id], onDelete: Cascade)
   level        TeachingLevel
   hours        Decimal       @db.Decimal(4, 2)
+  disciplineId String
+  discipline   Discipline    @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
 
+  @@unique([membershipId, level, disciplineId])
   @@map("membership_level_hours")
 }
 

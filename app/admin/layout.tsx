@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import { assertIsSuperAdmin } from "@/lib/admin-authorization";
 import { ForbiddenError } from "@/lib/school-authorization";
 import { LogoMark } from "@/components/logo-mark";
@@ -11,6 +12,7 @@ const tabs = [
   { href: "/admin/ecoles", label: "Écoles" },
   { href: "/admin/utilisateurs", label: "Utilisateurs" },
   { href: "/admin/annonces", label: "Annonces" },
+  { href: "/admin/assistance", label: "Assistance" },
   { href: "/admin/dons", label: "Dons" },
 ];
 
@@ -25,6 +27,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     if (error instanceof ForbiddenError) redirect("/mes-periodes");
     throw error;
   }
+
+  const openTicketsCount = await prisma.supportTicket.count({ where: { status: "OPEN" } });
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
@@ -42,7 +46,19 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                   href={tab.href}
                   className="rounded-full px-3 py-1.5 text-stone-600 transition hover:bg-stone-100 hover:text-brand-700 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-brand-500"
                 >
-                  {tab.label}
+                  {/* whitespace-nowrap sur ce span (pas sur le Link entier, pour ne
+                      pas empêcher les autres onglets de se replier sur 2 lignes en
+                      espace étroit) : évite que le badge ne soit rejeté à la ligne
+                      suivante quand l'onglet se rétrécit. */}
+                  <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                    {tab.label}
+                    {/* Nombre de tickets encore "Ouvert" (cf. /admin/assistance) — masqué à 0 */}
+                    {tab.href === "/admin/assistance" && openTicketsCount > 0 && (
+                      <sup className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">
+                        {openTicketsCount}
+                      </sup>
+                    )}
+                  </span>
                 </Link>
               ))}
             </nav>

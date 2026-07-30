@@ -10,9 +10,15 @@
 @theme {
   --color-brand-50: #eef6fc;
   --color-brand-100: #d9ebf8;
+  --color-brand-200: #b4d4f3;
+  --color-brand-300: #8dbdec;
+  --color-brand-400: #5da1e5;
   --color-brand-500: #2e86de;
   --color-brand-600: #1f6fc4;
   --color-brand-700: #1a5aa0;
+  --color-brand-800: #154a7f;
+  --color-brand-900: #103860;
+  --color-brand-950: #0b2642;
   --color-brand-teal: #14b8a6;
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
 }
@@ -22,6 +28,28 @@
 @layer components {
   .input-field {
     @apply w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-stone-900 shadow-sm transition placeholder:text-stone-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:placeholder:text-stone-500;
+  }
+  /* Le remplissage automatique du navigateur (identifiants enregistrés, très
+     fréquent sur les champs email/mot de passe) impose son propre fond via le
+     pseudo-état interne -webkit-autofill, qui ignore purement et simplement
+     `background-color` — d'où les champs qui restent blancs en mode Dark
+     malgré dark:bg-stone-900. Seule une box-shadow interne massive peut le
+     recouvrir ; le transition-delay énorme empêche en plus le flash jaune
+     que Chrome applique le temps de peindre l'autofill. */
+  .input-field:-webkit-autofill,
+  .input-field:-webkit-autofill:hover,
+  .input-field:-webkit-autofill:focus {
+    -webkit-text-fill-color: #1c1917;
+    -webkit-box-shadow: 0 0 0px 1000px #ffffff inset;
+    box-shadow: 0 0 0px 1000px #ffffff inset;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+  .dark .input-field:-webkit-autofill,
+  .dark .input-field:-webkit-autofill:hover,
+  .dark .input-field:-webkit-autofill:focus {
+    -webkit-text-fill-color: #f5f5f4;
+    -webkit-box-shadow: 0 0 0px 1000px #1c1917 inset;
+    box-shadow: 0 0 0px 1000px #1c1917 inset;
   }
   /* Dégradé aux couleurs du logo (bleu → sarcelle) — bouton d'action
      principale dans toute l'application (Enregistrer, Se connecter,
@@ -155,6 +183,33 @@
   .animate-cloud-fly-c,
   .animate-curtain-fade-in,
   .animate-curtain-fade-out {
+    animation: none;
+  }
+}
+
+/* Carrousel des logos de réseaux d'enseignement (cf.
+   components/reseaux-enseignement-section.tsx) : le contenu est dupliqué une
+   fois côté composant, puis ce conteneur défile de 0 à -50% de sa propre
+   largeur — comme les deux moitiés sont identiques, le passage de -50% à 0%
+   est invisible et la boucle paraît continue, sans à-coup ni retour brusque. */
+@keyframes marquee-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee-left 32s linear infinite;
+}
+/* Pause au survol d'un logo (un descendant de .animate-marquee garde le
+   parent en état :hover). Écrite ici en CSS brut plutôt qu'en utilitaire
+   Tailwind hover:[...] : Tailwind v4 place ses utilitaires dans un
+   @layer, qui perd systématiquement face à cette règle non calquée — même
+   piège déjà rencontré pour la pause des nuages (cf. components/nav.tsx) où
+   le raccourci `animation` réinitialise implicitement animation-play-state. */
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
     animation: none;
   }
 }

@@ -15,20 +15,38 @@ export const FULL_TIME_HOURS: Record<TeachingLevel, number> = {
   SECONDAIRE_SUPERIEUR: 21,
 };
 
-export type LevelHoursEntry = { level: TeachingLevel; hours: string };
+export type LevelHoursEntry = { level: TeachingLevel; hours: string; discipline: string };
 
 const VALID_LEVELS = new Set<string>(TEACHING_LEVEL_OPTIONS.map((o) => o.value));
 
-// Lit les paires parallèles formData.getAll("level")/getAll("hours") — même
-// pattern que colleagueMembershipIds ailleurs dans ce projet — plutôt que des
-// champs indexés, pour rester simple côté formulaire (LevelHoursPicker).
+// Lit les triplets parallèles formData.getAll("level")/getAll("hours")/
+// getAll("discipline") — même pattern que colleagueMembershipIds ailleurs
+// dans ce projet — plutôt que des champs indexés, pour rester simple côté
+// formulaire (LevelHoursPicker, qui place le champ discipline juste sous le
+// niveau de chaque ligne).
+//
+// Un même niveau peut apparaître plusieurs fois (disciplines différentes
+// dans le même niveau) — seul le doublon EXACT niveau+discipline est rejeté,
+// pour rester cohérent avec la contrainte @@unique en base.
+//
+// `required: false` (utilisé par updateTeachingInfo, cf. mon-profil/actions.ts)
+// autorise une liste vide — un membre DIRECTION/REFERENT_NUMERIQUE qui ne
+// donne pas cours n'a rien à déclarer ici. Reste requis par défaut pour les
+// parcours d'inscription ENSEIGNANT (join-form/join-school-form), où au
+// moins une déclaration est attendue.
 export function parseLevelHoursFromFormData(
-  formData: FormData
+  formData: FormData,
+  options: { required?: boolean } = {}
 ): { ok: true; data: LevelHoursEntry[] } | { ok: false; error: string } {
+  const required = options.required ?? true;
   const levels = formData.getAll("level").map(String);
   const hours = formData.getAll("hours").map(String);
+  const disciplines = formData.getAll("discipline").map(String);
 
-  if (levels.length === 0 || levels.length !== hours.length) {
+  if (levels.length !== hours.length || levels.length !== disciplines.length) {
+    return { ok: false, error: "Données de niveaux invalides." };
+  }
+  if (required && levels.length === 0) {
     return { ok: false, error: "Au moins un niveau avec ses heures est requis." };
   }
 
@@ -38,12 +56,17 @@ export function parseLevelHoursFromFormData(
   for (let i = 0; i < levels.length; i++) {
     const level = levels[i];
     const hoursValue = hours[i];
+    const discipline = disciplines[i]?.trim();
 
     if (!VALID_LEVELS.has(level)) {
       return { ok: false, error: "Niveau invalide." };
     }
-    if (seen.has(level)) {
-      return { ok: false, error: "Un même niveau ne peut être sélectionné qu'une fois." };
+    if (!discipline) {
+      return { ok: false, error: "Discipline requise pour chaque niveau." };
+    }
+    const key = `${level}::${discipline.toLowerCase()}`;
+    if (seen.has(key)) {
+      return { ok: false, error: "Un même niveau et une même discipline ne peuvent être déclarés qu'une fois." };
     }
     // Colonne Decimal(4,2) en base : valeur absolue < 100 (cf. le même
     // garde-fou déjà appliqué à dureePeriodes dans app/(app)/declarer/schema.ts).
@@ -52,8 +75,8 @@ export function parseLevelHoursFromFormData(
       return { ok: false, error: "Nombre d'heures invalide (doit être compris entre 0 et 100)." };
     }
 
-    seen.add(level);
-    data.push({ level: level as TeachingLevel, hours: hoursValue });
+    seen.add(key);
+    data.push({ level: level as TeachingLevel, hours: hoursValue, discipline });
   }
 
   return { ok: true, data };

@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Session } from "next-auth";
 import type { ActiveMembership } from "@/lib/active-school";
 import { SchoolSwitcher } from "@/components/school-switcher";
+import { SatisfactionStars } from "@/components/satisfaction-stars";
 import { signOutAction } from "@/app/(app)/actions";
 
 const linkClass =
@@ -14,10 +15,12 @@ export function Nav({
   session,
   active,
   memberships,
+  satisfactionRating,
 }: {
   session: Session;
   active: ActiveMembership | null;
   memberships: ActiveMembership[];
+  satisfactionRating: number | null;
 }) {
   const [open, setOpen] = useState(false);
   // Distingue "jamais encore ouvert" de "en train de se refermer" : sans ça,
@@ -153,6 +156,9 @@ export function Nav({
             <Link href="/rejoindre-ecole" onClick={() => handleOpenChange(false)} className={linkClass}>
               Rejoindre une école
             </Link>
+            <Link href="/assistance" onClick={() => handleOpenChange(false)} className={linkClass}>
+              Assistance
+            </Link>
             {session.isSuperAdmin && (
               <Link href="/admin" onClick={() => handleOpenChange(false)} className={linkClass}>
                 Plateforme
@@ -175,6 +181,9 @@ export function Nav({
             </span>
             <span className="truncate text-stone-700 dark:text-stone-300">{session.user?.name}</span>
           </Link>
+          <div className="border-t border-stone-100 pt-3 dark:border-stone-800">
+            <SatisfactionStars initialRating={satisfactionRating} />
+          </div>
           <form action={signOutAction}>
             <button
               type="submit"

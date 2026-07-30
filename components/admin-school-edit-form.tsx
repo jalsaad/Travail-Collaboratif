@@ -6,6 +6,7 @@ import {
   deleteSchoolAsAdmin,
   type AdminActionState,
 } from "@/app/admin/ecoles/[schoolId]/actions";
+import { reseauOptionsWithLegacy } from "@/lib/reseau-options";
 
 const initialState: AdminActionState = {};
 
@@ -74,7 +75,14 @@ export function AdminSchoolEditForm({
           <label htmlFor="reseau" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
             Réseau d&apos;enseignement
           </label>
-          <input id="reseau" name="reseau" defaultValue={reseau} className="input-field mt-1.5" />
+          <select id="reseau" name="reseau" defaultValue={reseau} className="input-field mt-1.5">
+            <option value="">— Aucun —</option>
+            {reseauOptionsWithLegacy(reseau).map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label htmlFor="numeroFase" className="block text-sm font-medium text-stone-700 dark:text-stone-300">

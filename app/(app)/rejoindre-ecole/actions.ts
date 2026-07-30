@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { setActiveSchoolCookie } from "@/lib/active-school";
 import { logAudit, AuditAction } from "@/lib/audit-log";
 import { parseLevelHoursFromFormData } from "@/lib/teaching-levels";
+import { resolveOrCreateDiscipline } from "@/lib/discipline-form";
 import { recomputeUserQuotas } from "@/lib/quota-engine";
 
 export type JoinSchoolState = { error?: string };
@@ -84,9 +85,12 @@ export async function joinSchoolWithCode(
   // Remplace plutôt que cumule : en cas de réactivation, d'anciennes lignes
   // ne doivent pas se combiner avec la nouvelle déclaration.
   await prisma.membershipLevelHours.deleteMany({ where: { membershipId } });
-  await prisma.membershipLevelHours.createMany({
-    data: parsedLevels.data.map((l) => ({ membershipId, level: l.level, hours: l.hours })),
-  });
+  for (const l of parsedLevels.data) {
+    const discipline = await resolveOrCreateDiscipline(prisma, l.discipline);
+    await prisma.membershipLevelHours.create({
+      data: { membershipId, level: l.level, hours: l.hours, disciplineId: discipline.id },
+    });
+  }
 
   await logAudit({
     schoolId: joinCode.schoolId,

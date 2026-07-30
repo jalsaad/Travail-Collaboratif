@@ -6,7 +6,7 @@ import { LevelHoursPicker } from "@/components/level-hours-picker";
 
 const initialState: JoinSchoolState = {};
 
-export function JoinSchoolForm() {
+export function JoinSchoolForm({ disciplines }: { disciplines: string[] }) {
   const [state, formAction, pending] = useActionState(joinSchoolWithCode, initialState);
 
   return (
@@ -24,7 +24,7 @@ export function JoinSchoolForm() {
         />
       </div>
 
-      <LevelHoursPicker />
+      <LevelHoursPicker disciplines={disciplines} />
 
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
 

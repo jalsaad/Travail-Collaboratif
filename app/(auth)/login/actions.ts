@@ -46,11 +46,28 @@ export async function loginAction(
     };
   }
 
+  // Un compte administrateur plateforme "pur" (aucune Membership : ni école,
+  // ni rattachement par code) n'a ni espace "Mon école" ni espace "Mes
+  // périodes" à afficher — /mes-periodes n'y montrerait qu'un message
+  // "aucune école active" avec le menu hamburger de l'espace connecté, sans
+  // intérêt pour ce compte. Direction vers /admin directement dans ce cas.
+  // Un compte à la fois enseignant·e/direction ET administrateur plateforme
+  // garde son espace habituel (le lien "Administration" reste disponible
+  // dans le menu, cf. components/nav.tsx).
+  let redirectTo: string;
+  if (hasManagementRole) {
+    redirectTo = "/ecole";
+  } else if (memberships.length === 0 && user.isSuperAdmin) {
+    redirectTo = "/admin";
+  } else {
+    redirectTo = "/mes-periodes";
+  }
+
   try {
     await signIn("credentials", {
       email,
       password,
-      redirectTo: hasManagementRole ? "/ecole" : "/mes-periodes",
+      redirectTo,
     });
     return {};
   } catch (error) {

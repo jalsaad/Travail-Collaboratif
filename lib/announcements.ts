@@ -9,7 +9,7 @@ export async function getVisibleAnnouncementsForUser(userId: string, active: Act
 
   const [school, disciplines, reads, announcements] = await Promise.all([
     prisma.school.findUnique({ where: { id: active.schoolId } }),
-    prisma.membershipDiscipline.findMany({
+    prisma.membershipLevelHours.findMany({
       where: { membershipId: active.membershipId },
       select: { disciplineId: true },
     }),

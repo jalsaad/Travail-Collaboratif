@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import { createSchool, type CreateSchoolState } from "@/app/(auth)/creer-ecole/actions";
 import { roleLabel } from "@/lib/role-labels";
+import { RESEAU_OPTIONS } from "@/lib/reseau-options";
+import { PasswordInput } from "@/components/password-input";
 
 const initialState: CreateSchoolState = {};
 
@@ -23,7 +25,16 @@ export function CreateSchoolForm() {
           <label htmlFor="reseau" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
             Réseau d&apos;enseignement
           </label>
-          <input id="reseau" name="reseau" required className="input-field mt-1.5" />
+          <select id="reseau" name="reseau" required defaultValue="" className="input-field mt-1.5">
+            <option value="" disabled>
+              — Sélectionner —
+            </option>
+            {RESEAU_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label htmlFor="numeroFase" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
@@ -138,28 +149,18 @@ export function CreateSchoolForm() {
           <label htmlFor="password" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
             Mot de passe
           </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            className="input-field mt-1.5"
-          />
+          <PasswordInput id="password" name="password" required minLength={8} autoComplete="new-password" />
         </div>
         <div>
           <label htmlFor="passwordConfirmation" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
             Confirmer le mot de passe
           </label>
-          <input
+          <PasswordInput
             id="passwordConfirmation"
             name="passwordConfirmation"
-            type="password"
             required
             minLength={8}
             autoComplete="new-password"
-            className="input-field mt-1.5"
           />
         </div>
       </div>

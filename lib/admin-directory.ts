@@ -75,13 +75,19 @@ async function buildWhere(filters: DirectoryFilters) {
   return {
     status: "ACTIVE" as const,
     ...(schoolIds !== undefined ? { schoolId: { in: schoolIds } } : {}),
-    ...(filters.disciplineId ? { disciplines: { some: { disciplineId: filters.disciplineId } } } : {}),
+    ...(filters.disciplineId ? { levelHours: { some: { disciplineId: filters.disciplineId } } } : {}),
   };
 }
 
+// Étend DirectoryRow avec l'évaluation de satisfaction — hors du système
+// générique de colonnes (ADMIN_DIRECTORY_COLUMNS/export CSV) puisqu'un rendu
+// d'étoiles n'a pas de forme texte naturelle : affiché uniquement à l'écran
+// dans app/admin/utilisateurs/page.tsx, jamais exporté.
+export type DirectoryRowWithSatisfaction = DirectoryRow & { satisfactionRating: number | null };
+
 async function membershipsToRows(
   memberships: Awaited<ReturnType<typeof fetchMemberships>>
-): Promise<DirectoryRow[]> {
+): Promise<DirectoryRowWithSatisfaction[]> {
   const schoolIds = [...new Set(memberships.map((m) => m.schoolId))];
   const activeJoinCodes = await prisma.joinCode.findMany({
     where: { schoolId: { in: schoolIds }, active: true },
@@ -102,8 +108,9 @@ async function membershipsToRows(
     niveaux: m.school.niveaux.map((n) => NIVEAU_LABEL[n] ?? n).join(", "),
     typesEnseignement: m.school.typesEnseignement.map((t) => TYPE_ENSEIGNEMENT_LABEL[t] ?? t).join(", "),
     role: roleLabel[m.role],
-    disciplines: m.disciplines.map((d) => d.discipline.name).join(", "),
+    disciplines: [...new Set(m.levelHours.map((lh) => lh.discipline.name))].join(", "),
     status: SCHOOL_STATUS_LABEL[m.school.status] ?? m.school.status,
+    satisfactionRating: m.user.satisfactionRating,
   }));
 }
 
@@ -113,7 +120,7 @@ function fetchMemberships(
 ) {
   return prisma.membership.findMany({
     where,
-    include: { user: true, school: true, disciplines: { include: { discipline: true } } },
+    include: { user: true, school: true, levelHours: { include: { discipline: true } } },
     orderBy: [{ school: { name: "asc" } }, { user: { lastName: "asc" } }],
     skip: pagination?.skip,
     take: pagination?.take,
@@ -129,7 +136,7 @@ export async function queryDirectoryPage(filters: DirectoryFilters, page: number
   return { rows: await membershipsToRows(memberships), total };
 }
 
-export async function queryDirectoryAll(filters: DirectoryFilters): Promise<DirectoryRow[]> {
+export async function queryDirectoryAll(filters: DirectoryFilters): Promise<DirectoryRowWithSatisfaction[]> {
   const where = await buildWhere(filters);
   const memberships = await fetchMemberships(where);
   return membershipsToRows(memberships);

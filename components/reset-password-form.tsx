@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { resetPassword, type ResetPasswordState } from "@/app/(auth)/reinitialiser-mot-de-passe/actions";
+import { PasswordInput } from "@/components/password-input";
 
 const initialState: ResetPasswordState = {};
 
@@ -16,15 +17,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <label htmlFor="password" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
           Nouveau mot de passe
         </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          required
-          minLength={8}
-          autoComplete="new-password"
-          className="input-field mt-1.5"
-        />
+        <PasswordInput id="password" name="password" required minLength={8} autoComplete="new-password" />
       </div>
 
       <div>
@@ -34,14 +27,12 @@ export function ResetPasswordForm({ token }: { token: string }) {
         >
           Confirmer le mot de passe
         </label>
-        <input
+        <PasswordInput
           id="passwordConfirmation"
           name="passwordConfirmation"
-          type="password"
           required
           minLength={8}
           autoComplete="new-password"
-          className="input-field mt-1.5"
         />
       </div>
       <p className="text-xs text-stone-400 dark:text-stone-500">8 caractères minimum.</p>

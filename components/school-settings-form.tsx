@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { updateSchoolInfo, type SchoolActionState } from "@/app/(app)/ecole/parametres/actions";
+import { reseauOptionsWithLegacy } from "@/lib/reseau-options";
 
 const initialState: SchoolActionState = {};
 
@@ -33,7 +34,14 @@ export function SchoolSettingsForm({
         <label htmlFor="reseau" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
           Réseau d&apos;enseignement
         </label>
-        <input id="reseau" name="reseau" defaultValue={reseau} className="input-field mt-1.5" />
+        <select id="reseau" name="reseau" defaultValue={reseau} className="input-field mt-1.5">
+          <option value="">— Aucun —</option>
+          {reseauOptionsWithLegacy(reseau).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>

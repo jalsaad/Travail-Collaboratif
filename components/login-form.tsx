@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { loginAction, type LoginState } from "@/app/(auth)/login/actions";
+import { PasswordInput } from "@/components/password-input";
 
 const initialState: LoginState = {};
 
@@ -37,14 +38,7 @@ export function LoginForm({ espace }: { espace: "profs" | "direction" }) {
             Mot de passe oublié ?
           </Link>
         </div>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          required
-          autoComplete="current-password"
-          className="input-field mt-1.5"
-        />
+        <PasswordInput id="password" name="password" required autoComplete="current-password" />
       </div>
       {state?.error && (
         <p className="text-sm text-red-600">

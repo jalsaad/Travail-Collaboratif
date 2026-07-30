@@ -7,7 +7,9 @@ import {
   TYPE_ENSEIGNEMENT_LABEL,
 } from "@/lib/admin-directory";
 import { ADMIN_DIRECTORY_COLUMNS } from "@/lib/admin-directory-export";
+import { RESEAU_OPTIONS } from "@/lib/reseau-options";
 import { AdminUsersExportPanel } from "@/components/admin-users-export-panel";
+import { SatisfactionStarsDisplay, SatisfactionGradientDef } from "@/components/satisfaction-stars-display";
 
 const PAGE_SIZE = 100;
 
@@ -33,15 +35,9 @@ export default async function AdminUtilisateursPage({
   const filters = parseDirectoryFilters(urlParams);
   const page = Math.max(1, parseInt(urlParams.get("page") ?? "1", 10) || 1);
 
-  const [{ rows, total }, schools, reseauxRaw, regionsRaw, disciplines] = await Promise.all([
+  const [{ rows, total }, schools, regionsRaw, disciplines] = await Promise.all([
     queryDirectoryPage(filters, page, PAGE_SIZE),
     prisma.school.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
-    prisma.school.findMany({
-      where: { reseau: { not: null } },
-      select: { reseau: true },
-      distinct: ["reseau"],
-      orderBy: { reseau: "asc" },
-    }),
     prisma.school.findMany({
       where: { region: { not: null } },
       select: { region: true },
@@ -103,9 +99,9 @@ export default async function AdminUtilisateursPage({
             className="input-field mt-1 text-sm"
           >
             <option value="">Tous</option>
-            {reseauxRaw.map((r) => (
-              <option key={r.reseau} value={r.reseau!}>
-                {r.reseau}
+            {RESEAU_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
               </option>
             ))}
           </select>
@@ -201,6 +197,7 @@ export default async function AdminUtilisateursPage({
       <AdminUsersExportPanel hiddenFields={hiddenFields} />
 
       <div className="card overflow-x-auto">
+        <SatisfactionGradientDef />
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-stone-100 bg-stone-50/70 text-left text-xs font-semibold uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:bg-stone-800/50 dark:text-stone-500">
@@ -209,13 +206,14 @@ export default async function AdminUtilisateursPage({
                   {c.label}
                 </th>
               ))}
+              <th className="whitespace-nowrap px-4 py-3">Satisfaction</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={ADMIN_DIRECTORY_COLUMNS.length}
+                  colSpan={ADMIN_DIRECTORY_COLUMNS.length + 1}
                   className="px-4 py-8 text-center text-stone-400 dark:text-stone-500"
                 >
                   Aucun résultat pour ces filtres.
@@ -229,6 +227,9 @@ export default async function AdminUtilisateursPage({
                     {row[c.key] || "—"}
                   </td>
                 ))}
+                <td className="whitespace-nowrap px-4 py-3">
+                  <SatisfactionStarsDisplay rating={row.satisfactionRating} />
+                </td>
               </tr>
             ))}
           </tbody>
