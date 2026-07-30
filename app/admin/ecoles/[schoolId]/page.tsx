@@ -22,7 +22,7 @@ export default async function AdminSchoolDetailPage({
   const school = await prisma.school.findUnique({ where: { id: schoolId } });
   if (!school) notFound();
 
-  const [members, periods] = await Promise.all([
+  const [members, periods, activeJoinCode] = await Promise.all([
     prisma.membership.findMany({
       where: { schoolId, status: "ACTIVE" },
       include: { user: true },
@@ -33,6 +33,7 @@ export default async function AdminSchoolDetailPage({
       include: { participants: { include: { user: true } } },
       orderBy: { date: "desc" },
     }),
+    prisma.joinCode.findFirst({ where: { schoolId, active: true } }),
   ]);
 
   return (
@@ -48,11 +49,21 @@ export default async function AdminSchoolDetailPage({
         schoolId={school.id}
         name={school.name}
         reseau={school.reseau ?? ""}
+        region={school.region ?? ""}
+        niveaux={school.niveaux}
+        typesEnseignement={school.typesEnseignement}
         address={school.address ?? ""}
         phone={school.phone ?? ""}
         numeroFase={school.numeroFase ?? ""}
         logoUrl={school.logoUrl ?? ""}
       />
+
+      <div className="card p-6">
+        <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Code de rattachement</h2>
+        <p className="mt-2 rounded-lg bg-stone-50 px-3 py-2 font-mono text-lg tracking-wide text-stone-900 dark:bg-stone-800 dark:text-stone-100">
+          {activeJoinCode?.code ?? "Aucun code actif"}
+        </p>
+      </div>
 
       <div>
         <h2 className="text-base font-semibold tracking-tight text-stone-900 dark:text-stone-100">
@@ -63,6 +74,7 @@ export default async function AdminSchoolDetailPage({
             <thead>
               <tr className="border-b border-stone-100 bg-stone-50/70 text-left text-xs font-semibold uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:bg-stone-800/50 dark:text-stone-500">
                 <th className="px-5 py-3">Nom</th>
+                <th className="px-5 py-3">Matricule</th>
                 <th className="px-5 py-3">Rôle</th>
                 <th className="px-5 py-3" />
               </tr>
@@ -70,7 +82,7 @@ export default async function AdminSchoolDetailPage({
             <tbody>
               {members.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-5 py-8 text-center text-stone-400 dark:text-stone-500">
+                  <td colSpan={4} className="px-5 py-8 text-center text-stone-400 dark:text-stone-500">
                     Aucun membre pour le moment.
                   </td>
                 </tr>
@@ -90,6 +102,9 @@ export default async function AdminSchoolDetailPage({
                       </span>
                     )}
                     <p className="text-xs text-stone-400 dark:text-stone-500">{member.user.email}</p>
+                  </td>
+                  <td className="px-5 py-3.5 font-mono text-xs text-stone-600 dark:text-stone-400">
+                    {member.user.matricule ?? "—"}
                   </td>
                   <td className="px-5 py-3.5">
                     <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${roleBadgeStyle[member.role]}`}>

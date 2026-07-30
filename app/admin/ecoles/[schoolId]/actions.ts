@@ -33,10 +33,14 @@ async function requireSuperAdmin() {
 const schoolInfoSchema = z.object({
   name: z.string().min(1, "Nom requis"),
   reseau: z.string().optional(),
+  region: z.string().optional(),
   address: z.string().optional(),
   phone: z.string().optional(),
   numeroFase: z.string().optional(),
 });
+
+const niveauSchema = z.enum(["MATERNELLE", "PRIMAIRE", "SECONDAIRE"]);
+const typeEnseignementSchema = z.enum(["ORDINAIRE", "SPECIALISE"]);
 
 export async function updateSchoolAsAdmin(
   schoolId: string,
@@ -48,12 +52,19 @@ export async function updateSchoolAsAdmin(
   const parsed = schoolInfoSchema.safeParse({
     name: formData.get("name"),
     reseau: formData.get("reseau") || undefined,
+    region: formData.get("region") || undefined,
     address: formData.get("address") || undefined,
     phone: formData.get("phone") || undefined,
     numeroFase: formData.get("numeroFase") || undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
+  }
+
+  const niveaux = niveauSchema.array().safeParse(formData.getAll("niveaux"));
+  const typesEnseignement = typeEnseignementSchema.array().safeParse(formData.getAll("typesEnseignement"));
+  if (!niveaux.success || !typesEnseignement.success) {
+    return { error: "Niveaux ou type d'enseignement invalide." };
   }
 
   // Le fichier est optionnel : si l'admin n'a rien choisi, le logo existant
@@ -76,6 +87,9 @@ export async function updateSchoolAsAdmin(
       data: {
         name: parsed.data.name,
         reseau: parsed.data.reseau || null,
+        region: parsed.data.region || null,
+        niveaux: niveaux.data,
+        typesEnseignement: typesEnseignement.data,
         address: parsed.data.address || null,
         phone: parsed.data.phone || null,
         numeroFase: parsed.data.numeroFase || null,

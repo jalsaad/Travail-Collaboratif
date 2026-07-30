@@ -50,15 +50,23 @@ export default function LoginGatewayPage() {
             />
             <Link
               href="/login/profs"
-              className="relative block overflow-hidden rounded-2xl border border-stone-200 transition hover:-translate-y-1 dark:border-stone-800"
+              className="relative block overflow-hidden rounded-2xl border-2 border-brand-teal/50 transition hover:-translate-y-1 dark:border-brand-400/50"
             >
               <Image
-                src="/2.png"
+                src="/EspaceProfsLight.png"
                 alt="Espace Profs"
                 width={500}
                 height={500}
                 priority
-                className="h-auto w-full"
+                className="block h-auto w-full dark:hidden"
+              />
+              <Image
+                src="/EspaceProfsDark.png"
+                alt="Espace Profs"
+                width={500}
+                height={500}
+                priority
+                className="hidden h-auto w-full dark:block"
               />
             </Link>
           </Reveal>
@@ -69,15 +77,23 @@ export default function LoginGatewayPage() {
             />
             <Link
               href="/login/direction"
-              className="relative block overflow-hidden rounded-2xl border border-stone-200 transition hover:-translate-y-1 dark:border-stone-800"
+              className="relative block overflow-hidden rounded-2xl border-2 border-brand-teal/50 transition hover:-translate-y-1 dark:border-brand-400/50"
             >
               <Image
-                src="/1.png"
+                src="/EspaceDirectionLight.png"
                 alt="Espace Direction"
                 width={500}
                 height={500}
                 priority
-                className="h-auto w-full"
+                className="block h-auto w-full dark:hidden"
+              />
+              <Image
+                src="/EspaceDirectionDark.png"
+                alt="Espace Direction"
+                width={500}
+                height={500}
+                priority
+                className="hidden h-auto w-full dark:block"
               />
             </Link>
           </Reveal>

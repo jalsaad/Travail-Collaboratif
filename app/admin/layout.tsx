@@ -9,6 +9,7 @@ import { LogoMark } from "@/components/logo-mark";
 const tabs = [
   { href: "/admin", label: "Tableau de bord" },
   { href: "/admin/ecoles", label: "Écoles" },
+  { href: "/admin/utilisateurs", label: "Utilisateurs" },
   { href: "/admin/annonces", label: "Annonces" },
   { href: "/admin/dons", label: "Dons" },
 ];

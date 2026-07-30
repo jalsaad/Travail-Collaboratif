@@ -20,6 +20,8 @@ export const AuditAction = {
   DELETE_SCHOOL: "DELETE_SCHOOL",
   UPDATE_PERIOD: "UPDATE_PERIOD",
   DELETE_PERIOD: "DELETE_PERIOD",
+  EXPORT_USERS_DIRECTORY: "EXPORT_USERS_DIRECTORY",
+  RESET_PASSWORD: "RESET_PASSWORD",
 } as const;
 
 export async function logAudit(params: {

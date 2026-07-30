@@ -8,6 +8,8 @@ import { signIn } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit, AuditAction } from "@/lib/audit-log";
 import { computeMatricule, MATRICULE_MANUAL_PATTERN } from "@/lib/matricule";
+import { parseLevelHoursFromFormData } from "@/lib/teaching-levels";
+import { recomputeUserQuotas } from "@/lib/quota-engine";
 
 export type JoinState = { error?: string };
 
@@ -49,6 +51,11 @@ export async function joinViaCode(
     return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
   }
 
+  const parsedLevels = parseLevelHoursFromFormData(formData);
+  if (!parsedLevels.ok) {
+    return { error: parsedLevels.error };
+  }
+
   const normalizedCode = parsed.data.code.trim().toUpperCase();
   const email = parsed.data.email.trim();
 
@@ -83,6 +90,9 @@ export async function joinViaCode(
       const membership = await tx.membership.create({
         data: { userId: user.id, schoolId: joinCode.schoolId, role: "ENSEIGNANT", status: "ACTIVE" },
       });
+      await tx.membershipLevelHours.createMany({
+        data: parsedLevels.data.map((l) => ({ membershipId: membership.id, level: l.level, hours: l.hours })),
+      });
       return { user, membership };
     });
   } catch (error) {
@@ -106,6 +116,11 @@ export async function joinViaCode(
     targetType: "Membership",
     targetId: created.membership.id,
   });
+
+  const schoolYear = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
+  if (schoolYear) {
+    await recomputeUserQuotas(created.user.id, schoolYear.id);
+  }
 
   try {
     await signIn("credentials", {

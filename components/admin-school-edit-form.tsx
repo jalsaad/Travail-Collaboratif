@@ -9,10 +9,24 @@ import {
 
 const initialState: AdminActionState = {};
 
+const NIVEAU_OPTIONS: { value: "MATERNELLE" | "PRIMAIRE" | "SECONDAIRE"; label: string }[] = [
+  { value: "MATERNELLE", label: "Maternelle" },
+  { value: "PRIMAIRE", label: "Primaire" },
+  { value: "SECONDAIRE", label: "Secondaire" },
+];
+
+const TYPE_ENSEIGNEMENT_OPTIONS: { value: "ORDINAIRE" | "SPECIALISE"; label: string }[] = [
+  { value: "ORDINAIRE", label: "Ordinaire" },
+  { value: "SPECIALISE", label: "Spécialisé" },
+];
+
 export function AdminSchoolEditForm({
   schoolId,
   name,
   reseau,
+  region,
+  niveaux,
+  typesEnseignement,
   address,
   phone,
   numeroFase,
@@ -21,6 +35,9 @@ export function AdminSchoolEditForm({
   schoolId: string;
   name: string;
   reseau: string;
+  region: string;
+  niveaux: string[];
+  typesEnseignement: string[];
   address: string;
   phone: string;
   numeroFase: string;
@@ -69,6 +86,52 @@ export function AdminSchoolEditForm({
             defaultValue={numeroFase}
             className="input-field mt-1.5"
           />
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="region" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+          Région
+        </label>
+        <input id="region" name="region" defaultValue={region} className="input-field mt-1.5" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">Niveaux</span>
+          <div className="mt-1.5 flex flex-col gap-1.5">
+            {NIVEAU_OPTIONS.map((option) => (
+              <label key={option.value} className="inline-flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
+                <input
+                  type="checkbox"
+                  name="niveaux"
+                  value={option.value}
+                  defaultChecked={niveaux.includes(option.value)}
+                  className="h-4 w-4 rounded border-stone-300 dark:border-stone-700"
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div>
+          <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+            Type d&apos;enseignement
+          </span>
+          <div className="mt-1.5 flex flex-col gap-1.5">
+            {TYPE_ENSEIGNEMENT_OPTIONS.map((option) => (
+              <label key={option.value} className="inline-flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
+                <input
+                  type="checkbox"
+                  name="typesEnseignement"
+                  value={option.value}
+                  defaultChecked={typesEnseignement.includes(option.value)}
+                  className="h-4 w-4 rounded border-stone-300 dark:border-stone-700"
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
         </div>
       </div>
 

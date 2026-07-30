@@ -26,9 +26,17 @@ export function LoginForm({ espace }: { espace: "profs" | "direction" }) {
         />
       </div>
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-          Mot de passe
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="password" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+            Mot de passe
+          </label>
+          <Link
+            href="/mot-de-passe-oublie"
+            className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-500"
+          >
+            Mot de passe oublié ?
+          </Link>
+        </div>
         <input
           id="password"
           name="password"

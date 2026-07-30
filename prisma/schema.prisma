@@ -30,6 +30,21 @@ enum Sex {
   F
 }
 
+/// Niveau d'enseignement offert par une école — tableau car une école
+/// "fondamentale" combine souvent MATERNELLE et PRIMAIRE.
+enum SchoolLevel {
+  MATERNELLE
+  PRIMAIRE
+  SECONDAIRE
+}
+
+/// Type d'enseignement — tableau par symétrie avec SchoolLevel, même si la
+/// combinaison des deux valeurs reste rare en pratique.
+enum EducationType {
+  ORDINAIRE
+  SPECIALISE
+}
+
 enum MembershipStatus {
   ACTIVE
   REMOVED
@@ -136,8 +151,27 @@ model User {
   announcementsCreated Announcement[]
   announcementReads AnnouncementRead[]
   donations         Donation[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
+}
+
+/// Lien de réinitialisation de mot de passe envoyé par email (cf.
+/// lib/mailer.ts). Seul un hash SHA-256 du token est stocké — le token brut
+/// ne vit que dans l'URL emailée, jamais en base. Usage unique (usedAt) et
+/// expirant (1h) ; toute nouvelle demande supprime les tokens non utilisés
+/// précédents de cet utilisateur (cf. app/(auth)/mot-de-passe-oublie/actions.ts).
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model School {
@@ -145,6 +179,13 @@ model School {
   name        String
   /// Réseau d'enseignement (WBE, officiel subventionné, libre subventionné...)
   reseau      String?
+  /// Région/province — texte libre (pas d'enum : les découpages varient),
+  /// renseigné par l'admin plateforme (cf. AdminSchoolEditForm).
+  region      String?
+  /// Niveaux offerts (maternelle/primaire/secondaire) — admin uniquement.
+  niveaux     SchoolLevel[]   @default([])
+  /// Type(s) d'enseignement (ordinaire/spécialisé) — admin uniquement.
+  typesEnseignement EducationType[] @default([])
   /// Numéro FASE / matricule officiel de l'établissement
   numeroFase  String?  @unique
   address     String?
@@ -220,6 +261,7 @@ model Membership {
   authoredInvitation Invitation[]        @relation("InvitationAcceptedAs")
   periodParticipants PeriodParticipant[]
   disciplines        MembershipDiscipline[]
+  levelHours         MembershipLevelHours[]
 
   @@unique([userId, schoolId])
   @@map("memberships")
@@ -255,7 +297,13 @@ model MembershipDiscipline {
 /// l'autre, tout comme sa répartition entre écoles).
 ///
 /// Règles Circulaire 8894 à appliquer en couche applicative :
-/// - objectifPeriodes = 60 * etp (temps plein => 60 périodes/an)
+/// - etp d'une Membership = somme, sur ses MembershipLevelHours, de
+///   (heures déclarées / heures temps plein du niveau) — cf. lib/quota-engine.ts.
+/// - Quota (objectifPeriodes) calculé sur l'ETP TOTAL de l'utilisateur (somme
+///   sur toutes ses écoles) : ETP total >= 1 (temps plein) => 60 périodes ;
+///   ETP total < 1 (temps partiel) => 30 * ETP total. Ce total est ensuite
+///   réparti entre écoles au prorata de l'ETP de chacune — cf.
+///   lib/quota-engine.ts::recomputeUserQuotas.
 /// - somme des (objectifPeriodes / 36 semaines) sur toutes les écoles d'un
 ///   même User, pour une même SchoolYear, ne peut dépasser l'équivalent de
 ///   2 périodes/semaine.
@@ -270,6 +318,29 @@ model AnnualAssignment {
 
   @@unique([membershipId, schoolYearId])
   @@map("annual_assignments")
+}
+
+/// Niveau(x) enseigné(s) déclarés pour UNE Membership, avec les heures/semaine
+/// correspondantes — saisis à l'inscription (cf. LevelHoursPicker), une
+/// Membership pouvant combiner plusieurs niveaux (ex: mi-temps primaire +
+/// mi-temps secondaire inférieur dans la même école). Sert de base au calcul
+/// de l'ETP (lib/quota-engine.ts), jamais recalculé automatiquement après
+/// l'inscription.
+enum TeachingLevel {
+  MATERNELLE
+  PRIMAIRE
+  SECONDAIRE_INFERIEUR
+  SECONDAIRE_SUPERIEUR
+}
+
+model MembershipLevelHours {
+  id           String        @id @default(cuid())
+  membershipId String
+  membership   Membership    @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  level        TeachingLevel
+  hours        Decimal       @db.Decimal(4, 2)
+
+  @@map("membership_level_hours")
 }
 
 // ---------------------------------------------------------------------------

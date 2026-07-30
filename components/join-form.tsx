@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { joinViaCode, type JoinState } from "@/app/(auth)/rejoindre/actions";
+import { LevelHoursPicker } from "@/components/level-hours-picker";
 
 const initialState: JoinState = {};
 
@@ -84,6 +85,10 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
           Les 7 premiers chiffres sont calculés automatiquement à partir du sexe et de la date de
           naissance.
         </p>
+      </div>
+
+      <div className="border-t border-stone-100 pt-4 dark:border-stone-800">
+        <LevelHoursPicker />
       </div>
 
       <div>

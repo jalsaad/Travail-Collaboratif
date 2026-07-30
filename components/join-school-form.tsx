@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { joinSchoolWithCode, type JoinSchoolState } from "@/app/(app)/rejoindre-ecole/actions";
+import { LevelHoursPicker } from "@/components/level-hours-picker";
 
 const initialState: JoinSchoolState = {};
 
@@ -22,6 +23,8 @@ export function JoinSchoolForm() {
           className="input-field mt-1.5 uppercase"
         />
       </div>
+
+      <LevelHoursPicker />
 
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
 

@@ -8,6 +8,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { setActiveSchoolCookie } from "@/lib/active-school";
 import { logAudit, AuditAction } from "@/lib/audit-log";
+import { parseLevelHoursFromFormData } from "@/lib/teaching-levels";
+import { recomputeUserQuotas } from "@/lib/quota-engine";
 
 export type JoinSchoolState = { error?: string };
 
@@ -22,6 +24,9 @@ export async function joinSchoolWithCode(
 
   const parsed = codeSchema.safeParse({ code: formData.get("code") });
   if (!parsed.success) return { error: "Code requis." };
+
+  const parsedLevels = parseLevelHoursFromFormData(formData);
+  if (!parsedLevels.ok) return { error: parsedLevels.error };
 
   const normalizedCode = parsed.data.code.trim().toUpperCase();
   const joinCode = await prisma.joinCode.findUnique({ where: { code: normalizedCode } });
@@ -76,6 +81,13 @@ export async function joinSchoolWithCode(
     }
   }
 
+  // Remplace plutôt que cumule : en cas de réactivation, d'anciennes lignes
+  // ne doivent pas se combiner avec la nouvelle déclaration.
+  await prisma.membershipLevelHours.deleteMany({ where: { membershipId } });
+  await prisma.membershipLevelHours.createMany({
+    data: parsedLevels.data.map((l) => ({ membershipId, level: l.level, hours: l.hours })),
+  });
+
   await logAudit({
     schoolId: joinCode.schoolId,
     actorId: session.userId,
@@ -83,6 +95,13 @@ export async function joinSchoolWithCode(
     targetType: "Membership",
     targetId: membershipId,
   });
+
+  // Recalcule l'ETP/quota de TOUTES les écoles de cet utilisateur (pas
+  // seulement celle-ci) : le total ETP vient de changer, cf. lib/quota-engine.ts.
+  const schoolYear = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
+  if (schoolYear) {
+    await recomputeUserQuotas(session.userId, schoolYear.id);
+  }
 
   await setActiveSchoolCookie(joinCode.schoolId, session.userId);
   revalidatePath("/", "layout");
