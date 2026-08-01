@@ -9,6 +9,12 @@ const codespaceOrigin =
     ? `${process.env.CODESPACE_NAME}-3000.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`
     : undefined;
 
+// Même contrainte en production derrière un nom de domaine réel : sans ça,
+// toute action serveur échoue avec "Invalid Server Actions request." dès
+// qu'on accède au site via son domaine. APP_ORIGIN se règle dans .env
+// (ex: "travail-collaboratif.be", sans protocole).
+const productionOrigin = process.env.APP_ORIGIN;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
@@ -16,6 +22,7 @@ const nextConfig = {
       allowedOrigins: [
         "localhost:3000",
         ...(codespaceOrigin ? [codespaceOrigin] : []),
+        ...(productionOrigin ? [productionOrigin] : []),
         "*.app.github.dev",
       ],
     },
