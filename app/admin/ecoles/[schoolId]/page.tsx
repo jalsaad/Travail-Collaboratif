@@ -53,6 +53,8 @@ export default async function AdminSchoolDetailPage({
         niveaux={school.niveaux}
         typesEnseignement={school.typesEnseignement}
         address={school.address ?? ""}
+        postalCode={school.postalCode ?? ""}
+        locality={school.locality ?? ""}
         phone={school.phone ?? ""}
         numeroFase={school.numeroFase ?? ""}
         logoUrl={school.logoUrl ?? ""}

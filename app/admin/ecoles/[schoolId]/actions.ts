@@ -35,6 +35,8 @@ const schoolInfoSchema = z.object({
   reseau: z.string().optional(),
   region: z.string().optional(),
   address: z.string().optional(),
+  postalCode: z.string().optional(),
+  locality: z.string().optional(),
   phone: z.string().optional(),
   numeroFase: z.string().optional(),
 });
@@ -54,6 +56,8 @@ export async function updateSchoolAsAdmin(
     reseau: formData.get("reseau") || undefined,
     region: formData.get("region") || undefined,
     address: formData.get("address") || undefined,
+    postalCode: formData.get("postalCode") || undefined,
+    locality: formData.get("locality") || undefined,
     phone: formData.get("phone") || undefined,
     numeroFase: formData.get("numeroFase") || undefined,
   });
@@ -91,6 +95,8 @@ export async function updateSchoolAsAdmin(
         niveaux: niveaux.data,
         typesEnseignement: typesEnseignement.data,
         address: parsed.data.address || null,
+        postalCode: parsed.data.postalCode || null,
+        locality: parsed.data.locality || null,
         phone: parsed.data.phone || null,
         numeroFase: parsed.data.numeroFase || null,
         ...(logoUrl !== undefined ? { logoUrl } : {}),

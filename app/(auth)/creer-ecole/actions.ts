@@ -17,7 +17,9 @@ const schoolSchema = z.object({
   name: z.string().min(1, "Nom de l'école requis"),
   reseau: z.string().min(1, "Réseau d'enseignement requis"),
   region: z.string().min(1, "Région requise"),
-  address: z.string().min(1, "Adresse requise"),
+  address: z.string().min(1, "Rue et numéro requis"),
+  postalCode: z.string().min(1, "Code postal requis"),
+  locality: z.string().min(1, "Localité requise"),
   phone: z.string().min(1, "Téléphone requis"),
   numeroFase: z.string().min(1, "Numéro FASE requis"),
 });
@@ -66,6 +68,8 @@ export async function createSchool(
     reseau: formData.get("reseau"),
     region: formData.get("region"),
     address: formData.get("address"),
+    postalCode: formData.get("postalCode"),
+    locality: formData.get("locality"),
     phone: formData.get("phone"),
     numeroFase: formData.get("numeroFase"),
   });
@@ -170,6 +174,8 @@ export async function createSchool(
           niveaux: niveaux.data,
           typesEnseignement: typesEnseignement.data,
           address: parsedSchool.data.address,
+          postalCode: parsedSchool.data.postalCode,
+          locality: parsedSchool.data.locality,
           phone: parsedSchool.data.phone,
           numeroFase: parsedSchool.data.numeroFase,
           // Toute école créée via ce flux public attend une validation par

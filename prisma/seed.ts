@@ -206,10 +206,13 @@ async function main() {
     create: { membershipId: memberThomasVal.id, schoolYearId: schoolYear.id, etp: 1, objectifPeriodes: 60 },
   });
 
-  // --- Disciplines ---------------------------------------------------------
+  // --- Disciplines -----------------------------------------------------
+  // Codes du référentiel FWB (cf. lib/disciplines.ts) : Mathématiques degré
+  // inférieur (26) et Français degré supérieur (228) — cohérents avec les
+  // niveaux déclarés ci-dessous.
   const [maths, francais] = await Promise.all([
-    prisma.discipline.upsert({ where: { name: "Mathématiques" }, update: {}, create: { name: "Mathématiques" } }),
-    prisma.discipline.upsert({ where: { name: "Français" }, update: {}, create: { name: "Français" } }),
+    prisma.discipline.upsert({ where: { code: "26" }, update: {}, create: { code: "26", name: "Mathématiques" } }),
+    prisma.discipline.upsert({ where: { code: "228" }, update: {}, create: { code: "228", name: "Français" } }),
   ]);
 
   // La discipline se rattache désormais à une ligne niveau/heures (pas à la

@@ -92,7 +92,7 @@ export async function joinViaCode(
         data: { userId: user.id, schoolId: joinCode.schoolId, role: "ENSEIGNANT", status: "ACTIVE" },
       });
       for (const l of parsedLevels.data) {
-        const discipline = await resolveOrCreateDiscipline(tx, l.discipline);
+        const discipline = await resolveOrCreateDiscipline(tx, l.disciplineCode, l.disciplineLabel);
         await tx.membershipLevelHours.create({
           data: { membershipId: membership.id, level: l.level, hours: l.hours, disciplineId: discipline.id },
         });

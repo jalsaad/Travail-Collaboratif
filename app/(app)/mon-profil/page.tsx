@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
+import { toPickerDefaultValue } from "@/lib/discipline-form";
 import { OwnProfileForm } from "@/components/own-profile-form";
 import { TeachingInfoForm } from "@/components/teaching-info-form";
 import { Reveal } from "@/components/reveal";
@@ -22,27 +23,26 @@ export default async function MonProfilPage() {
   // heures — la section reste vide (facultative) si non applicable.
   let teachingInfo: {
     schoolName: string;
-    levelHours: { level: string; hours: number; discipline: string }[];
-    disciplines: string[];
+    levelHours: { level: string; hours: number; discipline: string; precision: string }[];
   } | null = null;
 
   if (active) {
-    const [membership, allDisciplines] = await Promise.all([
-      prisma.membership.findUnique({
-        where: { id: active.membershipId },
-        include: { levelHours: { include: { discipline: true } } },
-      }),
-      prisma.discipline.findMany({ orderBy: { name: "asc" } }),
-    ]);
+    const membership = await prisma.membership.findUnique({
+      where: { id: active.membershipId },
+      include: { levelHours: { include: { discipline: true } } },
+    });
     teachingInfo = {
       schoolName: active.schoolName,
+      // discipline = code du référentiel (peut être vide pour une donnée
+      // créée avant l'introduction du référentiel — le sélecteur affichera
+      // alors simplement le placeholder, cf. components/level-hours-picker.tsx) ;
+      // precision = texte libre préchargé quand c'était un "Autre (à préciser)".
       levelHours:
         membership?.levelHours.map((lh) => ({
           level: lh.level,
           hours: Number(lh.hours),
-          discipline: lh.discipline.name,
+          ...toPickerDefaultValue(lh.discipline.code, lh.discipline.name),
         })) ?? [],
-      disciplines: allDisciplines.map((d) => d.name),
     };
   }
 
@@ -64,11 +64,7 @@ export default async function MonProfilPage() {
         <div>
           <h2 className="text-base font-semibold tracking-tight text-stone-900 dark:text-stone-100">Mon enseignement</h2>
           <Reveal className="mt-3">
-            <TeachingInfoForm
-              schoolName={teachingInfo.schoolName}
-              levelHours={teachingInfo.levelHours}
-              disciplines={teachingInfo.disciplines}
-            />
+            <TeachingInfoForm schoolName={teachingInfo.schoolName} levelHours={teachingInfo.levelHours} />
           </Reveal>
         </div>
       )}

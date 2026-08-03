@@ -3,19 +3,34 @@
 import { useActionState } from "react";
 import { updateSchoolInfo, type SchoolActionState } from "@/app/(app)/ecole/parametres/actions";
 import { reseauOptionsWithLegacy } from "@/lib/reseau-options";
+import { regionOptionsWithLegacy } from "@/lib/region-options";
+import { NIVEAU_OPTIONS, TYPE_ENSEIGNEMENT_OPTIONS } from "@/lib/school-classification-options";
+import { AddressFields } from "@/components/address-fields";
 
 const initialState: SchoolActionState = {};
 
 export function SchoolSettingsForm({
   name,
   reseau,
+  region,
+  niveaux,
+  typesEnseignement,
   address,
+  postalCode,
+  locality,
+  phone,
   logoUrl,
   numeroFase,
 }: {
   name: string;
   reseau: string;
+  region: string;
+  niveaux: string[];
+  typesEnseignement: string[];
   address: string;
+  postalCode: string;
+  locality: string;
+  phone: string;
   logoUrl: string;
   numeroFase: string;
 }) {
@@ -45,10 +60,65 @@ export function SchoolSettingsForm({
       </div>
 
       <div>
-        <label htmlFor="address" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-          Adresse
+        <label htmlFor="region" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+          Région
         </label>
-        <input id="address" name="address" defaultValue={address} className="input-field mt-1.5" />
+        <select id="region" name="region" defaultValue={region} className="input-field mt-1.5">
+          <option value="">— Aucune —</option>
+          {regionOptionsWithLegacy(region).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">Niveaux</span>
+          <div className="mt-1.5 flex flex-col gap-1.5">
+            {NIVEAU_OPTIONS.map((option) => (
+              <label key={option.value} className="inline-flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
+                <input
+                  type="checkbox"
+                  name="niveaux"
+                  value={option.value}
+                  defaultChecked={niveaux.includes(option.value)}
+                  className="h-4 w-4 rounded border-stone-300 dark:border-stone-700"
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div>
+          <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+            Type d&apos;enseignement
+          </span>
+          <div className="mt-1.5 flex flex-col gap-1.5">
+            {TYPE_ENSEIGNEMENT_OPTIONS.map((option) => (
+              <label key={option.value} className="inline-flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
+                <input
+                  type="checkbox"
+                  name="typesEnseignement"
+                  value={option.value}
+                  defaultChecked={typesEnseignement.includes(option.value)}
+                  className="h-4 w-4 rounded border-stone-300 dark:border-stone-700"
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <AddressFields address={address} postalCode={postalCode} locality={locality} />
+
+      <div>
+        <label htmlFor="phone" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+          Téléphone
+        </label>
+        <input id="phone" name="phone" type="tel" defaultValue={phone} className="input-field mt-1.5" />
       </div>
 
       <div>

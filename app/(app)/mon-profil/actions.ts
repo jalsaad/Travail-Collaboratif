@@ -145,7 +145,7 @@ export async function updateTeachingInfo(
   await prisma.$transaction(async (tx) => {
     await tx.membershipLevelHours.deleteMany({ where: { membershipId: active.membershipId } });
     for (const l of parsedLevels.data) {
-      const discipline = await resolveOrCreateDiscipline(tx, l.discipline);
+      const discipline = await resolveOrCreateDiscipline(tx, l.disciplineCode, l.disciplineLabel);
       await tx.membershipLevelHours.create({
         data: { membershipId: active.membershipId, level: l.level, hours: l.hours, disciplineId: discipline.id },
       });

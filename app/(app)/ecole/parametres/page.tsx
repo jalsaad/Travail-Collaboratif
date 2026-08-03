@@ -28,7 +28,13 @@ export default async function ParametresPage() {
         <SchoolSettingsForm
           name={school.name}
           reseau={school.reseau ?? ""}
+          region={school.region ?? ""}
+          niveaux={school.niveaux}
+          typesEnseignement={school.typesEnseignement}
           address={school.address ?? ""}
+          postalCode={school.postalCode ?? ""}
+          locality={school.locality ?? ""}
+          phone={school.phone ?? ""}
           logoUrl={school.logoUrl ?? ""}
           numeroFase={school.numeroFase ?? ""}
         />

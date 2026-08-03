@@ -9,6 +9,7 @@ import {
 import { reseauOptionsWithLegacy } from "@/lib/reseau-options";
 import { regionOptionsWithLegacy } from "@/lib/region-options";
 import { NIVEAU_OPTIONS, TYPE_ENSEIGNEMENT_OPTIONS } from "@/lib/school-classification-options";
+import { AddressFields } from "@/components/address-fields";
 
 const initialState: AdminActionState = {};
 
@@ -20,6 +21,8 @@ export function AdminSchoolEditForm({
   niveaux,
   typesEnseignement,
   address,
+  postalCode,
+  locality,
   phone,
   numeroFase,
   logoUrl,
@@ -31,6 +34,8 @@ export function AdminSchoolEditForm({
   niveaux: string[];
   typesEnseignement: string[];
   address: string;
+  postalCode: string;
+  locality: string;
   phone: string;
   numeroFase: string;
   logoUrl: string;
@@ -141,12 +146,7 @@ export function AdminSchoolEditForm({
         </div>
       </div>
 
-      <div>
-        <label htmlFor="address" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-          Adresse
-        </label>
-        <input id="address" name="address" defaultValue={address} className="input-field mt-1.5" />
-      </div>
+      <AddressFields address={address} postalCode={postalCode} locality={locality} />
 
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-stone-700 dark:text-stone-300">

@@ -9,11 +9,13 @@ const initialState: TeachingInfoState = {};
 export function TeachingInfoForm({
   schoolName,
   levelHours,
-  disciplines,
 }: {
   schoolName: string;
-  levelHours: { level: string; hours: number; discipline: string }[];
-  disciplines: string[];
+  // discipline = code officiel du référentiel FWB (cf. lib/disciplines.ts),
+  // pas le libellé — c'est la valeur attendue par le <select> de
+  // LevelHoursPicker. precision = texte libre affiché quand discipline
+  // vaut "autre" (cf. lib/discipline-form.ts::toPickerDefaultValue).
+  levelHours: { level: string; hours: number; discipline: string; precision?: string }[];
 }) {
   const [state, formAction, pending] = useActionState(updateTeachingInfo, initialState);
 
@@ -29,7 +31,7 @@ export function TeachingInfoForm({
         </p>
       </div>
 
-      <LevelHoursPicker defaultValues={levelHours} disciplines={disciplines} minRows={0} />
+      <LevelHoursPicker defaultValues={levelHours} minRows={0} />
 
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
       {state?.success && <p className="text-sm text-emerald-700 dark:text-emerald-400">{state.success}</p>}

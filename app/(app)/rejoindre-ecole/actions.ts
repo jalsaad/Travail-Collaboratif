@@ -86,7 +86,7 @@ export async function joinSchoolWithCode(
   // ne doivent pas se combiner avec la nouvelle déclaration.
   await prisma.membershipLevelHours.deleteMany({ where: { membershipId } });
   for (const l of parsedLevels.data) {
-    const discipline = await resolveOrCreateDiscipline(prisma, l.discipline);
+    const discipline = await resolveOrCreateDiscipline(prisma, l.disciplineCode, l.disciplineLabel);
     await prisma.membershipLevelHours.create({
       data: { membershipId, level: l.level, hours: l.hours, disciplineId: discipline.id },
     });

@@ -6,6 +6,7 @@ import { createSchool, type CreateSchoolState } from "@/app/(auth)/creer-ecole/a
 import { RESEAU_OPTIONS } from "@/lib/reseau-options";
 import { REGION_OPTIONS } from "@/lib/region-options";
 import { NIVEAU_OPTIONS, TYPE_ENSEIGNEMENT_OPTIONS } from "@/lib/school-classification-options";
+import { AddressFields } from "@/components/address-fields";
 import { PasswordInput } from "@/components/password-input";
 
 const initialState: CreateSchoolState = {};
@@ -102,12 +103,7 @@ export function CreateSchoolForm() {
         </div>
       </div>
 
-      <div>
-        <label htmlFor="address" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-          Adresse
-        </label>
-        <input id="address" name="address" required className="input-field mt-1.5" />
-      </div>
+      <AddressFields required />
 
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-stone-700 dark:text-stone-300">

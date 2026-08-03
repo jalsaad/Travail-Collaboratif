@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { computePeriodStatus } from "@/lib/period-status";
 import { roleLabel } from "@/lib/role-labels";
+import { formatSchoolAddress } from "@/lib/school-address";
 import { SchoolPeriodList } from "@/components/school-period-list";
 import { ExportPanel } from "@/components/export-panel";
 import { TeacherReminderPanel } from "@/components/teacher-reminder-panel";
@@ -79,7 +80,8 @@ export default async function EcolePage() {
           <div>
             <h1 className="text-lg font-semibold tracking-tight text-stone-900 dark:text-stone-100">{school.name}</h1>
             <p className="text-sm text-stone-500 dark:text-stone-400">
-              {school.reseau ?? "Réseau non renseigné"} · {school.address ?? "Adresse non renseignée"}
+              {school.reseau ?? "Réseau non renseigné"} ·{" "}
+              {formatSchoolAddress(school) ?? "Adresse non renseignée"}
             </p>
             <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Numéro FASE : {school.numeroFase ?? "—"}</p>
           </div>

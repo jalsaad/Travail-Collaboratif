@@ -7,7 +7,7 @@ import { PasswordInput } from "@/components/password-input";
 
 const initialState: JoinState = {};
 
-export function JoinForm({ defaultCode, disciplines }: { defaultCode: string; disciplines: string[] }) {
+export function JoinForm({ defaultCode }: { defaultCode: string }) {
   const [state, formAction, pending] = useActionState(joinViaCode, initialState);
 
   return (
@@ -89,7 +89,7 @@ export function JoinForm({ defaultCode, disciplines }: { defaultCode: string; di
       </div>
 
       <div className="border-t border-stone-100 pt-4 dark:border-stone-800">
-        <LevelHoursPicker disciplines={disciplines} />
+        <LevelHoursPicker />
       </div>
 
       <div>

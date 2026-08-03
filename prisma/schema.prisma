@@ -232,7 +232,14 @@ model School {
   typesEnseignement EducationType[] @default([])
   /// Numéro FASE / matricule officiel de l'établissement
   numeroFase  String?  @unique
+  /// Rue et numéro. Les écoles créées avant le découpage de l'adresse y ont
+  /// encore leur adresse complète en texte libre (code postal et localité
+  /// restent alors vides jusqu'à la prochaine édition du formulaire).
   address     String?
+  /// Code postal belge à 4 chiffres — cf. lib/belgian-postal-codes.ts.
+  postalCode  String?
+  /// Localité correspondant au code postal (un code en dessert plusieurs).
+  locality    String?
   phone       String?
   /// Logo affiché dans l'espace école (personnalisation par la direction)
   logoUrl     String?
@@ -326,7 +333,17 @@ model Membership {
 /// ciblage des annonces plateforme.
 model Discipline {
   id   String @id @default(cuid())
-  name String @unique
+  /// Libellé affiché — pas la clé d'unicité (cf. code) : deux "fonctions"
+  /// officielles distinctes (ex: Français degré inférieur / degré
+  /// supérieur) peuvent légitimement partager le même libellé usuel.
+  name String
+  /// Code officiel de la fonction (référentiel FWB — cf. lib/disciplines.ts,
+  /// décret Titres & Fonctions) : identifiant stable et interopérable avec
+  /// les documents administratifs, "c'est lui qu'on stocke, pas le libellé".
+  /// Nullable : disciplines créées en texte libre avant l'introduction du
+  /// référentiel (jamais reproposées par le sélecteur, mais toujours
+  /// valides pour les données existantes).
+  code String? @unique
 
   levelHours MembershipLevelHours[]
   targets    AnnouncementTarget[]

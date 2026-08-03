@@ -15,8 +15,15 @@ export type SchoolActionState = { error?: string; success?: string };
 const schoolInfoSchema = z.object({
   name: z.string().min(1, "Nom requis"),
   reseau: z.string().optional(),
+  region: z.string().optional(),
   address: z.string().optional(),
+  postalCode: z.string().optional(),
+  locality: z.string().optional(),
+  phone: z.string().optional(),
 });
+
+const niveauSchema = z.enum(["MATERNELLE", "PRIMAIRE", "SECONDAIRE"]);
+const typeEnseignementSchema = z.enum(["ORDINAIRE", "SPECIALISE"]);
 
 export async function updateSchoolInfo(
   _prevState: SchoolActionState | undefined,
@@ -37,10 +44,20 @@ export async function updateSchoolInfo(
   const parsed = schoolInfoSchema.safeParse({
     name: formData.get("name"),
     reseau: formData.get("reseau") || undefined,
+    region: formData.get("region") || undefined,
     address: formData.get("address") || undefined,
+    postalCode: formData.get("postalCode") || undefined,
+    locality: formData.get("locality") || undefined,
+    phone: formData.get("phone") || undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
+  }
+
+  const niveaux = niveauSchema.array().safeParse(formData.getAll("niveaux"));
+  const typesEnseignement = typeEnseignementSchema.array().safeParse(formData.getAll("typesEnseignement"));
+  if (!niveaux.success || !typesEnseignement.success) {
+    return { error: "Niveaux ou type d'enseignement invalide." };
   }
 
   // Le fichier est optionnel : si l'utilisateur n'a rien choisi, le logo
@@ -64,7 +81,13 @@ export async function updateSchoolInfo(
     data: {
       name: parsed.data.name,
       reseau: parsed.data.reseau || null,
+      region: parsed.data.region || null,
+      niveaux: niveaux.data,
+      typesEnseignement: typesEnseignement.data,
       address: parsed.data.address || null,
+      postalCode: parsed.data.postalCode || null,
+      locality: parsed.data.locality || null,
+      phone: parsed.data.phone || null,
       ...(logoUrl !== undefined ? { logoUrl } : {}),
     },
   });

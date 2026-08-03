@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { JoinForm } from "@/components/join-form";
 import { LogoMark } from "@/components/logo-mark";
 import { Reveal } from "@/components/reveal";
@@ -10,7 +9,6 @@ export default async function RejoindrePage({
   searchParams: Promise<{ code?: string }>;
 }) {
   const { code } = await searchParams;
-  const disciplines = await prisma.discipline.findMany({ orderBy: { name: "asc" } });
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50/70 via-stone-50 to-stone-50 px-4 py-10 dark:from-stone-900 dark:via-stone-950 dark:to-stone-950">
@@ -31,7 +29,7 @@ export default async function RejoindrePage({
             </p>
           </div>
           <div className="mt-7">
-            <JoinForm defaultCode={code ?? ""} disciplines={disciplines.map((d) => d.name)} />
+            <JoinForm defaultCode={code ?? ""} />
           </div>
           <p className="mt-5 text-center text-sm text-stone-500 dark:text-stone-400">
             Déjà un compte ?{" "}

@@ -1,4 +1,5 @@
 import type { TeachingLevel } from "@prisma/client";
+import { resolveDisciplineOption } from "@/lib/discipline-form";
 
 export const TEACHING_LEVEL_OPTIONS: { value: TeachingLevel; label: string }[] = [
   { value: "MATERNELLE", label: "Maternelle" },
@@ -15,7 +16,12 @@ export const FULL_TIME_HOURS: Record<TeachingLevel, number> = {
   SECONDAIRE_SUPERIEUR: 21,
 };
 
-export type LevelHoursEntry = { level: TeachingLevel; hours: string; discipline: string };
+export type LevelHoursEntry = {
+  level: TeachingLevel;
+  hours: string;
+  disciplineCode: string;
+  disciplineLabel: string;
+};
 
 const VALID_LEVELS = new Set<string>(TEACHING_LEVEL_OPTIONS.map((o) => o.value));
 
@@ -42,8 +48,16 @@ export function parseLevelHoursFromFormData(
   const levels = formData.getAll("level").map(String);
   const hours = formData.getAll("hours").map(String);
   const disciplines = formData.getAll("discipline").map(String);
+  // Un champ (toujours présent, même masqué) par ligne — cf.
+  // components/level-hours-picker.tsx — pour rester aligné avec les trois
+  // autres tableaux parallèles ; ignoré sauf si discipline === "autre".
+  const disciplinePrecisions = formData.getAll("disciplinePrecision").map(String);
 
-  if (levels.length !== hours.length || levels.length !== disciplines.length) {
+  if (
+    levels.length !== hours.length ||
+    levels.length !== disciplines.length ||
+    levels.length !== disciplinePrecisions.length
+  ) {
     return { ok: false, error: "Données de niveaux invalides." };
   }
   if (required && levels.length === 0) {
@@ -56,15 +70,21 @@ export function parseLevelHoursFromFormData(
   for (let i = 0; i < levels.length; i++) {
     const level = levels[i];
     const hoursValue = hours[i];
-    const discipline = disciplines[i]?.trim();
+    const disciplineCode = disciplines[i];
 
     if (!VALID_LEVELS.has(level)) {
       return { ok: false, error: "Niveau invalide." };
     }
-    if (!discipline) {
-      return { ok: false, error: "Discipline requise pour chaque niveau." };
+    // Ne fait jamais confiance à un libellé envoyé par le client : le code
+    // doit correspondre à une option réelle du référentiel FWB (cf.
+    // lib/disciplines.ts) — c'est le référentiel qui fournit le libellé
+    // stocké (ou la précision libre validée, pour "Autre"), jamais une
+    // valeur arbitraire du formulaire.
+    const discipline = resolveDisciplineOption(disciplineCode, disciplinePrecisions[i]);
+    if (!discipline.ok) {
+      return { ok: false, error: discipline.error };
     }
-    const key = `${level}::${discipline.toLowerCase()}`;
+    const key = `${level}::${discipline.code}`;
     if (seen.has(key)) {
       return { ok: false, error: "Un même niveau et une même discipline ne peuvent être déclarés qu'une fois." };
     }
@@ -76,7 +96,12 @@ export function parseLevelHoursFromFormData(
     }
 
     seen.add(key);
-    data.push({ level: level as TeachingLevel, hours: hoursValue, discipline });
+    data.push({
+      level: level as TeachingLevel,
+      hours: hoursValue,
+      disciplineCode: discipline.code,
+      disciplineLabel: discipline.label,
+    });
   }
 
   return { ok: true, data };
