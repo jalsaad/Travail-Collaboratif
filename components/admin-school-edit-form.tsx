@@ -7,19 +7,10 @@ import {
   type AdminActionState,
 } from "@/app/admin/ecoles/[schoolId]/actions";
 import { reseauOptionsWithLegacy } from "@/lib/reseau-options";
+import { regionOptionsWithLegacy } from "@/lib/region-options";
+import { NIVEAU_OPTIONS, TYPE_ENSEIGNEMENT_OPTIONS } from "@/lib/school-classification-options";
 
 const initialState: AdminActionState = {};
-
-const NIVEAU_OPTIONS: { value: "MATERNELLE" | "PRIMAIRE" | "SECONDAIRE"; label: string }[] = [
-  { value: "MATERNELLE", label: "Maternelle" },
-  { value: "PRIMAIRE", label: "Primaire" },
-  { value: "SECONDAIRE", label: "Secondaire" },
-];
-
-const TYPE_ENSEIGNEMENT_OPTIONS: { value: "ORDINAIRE" | "SPECIALISE"; label: string }[] = [
-  { value: "ORDINAIRE", label: "Ordinaire" },
-  { value: "SPECIALISE", label: "Spécialisé" },
-];
 
 export function AdminSchoolEditForm({
   schoolId,
@@ -101,7 +92,14 @@ export function AdminSchoolEditForm({
         <label htmlFor="region" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
           Région
         </label>
-        <input id="region" name="region" defaultValue={region} className="input-field mt-1.5" />
+        <select id="region" name="region" defaultValue={region} className="input-field mt-1.5">
+          <option value="">— Aucune —</option>
+          {regionOptionsWithLegacy(region).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid grid-cols-2 gap-3">

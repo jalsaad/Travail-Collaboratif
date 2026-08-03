@@ -296,6 +296,13 @@ model Membership {
   implantationId String?
   implantation   Implantation?    @relation(fields: [implantationId], references: [id])
   role           Role
+  /// Intitulé déclaratif choisi à l'inscription ("Direction", "Direction
+  /// adjointe", "Autre") — distinct de `role` qui reste la seule source des
+  /// permissions réelles. Direction/Direction adjointe → role DIRECTION,
+  /// Autre → role REFERENT_NUMERIQUE (cf. app/(auth)/creer-ecole/actions.ts).
+  fonction       String?
+  /// Précision libre saisie uniquement quand fonction = "Autre".
+  fonctionAutre  String?
   status         MembershipStatus @default(ACTIVE)
   /// true pour le compte ayant créé l'espace école (non rétrogradable)
   isAccountOwner Boolean          @default(false)

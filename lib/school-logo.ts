@@ -14,11 +14,11 @@ const ALLOWED_TYPES: Record<string, string> = {
 
 export class InvalidLogoError extends Error {}
 
-// Nom de fichier dérivé uniquement du schoolId (jamais du nom fourni par
-// l'utilisateur) — aucun risque de traversée de chemin. Le paramètre v
-// (query string) sert uniquement à invalider le cache navigateur puisque le
-// nom de fichier est stable d'un envoi à l'autre.
-export async function saveSchoolLogo(schoolId: string, file: File): Promise<string> {
+// Séparée de saveSchoolLogo pour permettre de valider un fichier avant de
+// créer l'enregistrement qui en dépend (cf. app/(auth)/creer-ecole/actions.ts
+// : l'école n'existe pas encore au moment du choix du fichier, donc pas de
+// schoolId disponible pour appeler saveSchoolLogo directement).
+export function validateLogoFile(file: File): string {
   if (file.size === 0) {
     throw new InvalidLogoError("Fichier vide.");
   }
@@ -29,6 +29,15 @@ export async function saveSchoolLogo(schoolId: string, file: File): Promise<stri
   if (!ext) {
     throw new InvalidLogoError("Format non supporté (PNG, JPEG, WEBP ou GIF uniquement).");
   }
+  return ext;
+}
+
+// Nom de fichier dérivé uniquement du schoolId (jamais du nom fourni par
+// l'utilisateur) — aucun risque de traversée de chemin. Le paramètre v
+// (query string) sert uniquement à invalider le cache navigateur puisque le
+// nom de fichier est stable d'un envoi à l'autre.
+export async function saveSchoolLogo(schoolId: string, file: File): Promise<string> {
+  const ext = validateLogoFile(file);
 
   // Supprime les anciennes variantes (extension différente d'un envoi à
   // l'autre) pour ne pas accumuler de fichiers orphelins.

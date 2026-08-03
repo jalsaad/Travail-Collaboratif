@@ -9,17 +9,35 @@ import { prisma } from "@/lib/prisma";
 import { createJoinCodeForSchool } from "@/lib/join-codes";
 import { logAudit, AuditAction } from "@/lib/audit-log";
 import { computeMatricule, MATRICULE_MANUAL_PATTERN } from "@/lib/matricule";
+import { saveSchoolLogo, validateLogoFile, InvalidLogoError } from "@/lib/school-logo";
 
 export type CreateSchoolState = { error?: string };
 
 const schoolSchema = z.object({
   name: z.string().min(1, "Nom de l'école requis"),
   reseau: z.string().min(1, "Réseau d'enseignement requis"),
+  region: z.string().min(1, "Région requise"),
   address: z.string().min(1, "Adresse requise"),
   phone: z.string().min(1, "Téléphone requis"),
   numeroFase: z.string().min(1, "Numéro FASE requis"),
-  role: z.enum(["DIRECTION", "REFERENT_NUMERIQUE"]),
 });
+
+const niveauSchema = z.enum(["MATERNELLE", "PRIMAIRE", "SECONDAIRE"]);
+const typeEnseignementSchema = z.enum(["ORDINAIRE", "SPECIALISE"]);
+
+// Fonction déclarative choisie par le fondateur — distincte du Role qui
+// pilote les permissions réelles (cf. commentaire sur Membership.fonction
+// dans prisma/schema.prisma). Direction/Direction adjointe donnent le rôle
+// DIRECTION (plein pouvoir sur l'école) ; Autre donne REFERENT_NUMERIQUE.
+const founderRoleSchema = z
+  .object({
+    fonction: z.enum(["Direction", "Direction adjointe", "Autre"], { message: "Fonction requise" }),
+    fonctionAutre: z.string().optional(),
+  })
+  .refine((data) => data.fonction !== "Autre" || !!data.fonctionAutre?.trim(), {
+    message: "Précisez votre fonction.",
+    path: ["fonctionAutre"],
+  });
 
 const founderSchema = z
   .object({
@@ -46,13 +64,42 @@ export async function createSchool(
   const parsedSchool = schoolSchema.safeParse({
     name: formData.get("name"),
     reseau: formData.get("reseau"),
+    region: formData.get("region"),
     address: formData.get("address"),
     phone: formData.get("phone"),
     numeroFase: formData.get("numeroFase"),
-    role: formData.get("role"),
   });
   if (!parsedSchool.success) {
     return { error: parsedSchool.error.issues[0]?.message ?? "Formulaire invalide." };
+  }
+
+  const niveaux = niveauSchema.array().safeParse(formData.getAll("niveaux"));
+  const typesEnseignement = typeEnseignementSchema.array().safeParse(formData.getAll("typesEnseignement"));
+  if (!niveaux.success || !typesEnseignement.success) {
+    return { error: "Niveaux ou type d'enseignement invalide." };
+  }
+
+  const parsedFounderRole = founderRoleSchema.safeParse({
+    fonction: formData.get("fonction"),
+    fonctionAutre: formData.get("fonctionAutre") || undefined,
+  });
+  if (!parsedFounderRole.success) {
+    return { error: parsedFounderRole.error.issues[0]?.message ?? "Formulaire invalide." };
+  }
+  const role = parsedFounderRole.data.fonction === "Autre" ? "REFERENT_NUMERIQUE" : "DIRECTION";
+
+  // Validé avant la transaction : un logo invalide ne doit pas laisser un
+  // compte/école à moitié créés (cf. saveSchoolLogo, appelé après coup une
+  // fois le schoolId disponible).
+  const logoFile = formData.get("logoFile");
+  const hasLogo = logoFile instanceof File && logoFile.size > 0;
+  if (hasLogo) {
+    try {
+      validateLogoFile(logoFile as File);
+    } catch (error) {
+      if (error instanceof InvalidLogoError) return { error: error.message };
+      throw error;
+    }
   }
 
   const parsedFounder = founderSchema.safeParse({
@@ -119,6 +166,9 @@ export async function createSchool(
         data: {
           name: parsedSchool.data.name,
           reseau: parsedSchool.data.reseau,
+          region: parsedSchool.data.region,
+          niveaux: niveaux.data,
+          typesEnseignement: typesEnseignement.data,
           address: parsedSchool.data.address,
           phone: parsedSchool.data.phone,
           numeroFase: parsedSchool.data.numeroFase,
@@ -136,7 +186,9 @@ export async function createSchool(
         data: {
           userId: founderUserId,
           schoolId: createdSchool.id,
-          role: parsedSchool.data.role,
+          role,
+          fonction: parsedFounderRole.data.fonction,
+          fonctionAutre: parsedFounderRole.data.fonction === "Autre" ? parsedFounderRole.data.fonctionAutre : null,
           status: "ACTIVE",
           isAccountOwner: true,
         },
@@ -151,6 +203,18 @@ export async function createSchool(
       return { error: "Ce numéro FASE est déjà utilisé par une autre école." };
     }
     throw error;
+  }
+
+  // Après coup : le schoolId n'existe qu'une fois la transaction validée
+  // (cf. saveSchoolLogo, dont la clé de stockage est dérivée du schoolId).
+  // Best effort — un échec ici ne doit pas faire perdre l'école déjà créée.
+  if (hasLogo) {
+    try {
+      const logoUrl = await saveSchoolLogo(school.id, logoFile as File);
+      await prisma.school.update({ where: { id: school.id }, data: { logoUrl } });
+    } catch {
+      // Le logo reste vide ; modifiable depuis les paramètres de l'école.
+    }
   }
 
   await logAudit({
