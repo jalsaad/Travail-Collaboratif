@@ -3,8 +3,15 @@ import type { LoadedLogo } from "@/lib/export-logos";
 
 export type ExportPeriodRow = {
   date: Date;
+  /// "09:00 – 10:40", ou "—" pour les périodes déclarées avant l'introduction
+  /// de la plage horaire (cf. lib/period-duration.ts).
+  horaire: string;
   type: string;
+  /// Libellé de la nature de l'activité, ou "—" si non précisée.
+  nature: string;
   description: string;
+  /// Objectifs du plan de pilotage (4e colonne du formulaire officiel), ou "—".
+  objectifsPilotage: string;
   dureePeriodes: string;
   status: "validee" | "attente";
   participants: string;
@@ -18,8 +25,23 @@ export type ExportHeaderLogos = {
 const statusLabel = (status: ExportPeriodRow["status"]) =>
   status === "validee" ? "Validée" : "En attente";
 
-const COLUMN_WIDTHS = [65, 90, 150, 45, 55, 110];
-const COLUMN_LABELS = ["Date", "Type", "Description", "Durée", "Statut", "Participants"];
+// Le relevé reprend les colonnes du formulaire officiel de recensement annexé
+// à la circulaire 7167 (type de tâche/production, durée, avec qui, objectifs du
+// plan de pilotage). À neuf colonnes, l'A4 portrait ne suffit plus : le
+// document est produit en paysage, d'où une largeur utile de 842 - 2 * 40.
+// Somme des largeurs = 762 pt.
+const COLUMN_WIDTHS = [58, 66, 82, 105, 145, 105, 38, 50, 113];
+const COLUMN_LABELS = [
+  "Date",
+  "Horaire",
+  "Forme",
+  "Nature de l'activité",
+  "Description",
+  "Objectifs du plan de pilotage",
+  "Durée",
+  "Statut",
+  "Participants",
+];
 const PAGE_MARGIN = 40;
 const PDF_HEADER_LOGO_BOX = 55;
 
@@ -29,7 +51,7 @@ export function buildPeriodsPdf(
   logos?: ExportHeaderLogos
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: PAGE_MARGIN, size: "A4" });
+    const doc = new PDFDocument({ margin: PAGE_MARGIN, size: "A4", layout: "landscape" });
     const chunks: Buffer[] = [];
     doc.on("data", (chunk) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
@@ -78,8 +100,11 @@ export function buildPeriodsPdf(
     for (const row of rows) {
       const cells = [
         row.date.toLocaleDateString("fr-BE"),
+        row.horaire,
         row.type,
+        row.nature,
         row.description,
+        row.objectifsPilotage,
         row.dureePeriodes,
         statusLabel(row.status),
         row.participants,

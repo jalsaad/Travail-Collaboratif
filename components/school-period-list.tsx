@@ -1,6 +1,8 @@
 import type { CollaborativePeriod, PeriodParticipant, User } from "@prisma/client";
 import { computePeriodStatus } from "@/lib/period-status";
 import { periodTypeLabel, participantStatusLabel } from "@/lib/period-labels";
+import { formatPeriodSchedule } from "@/lib/period-duration";
+import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
 import { Reveal } from "@/components/reveal";
 
 type ParticipantWithUser = PeriodParticipant & { user: User };
@@ -29,14 +31,29 @@ export function SchoolPeriodList({ periods }: { periods: PeriodWithParticipants[
                 <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">
                   {periodTypeLabel[period.type] ?? period.type}
                 </p>
+                {collaborativeActivityLabel(period.natureActivite) && (
+                  <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
+                    {collaborativeActivityLabel(period.natureActivite)}
+                  </p>
+                )}
                 <p className="mt-1.5 text-sm text-stone-900 dark:text-stone-100">{period.description}</p>
+                {period.objectifsPilotage && (
+                  <p className="mt-1 text-xs italic text-stone-500 dark:text-stone-400">
+                    Plan de pilotage : {period.objectifsPilotage}
+                  </p>
+                )}
                 <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
                   {new Date(period.date).toLocaleDateString("fr-BE", {
                     day: "numeric",
                     month: "long",
                     year: "numeric",
                   })}{" "}
-                  · {period.dureePeriodes.toString()} période(s)
+                  ·{" "}
+                  {formatPeriodSchedule(
+                    period.heureDebut,
+                    period.heureFin,
+                    period.dureePeriodes.toString()
+                  )}
                 </p>
               </div>
               <span

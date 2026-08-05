@@ -2,6 +2,9 @@
 
 import { useActionState } from "react";
 import { updatePeriodAsAdmin, type AdminPeriodActionState } from "@/app/admin/periodes/[periodId]/actions";
+import { PeriodScheduleFields } from "@/components/period-schedule-fields";
+import { PeriodTypeFields } from "@/components/period-type-fields";
+import { PilotageObjectivesField } from "@/components/pilotage-objectives-field";
 
 const initialState: AdminPeriodActionState = {};
 
@@ -10,15 +13,22 @@ export function AdminEditPeriodForm({
   returnTo,
   type,
   date,
-  dureePeriodes,
+  heureDebut,
+  heureFin,
+  natureActivite,
   description,
+  objectifsPilotage,
 }: {
   periodId: string;
   returnTo: string;
   type: string;
   date: string;
-  dureePeriodes: string;
+  // Vides pour les périodes déclarées avant l'introduction de la plage horaire.
+  heureDebut: string;
+  heureFin: string;
+  natureActivite: string;
   description: string;
+  objectifsPilotage: string;
 }) {
   const updateWithContext = updatePeriodAsAdmin.bind(null, periodId, returnTo);
   const [state, formAction, pending] = useActionState(updateWithContext, initialState);
@@ -30,46 +40,13 @@ export function AdminEditPeriodForm({
         intervenants.
       </div>
 
-      <div>
-        <label htmlFor="type" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-          Type
-        </label>
-        <select id="type" name="type" required defaultValue={type} className="input-field mt-1.5">
-          <option value="COLLABORATION_PEDAGOGIQUE">Collaboration pédagogique</option>
-          <option value="REUNION_EQUIPE">Réunion d&apos;équipe</option>
-        </select>
-      </div>
+      <PeriodTypeFields defaultType={type} defaultNatureActivite={natureActivite} />
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label htmlFor="date" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-            Date
-          </label>
-          <input
-            id="date"
-            type="date"
-            name="date"
-            required
-            defaultValue={date}
-            className="input-field mt-1.5"
-          />
-        </div>
-        <div>
-          <label htmlFor="dureePeriodes" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-            Durée (périodes)
-          </label>
-          <input
-            id="dureePeriodes"
-            type="number"
-            step="0.5"
-            min="0.5"
-            name="dureePeriodes"
-            required
-            defaultValue={dureePeriodes}
-            className="input-field mt-1.5"
-          />
-        </div>
-      </div>
+      <PeriodScheduleFields
+        defaultDate={date}
+        defaultHeureDebut={heureDebut}
+        defaultHeureFin={heureFin}
+      />
 
       <div>
         <label htmlFor="description" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
@@ -85,7 +62,9 @@ export function AdminEditPeriodForm({
         />
       </div>
 
-      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+      <PilotageObjectivesField defaultValue={objectifsPilotage} />
+
+      {state?.error &&<p className="text-sm text-red-600">{state.error}</p>}
 
       <button type="submit" disabled={pending} className="btn-primary w-full">
         {pending ? "Enregistrement..." : "Enregistrer les modifications"}

@@ -7,3 +7,5 @@ tsconfig.tsbuildinfo
 .env.*
 !.env.example
 public/uploads/
+# Archives de fin d'année écrites en local quand ARCHIVE_DIR n'est pas défini
+archives/

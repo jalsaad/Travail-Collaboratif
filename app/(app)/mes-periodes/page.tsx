@@ -19,17 +19,24 @@ export default async function MesPeriodesPage() {
   const schoolYear = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
   const progress = schoolYear ? await getMembershipProgress(active.membershipId, schoolYear.id) : null;
 
-  const periods = await prisma.collaborativePeriod.findMany({
-    where: {
-      participants: { some: { membershipId: active.membershipId } },
-    },
-    include: {
-      participants: {
-        include: { user: true, membership: { include: { school: true } } },
-      },
-    },
-    orderBy: { date: "desc" },
-  });
+  // Scopé sur l'année courante, comme l'espace Direction (cf. ecole/page.tsx) :
+  // c'est ce qui fait repartir l'écran de zéro après l'archivage de fin
+  // d'année (cf. lib/school-year-archive.ts), les périodes clôturées restant
+  // en base et dans l'archive disque.
+  const periods = schoolYear
+    ? await prisma.collaborativePeriod.findMany({
+        where: {
+          schoolYearId: schoolYear.id,
+          participants: { some: { membershipId: active.membershipId } },
+        },
+        include: {
+          participants: {
+            include: { user: true, membership: { include: { school: true } } },
+          },
+        },
+        orderBy: { date: "desc" },
+      })
+    : [];
 
   return (
     <div className="space-y-4">

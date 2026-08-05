@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { computePeriodStatus } from "@/lib/period-status";
 import { periodTypeLabel } from "@/lib/period-labels";
+import { formatTimeRange } from "@/lib/period-duration";
+import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
 import { parseExportDateRange, InvalidExportRangeError } from "@/lib/export-range";
 import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
@@ -31,25 +33,34 @@ export async function GET(request: Request) {
     throw error;
   }
 
-  const [periods, schoolYear] = await Promise.all([
-    prisma.collaborativePeriod.findMany({
-      where: {
-        participants: { some: { membershipId: active.membershipId } },
-        ...(range.dateFilter ? { date: range.dateFilter } : {}),
-      },
-      // Périodes déclarées par soi-même OU par d'autres intervenant·es dès
-      // lors qu'on y participe — le statut affiché (validée/en attente)
-      // reflète la confirmation des pairs, jamais une validation direction.
-      include: { participants: { include: { user: true } } },
-      orderBy: { date: "desc" },
-    }),
-    prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } }),
-  ]);
+  // L'année courante borne l'export comme elle borne l'écran /mes-periodes :
+  // après un archivage de fin d'année, un relevé sans filtre de dates ne
+  // ramène pas les périodes de l'année précédente (elles restent dans
+  // l'archive disque, cf. lib/school-year-archive.ts).
+  const schoolYear = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
+
+  const periods = schoolYear
+    ? await prisma.collaborativePeriod.findMany({
+        where: {
+          schoolYearId: schoolYear.id,
+          participants: { some: { membershipId: active.membershipId } },
+          ...(range.dateFilter ? { date: range.dateFilter } : {}),
+        },
+        // Périodes déclarées par soi-même OU par d'autres intervenant·es dès
+        // lors qu'on y participe — le statut affiché (validée/en attente)
+        // reflète la confirmation des pairs, jamais une validation direction.
+        include: { participants: { include: { user: true } } },
+        orderBy: { date: "desc" },
+      })
+    : [];
 
   const rows: ExportPeriodRow[] = periods.map((p) => ({
     date: p.date,
+    horaire: formatTimeRange(p.heureDebut, p.heureFin) ?? "—",
     type: periodTypeLabel[p.type] ?? p.type,
+    nature: collaborativeActivityLabel(p.natureActivite) ?? "—",
     description: p.description,
+    objectifsPilotage: p.objectifsPilotage ?? "—",
     dureePeriodes: p.dureePeriodes.toString(),
     status: computePeriodStatus(p.participants),
     participants: p.participants.map((part) => `${part.user.firstName} ${part.user.lastName}`).join(", "),

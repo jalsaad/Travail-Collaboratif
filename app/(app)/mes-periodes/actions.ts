@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { createPeriodSchema } from "@/app/(app)/declarer/schema";
+import { periodesBetween } from "@/lib/period-duration";
 
 // Invariant d'autorisation (cf. permissions.md > assertCanConfirmParticipation) :
 // le where est TOUJOURS construit à partir de session.userId, jamais d'un
@@ -65,13 +66,19 @@ export async function updatePeriod(
   const parsed = createPeriodSchema.safeParse({
     type: formData.get("type"),
     date: formData.get("date"),
-    dureePeriodes: formData.get("dureePeriodes"),
+    heureDebut: formData.get("heureDebut"),
+    heureFin: formData.get("heureFin"),
+    natureActivite: formData.get("natureActivite") ?? "",
     description: formData.get("description"),
+    objectifsPilotage: formData.get("objectifsPilotage") ?? "",
     colleagueMembershipIds: formData.getAll("colleagueMembershipIds"),
   });
   if (!parsed.success) {
-    return { error: "Formulaire invalide. Vérifiez les champs." };
+    return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide. Vérifiez les champs." };
   }
+
+  // Non-null garanti par le refine du schéma.
+  const dureePeriodes = periodesBetween(parsed.data.heureDebut, parsed.data.heureFin)!;
 
   // Même défense que createPeriod : ne fait confiance qu'aux memberships
   // réellement actives de l'école active, pas au formulaire.
@@ -89,8 +96,12 @@ export async function updatePeriod(
       data: {
         type: parsed.data.type,
         date: new Date(parsed.data.date),
-        dureePeriodes: parsed.data.dureePeriodes,
+        heureDebut: parsed.data.heureDebut,
+        heureFin: parsed.data.heureFin,
+        dureePeriodes,
+        natureActivite: parsed.data.natureActivite,
         description: parsed.data.description,
+        objectifsPilotage: parsed.data.objectifsPilotage,
       },
     });
 

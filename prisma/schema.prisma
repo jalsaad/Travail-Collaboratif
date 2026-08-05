@@ -67,9 +67,15 @@ enum SchoolStatus {
   REJECTED
 }
 
-/// Correspond aux deux formes de travail collaboratif définies par le
-/// vade-mecum : réunions d'équipe (initiative direction) et collaboration
-/// pédagogique (initiative enseignants).
+/// Les DEUX seules formes de travail collaboratif ayant valeur normative
+/// (circulaire 7167 du 03/06/2019, sous-section 5, et son vade-mecum §2) :
+/// a. participation aux réunions des équipes pédagogique et éducative
+///    (initiative direction) ;
+/// b. collaboration à visée pédagogique soutenue par la direction, y compris
+///    avec d'autres établissements ou centres PMS (initiative enseignants).
+/// La direction doit pouvoir suivre l'équilibre entre les deux — d'où le
+/// maintien de cette distinction, la qualification fine passant par
+/// CollaborativePeriod.natureActivite.
 enum PeriodType {
   REUNION_EQUIPE
   COLLABORATION_PEDAGOGIQUE
@@ -462,9 +468,24 @@ model CollaborativePeriod {
   id             String     @id @default(cuid())
   type           PeriodType
   date           DateTime
-  /// Nombre de périodes, incréments de 0.5 possibles
+  /// Heure de début / de fin, format "HH:MM" en heure locale de l'école.
+  /// Nullables : les périodes déclarées avant l'introduction de la plage
+  /// horaire n'ont qu'une durée, et l'affichage retombe alors sur celle-ci.
+  heureDebut     String?
+  heureFin       String?
+  /// Nombre de périodes, incréments de 0.5 possibles. Dérivé de la plage
+  /// horaire à la saisie (cf. lib/period-duration.ts) mais conservé en base :
+  /// c'est l'unité de l'objectif annuel et des exports.
   dureePeriodes  Decimal    @db.Decimal(4, 2)
+  /// Thème de l'activité, slug du référentiel lib/collaborative-activities.ts
+  /// tiré du vade-mecum §8. Facultatif : le vade-mecum précise qu'« une liste
+  /// de thèmes n'est pas imposée », et les périodes antérieures n'en ont pas.
+  natureActivite String?
   description    String
+  /// 4e colonne du formulaire officiel de recensement (annexe circulaire
+  /// 7167) : « En lien éventuel avec quels objectifs du plan de pilotage ? ».
+  /// Texte libre, facultatif comme dans le formulaire.
+  objectifsPilotage String?
   schoolYearId   String
   schoolYear     SchoolYear @relation(fields: [schoolYearId], references: [id])
   createdByUserId String

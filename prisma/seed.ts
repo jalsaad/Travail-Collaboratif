@@ -302,8 +302,14 @@ async function main() {
       data: {
         type: PeriodType.COLLABORATION_PEDAGOGIQUE,
         date: new Date("2026-06-24"),
+        // dureePeriodes doit rester cohérent avec la plage horaire
+        // (1 période = 50 min, cf. lib/period-duration.ts).
+        heureDebut: "08:30",
+        heureFin: "10:10",
         dureePeriodes: 2,
+        natureActivite: "preparation-cours-commun",
         description: "Co-construction d'une séquence sur les fractions avec le cycle 4.",
+        objectifsPilotage: "Objectif 2 — améliorer les résultats en mathématiques au cycle 4.",
         schoolYearId: schoolYear.id,
         createdByUserId: sophie.id,
         participants: {
@@ -321,7 +327,10 @@ async function main() {
       data: {
         type: PeriodType.REUNION_EQUIPE,
         date: new Date("2026-06-18"),
+        heureDebut: "13:00",
+        heureFin: "15:30",
         dureePeriodes: 3,
+        natureActivite: "evaluation-contrat",
         description: "Réunion d'équipe — évaluation intermédiaire du contrat d'objectifs.",
         schoolYearId: schoolYear.id,
         createdByUserId: christine.id,
@@ -341,8 +350,12 @@ async function main() {
       data: {
         type: PeriodType.COLLABORATION_PEDAGOGIQUE,
         date: new Date("2026-06-10"),
+        heureDebut: "10:20",
+        heureFin: "11:35",
         dureePeriodes: 1.5,
+        natureActivite: "concertation-inter-ecoles",
         description: "Concertation inter-écoles sur l'épreuve commune de français.",
+        objectifsPilotage: "Objectif 1 — harmoniser les pratiques d'évaluation en français.",
         schoolYearId: schoolYear.id,
         createdByUserId: sophie.id,
         participants: {
@@ -359,7 +372,10 @@ async function main() {
       data: {
         type: PeriodType.COLLABORATION_PEDAGOGIQUE,
         date: new Date("2026-05-29"),
+        heureDebut: "14:00",
+        heureFin: "15:40",
         dureePeriodes: 2,
+        natureActivite: "accompagnement-debutant",
         description: "Coaching d'une nouvelle collègue sur la gestion de classe.",
         schoolYearId: schoolYear.id,
         createdByUserId: karim.id,

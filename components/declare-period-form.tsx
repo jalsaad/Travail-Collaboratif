@@ -3,6 +3,9 @@
 import { useActionState } from "react";
 import { createPeriod, type CreatePeriodState } from "@/app/(app)/declarer/actions";
 import { ColleaguePicker } from "@/components/colleague-picker";
+import { PeriodScheduleFields } from "@/components/period-schedule-fields";
+import { PeriodTypeFields } from "@/components/period-type-fields";
+import { PilotageObjectivesField } from "@/components/pilotage-objectives-field";
 
 const initialState: CreatePeriodState = {};
 
@@ -15,44 +18,9 @@ export function DeclarePeriodForm({
 
   return (
     <form action={formAction} className="card space-y-4 p-6">
-      <div>
-        <label htmlFor="type" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-          Type
-        </label>
-        <select
-          id="type"
-          name="type"
-          required
-          defaultValue="COLLABORATION_PEDAGOGIQUE"
-          className="input-field mt-1.5"
-        >
-          <option value="COLLABORATION_PEDAGOGIQUE">Collaboration pédagogique</option>
-          <option value="REUNION_EQUIPE">Réunion d&apos;équipe</option>
-        </select>
-      </div>
+      <PeriodTypeFields />
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label htmlFor="date" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-            Date
-          </label>
-          <input id="date" type="date" name="date" required className="input-field mt-1.5" />
-        </div>
-        <div>
-          <label htmlFor="dureePeriodes" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-            Durée (périodes)
-          </label>
-          <input
-            id="dureePeriodes"
-            type="number"
-            step="0.5"
-            min="0.5"
-            name="dureePeriodes"
-            required
-            className="input-field mt-1.5"
-          />
-        </div>
-      </div>
+      <PeriodScheduleFields />
 
       <div>
         <label htmlFor="description" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
@@ -66,6 +34,8 @@ export function DeclarePeriodForm({
           className="input-field mt-1.5"
         />
       </div>
+
+      <PilotageObjectivesField />
 
       <div>
         <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">Collègues à inviter</span>

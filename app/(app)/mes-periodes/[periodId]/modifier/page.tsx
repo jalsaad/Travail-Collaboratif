@@ -49,7 +49,10 @@ export default async function ModifierPeriodePage({
           periodId={period.id}
           type={period.type}
           date={period.date.toISOString().slice(0, 10)}
-          dureePeriodes={period.dureePeriodes.toString()}
+          heureDebut={period.heureDebut ?? ""}
+          heureFin={period.heureFin ?? ""}
+          natureActivite={period.natureActivite ?? ""}
+          objectifsPilotage={period.objectifsPilotage ?? ""}
           description={period.description}
           colleagues={colleagues.map((m) => ({
             membershipId: m.id,

@@ -5,6 +5,8 @@ import { resolveActiveMembership } from "@/lib/active-school";
 import { assertCanManageSchool, ForbiddenError } from "@/lib/school-authorization";
 import { computePeriodStatus } from "@/lib/period-status";
 import { periodTypeLabel } from "@/lib/period-labels";
+import { formatTimeRange } from "@/lib/period-duration";
+import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
 import { parseExportDateRange, InvalidExportRangeError } from "@/lib/export-range";
 import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
@@ -63,8 +65,12 @@ export async function GET(request: Request) {
 
   const schoolYear = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
 
+  // Scopé sur l'année courante comme l'écran /ecole : après l'archivage de
+  // fin d'année (cf. lib/school-year-archive.ts), le relevé collectif ne
+  // ramène plus l'année précédente, dont le PDF figure dans l'archive disque.
   const periods = await prisma.collaborativePeriod.findMany({
     where: {
+      ...(schoolYear ? { schoolYearId: schoolYear.id } : {}),
       ...(range.dateFilter ? { date: range.dateFilter } : {}),
       participants: {
         some: {
@@ -87,8 +93,11 @@ export async function GET(request: Request) {
 
   const rows: ExportPeriodRow[] = periods.map((p) => ({
     date: p.date,
+    horaire: formatTimeRange(p.heureDebut, p.heureFin) ?? "—",
     type: periodTypeLabel[p.type] ?? p.type,
+    nature: collaborativeActivityLabel(p.natureActivite) ?? "—",
     description: p.description,
+    objectifsPilotage: p.objectifsPilotage ?? "—",
     dureePeriodes: p.dureePeriodes.toString(),
     status: computePeriodStatus(p.participants),
     participants: p.participants.map((part) => `${part.user.firstName} ${part.user.lastName}`).join(", "),

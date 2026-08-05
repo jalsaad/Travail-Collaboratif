@@ -7,6 +7,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { assertIsSuperAdmin } from "@/lib/admin-authorization";
 import { logAudit, AuditAction } from "@/lib/audit-log";
+import { periodesBetween } from "@/lib/period-duration";
+import { periodCoreFields, timeRangeIsOrdered } from "@/app/(app)/declarer/schema";
 
 export type AdminPeriodActionState = { error?: string };
 
@@ -17,20 +19,9 @@ async function requireSuperAdmin() {
   return session;
 }
 
-const periodSchema = z.object({
-  type: z.enum(["REUNION_EQUIPE", "COLLABORATION_PEDAGOGIQUE"]),
-  date: z.string().min(1, "Date requise"),
-  dureePeriodes: z
-    .string()
-    .min(1, "Durée requise")
-    // Colonne Decimal(4,2) en base (cf. schema.prisma) : valeur absolue < 100,
-    // sinon Postgres lève une erreur numérique non rattrapable côté Prisma.
-    .refine(
-      (v) => !Number.isNaN(Number(v)) && Number(v) > 0 && Number(v) < 100,
-      "Durée invalide (doit être comprise entre 0 et 100)"
-    ),
-  description: z.string().min(3, "Description trop courte"),
-});
+// Mêmes règles que côté enseignant·e (cf. app/(app)/declarer/schema.ts), sans
+// la sélection de collègues qui n'est pas éditable depuis l'administration.
+const periodSchema = z.object(periodCoreFields).refine(timeRangeIsOrdered.check, timeRangeIsOrdered.params);
 
 export async function updatePeriodAsAdmin(
   periodId: string,
@@ -43,12 +34,18 @@ export async function updatePeriodAsAdmin(
   const parsed = periodSchema.safeParse({
     type: formData.get("type"),
     date: formData.get("date"),
-    dureePeriodes: formData.get("dureePeriodes"),
+    heureDebut: formData.get("heureDebut"),
+    heureFin: formData.get("heureFin"),
+    natureActivite: formData.get("natureActivite") ?? "",
     description: formData.get("description"),
+    objectifsPilotage: formData.get("objectifsPilotage") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
   }
+
+  // Non-null garanti par le refine du schéma.
+  const dureePeriodes = periodesBetween(parsed.data.heureDebut, parsed.data.heureFin)!;
 
   // Même règle que pour une réédition par l'initiateur·rice : la période
   // repart en attente de revalidation par tous les intervenants.
@@ -58,8 +55,12 @@ export async function updatePeriodAsAdmin(
       data: {
         type: parsed.data.type,
         date: new Date(parsed.data.date),
-        dureePeriodes: parsed.data.dureePeriodes,
+        heureDebut: parsed.data.heureDebut,
+        heureFin: parsed.data.heureFin,
+        dureePeriodes,
+        natureActivite: parsed.data.natureActivite,
         description: parsed.data.description,
+        objectifsPilotage: parsed.data.objectifsPilotage,
       },
     });
     await tx.periodParticipant.updateMany({
