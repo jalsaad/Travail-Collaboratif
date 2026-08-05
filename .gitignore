@@ -7,5 +7,7 @@ tsconfig.tsbuildinfo
 .env.*
 !.env.example
 public/uploads/
-# Archives de fin d'année écrites en local quand ARCHIVE_DIR n'est pas défini
-archives/
+# Archives de fin d'année écrites en local quand ARCHIVE_DIR n'est pas défini.
+# Le "/" initial ancre la règle à la racine du dépôt : sans lui, le motif
+# matcherait aussi app/admin/archives/, la page d'administration.
+/archives/
