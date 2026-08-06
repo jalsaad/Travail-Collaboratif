@@ -5,6 +5,7 @@ import { computePeriodStatus } from "@/lib/period-status";
 import { periodTypeLabel } from "@/lib/period-labels";
 import { formatPeriodes, formatTimeRange } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
+import { schoolYearDates } from "@/lib/school-year-dates";
 import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
 
@@ -34,8 +35,8 @@ const LABEL_PATTERN = /^(\d{4})-(\d{4})$/;
 
 export class ArchiveError extends Error {}
 
-/// "2025-2026" -> "2026-2027". Les dates suivent la convention déjà utilisée
-/// par le seed : 1er septembre -> 30 juin.
+/// "2025-2026" -> "2026-2027", aux dates du calendrier FWB (dernier lundi
+/// d'août -> premier vendredi de juillet, cf. lib/school-year-dates.ts).
 export function nextSchoolYear(label: string): {
   label: string;
   startDate: Date;
@@ -47,12 +48,7 @@ export function nextSchoolYear(label: string): {
       `Libellé d'année scolaire inattendu ("${label}") : impossible d'en déduire l'année suivante.`
     );
   }
-  const start = Number(match[2]);
-  return {
-    label: `${start}-${start + 1}`,
-    startDate: new Date(Date.UTC(start, 8, 1)),
-    endDate: new Date(Date.UTC(start + 1, 5, 30)),
-  };
+  return schoolYearDates(Number(match[2]));
 }
 
 function slugify(value: string): string {

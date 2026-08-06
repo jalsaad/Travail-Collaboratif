@@ -2,16 +2,23 @@
 
 import { useActionState, useState } from "react";
 import { archiveSchoolYear, type ArchiveActionState } from "@/app/admin/archives/actions";
+import { SchoolYearDateFields } from "@/components/admin-school-year-form";
 
 const initialState: ArchiveActionState = {};
 
 export function AdminArchivePanel({
   currentLabel,
   nextLabel,
+  nextStartDate,
+  nextEndDate,
   periodCount,
 }: {
   currentLabel: string;
   nextLabel: string | null;
+  /// Pré-remplissage calculé selon le calendrier FWB, modifiable avant
+  /// archivage : la Fédération y déroge certaines années.
+  nextStartDate: string;
+  nextEndDate: string;
   periodCount: number;
 }) {
   const [state, formAction, pending] = useActionState(archiveSchoolYear, initialState);
@@ -27,6 +34,23 @@ export function AdminArchivePanel({
         sur {nextLabel ?? "l'année suivante"}. Les espaces Profs et Direction repartent alors de
         zéro. Aucune donnée n&apos;est supprimée de la base : les périodes archivées restent
         consultables depuis l&apos;administration.
+      </div>
+
+      <div>
+        <p className="text-sm font-medium text-stone-700 dark:text-stone-300">
+          Dates de la nouvelle année{nextLabel ? ` (${nextLabel})` : ""}
+        </p>
+        <div className="mt-1.5">
+          <SchoolYearDateFields
+            prefix="next"
+            startDate={nextStartDate}
+            endDate={nextEndDate}
+          />
+        </div>
+        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+          Pré-remplies selon le calendrier FWB ; corrigez-les si la Fédération a publié un
+          calendrier dérogatoire.
+        </p>
       </div>
 
       <div>

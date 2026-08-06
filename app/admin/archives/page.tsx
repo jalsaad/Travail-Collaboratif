@@ -6,7 +6,12 @@ import {
   nextSchoolYear,
   resolveArchiveRoot,
 } from "@/lib/school-year-archive";
+import { schoolYearDates } from "@/lib/school-year-dates";
 import { AdminArchivePanel } from "@/components/admin-archive-panel";
+import {
+  CreateSchoolYearForm,
+  EditSchoolYearForm,
+} from "@/components/admin-school-year-form";
 import { Reveal } from "@/components/reveal";
 
 export const dynamic = "force-dynamic";
@@ -19,16 +24,27 @@ export default async function AdminArchivesPage() {
     listArchivedYears(),
   ]);
 
-  let nextLabel: string | null = null;
+  // <input type="date"> attend "AAAA-MM-JJ" ; les dates sont stockées en UTC
+  // (cf. lib/school-year-dates.ts), on tranche donc l'ISO sans conversion.
+  const asDay = (d: Date) => d.toISOString().slice(0, 10);
+
+  let next: { label: string; startDate: Date; endDate: Date } | null = null;
   if (current) {
     try {
-      nextLabel = nextSchoolYear(current.label).label;
+      next = nextSchoolYear(current.label);
     } catch (error) {
-      // Libellé non conforme à "YYYY-YYYY" : le panneau reste affiché et
+      // Libellé non conforme à "AAAA-AAAA" : le panneau reste affiché et
       // l'action serveur renverra le message d'erreur détaillé.
       if (!(error instanceof ArchiveError)) throw error;
     }
   }
+
+  // Proposition pour une instance vierge : l'année scolaire en cours, ou celle
+  // qui s'ouvre si l'on est déjà passé en août.
+  const today = new Date();
+  const suggested = schoolYearDates(
+    today.getUTCMonth() >= 7 ? today.getUTCFullYear() : today.getUTCFullYear() - 1
+  );
 
   return (
     <div className="space-y-6">
@@ -37,19 +53,36 @@ export default async function AdminArchivesPage() {
       </h1>
 
       {!current && (
-        <div className="card p-6 text-sm text-stone-500 dark:text-stone-400">
-          Aucune année scolaire configurée : rien à archiver.
-        </div>
+        <Reveal>
+          <CreateSchoolYearForm
+            defaultLabel={suggested.label}
+            defaultStartDate={asDay(suggested.startDate)}
+            defaultEndDate={asDay(suggested.endDate)}
+          />
+        </Reveal>
       )}
 
       {current && (
-        <Reveal>
-          <AdminArchivePanel
-            currentLabel={current.label}
-            nextLabel={nextLabel}
-            periodCount={periodCount}
-          />
-        </Reveal>
+        <>
+          <Reveal>
+            <EditSchoolYearForm
+              schoolYearId={current.id}
+              label={current.label}
+              startDate={asDay(current.startDate)}
+              endDate={asDay(current.endDate)}
+            />
+          </Reveal>
+
+          <Reveal>
+            <AdminArchivePanel
+              currentLabel={current.label}
+              nextLabel={next?.label ?? null}
+              nextStartDate={next ? asDay(next.startDate) : ""}
+              nextEndDate={next ? asDay(next.endDate) : ""}
+              periodCount={periodCount}
+            />
+          </Reveal>
+        </>
       )}
 
       <div>

@@ -50,8 +50,9 @@ async function main() {
     update: {},
     create: {
       label: "2025-2026",
-      startDate: new Date("2025-09-01"),
-      endDate: new Date("2026-06-30"),
+      // Calendrier FWB : dernier lundi d'août -> premier vendredi de juillet.
+      startDate: new Date("2025-08-25"),
+      endDate: new Date("2026-07-03"),
     },
   });
 
