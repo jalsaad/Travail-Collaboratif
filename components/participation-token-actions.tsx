@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import {
   confirmByToken,
   declineByToken,
@@ -23,24 +22,21 @@ export function ParticipationTokenActions({ token }: { token: string }) {
   const state = confirmState.done || confirmState.error ? confirmState : declineState;
   const pending = confirming || declining;
 
+  // Pas de lien « Accéder à la plateforme » ici : la page en affiche déjà un
+  // en pied, quel que soit l'état, et l'ajouter ferait doublon.
   if (state.done) {
     return (
-      <div className="space-y-4 text-center">
-        <p
-          className={`rounded-lg px-3 py-2.5 text-sm ${
-            state.done === "CONFIRMED"
-              ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-              : "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300"
-          }`}
-        >
-          {state.done === "CONFIRMED"
-            ? "Votre participation est confirmée. Merci !"
-            : "Votre participation a été déclinée. L'initiateur·rice en sera informé·e."}
-        </p>
-        <Link href="/login" className="text-sm font-medium text-brand-700 hover:underline dark:text-brand-500">
-          Accéder à la plateforme
-        </Link>
-      </div>
+      <p
+        className={`rounded-lg px-3 py-2.5 text-center text-sm ${
+          state.done === "CONFIRMED"
+            ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+            : "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300"
+        }`}
+      >
+        {state.done === "CONFIRMED"
+          ? "Votre participation est confirmée. Merci !"
+          : "Votre participation a été déclinée. L'initiateur·rice en sera informé·e."}
+      </p>
     );
   }
 
