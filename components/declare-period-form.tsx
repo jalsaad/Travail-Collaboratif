@@ -5,6 +5,7 @@ import { createPeriod, type CreatePeriodState } from "@/app/(app)/declarer/actio
 import { ColleaguePicker } from "@/components/colleague-picker";
 import { PeriodScheduleFields } from "@/components/period-schedule-fields";
 import { PeriodTypeFields } from "@/components/period-type-fields";
+import { PeriodDescriptionField } from "@/components/period-description-field";
 import { PilotageObjectivesField } from "@/components/pilotage-objectives-field";
 
 const initialState: CreatePeriodState = {};
@@ -22,18 +23,7 @@ export function DeclarePeriodForm({
 
       <PeriodScheduleFields />
 
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-          Description
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          required
-          rows={3}
-          className="input-field mt-1.5"
-        />
-      </div>
+      <PeriodDescriptionField />
 
       <PilotageObjectivesField />
 

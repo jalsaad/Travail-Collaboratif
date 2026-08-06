@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { getMembershipProgress } from "@/lib/collaboration-progress";
+import { formatPeriodes } from "@/lib/period-duration";
 import { CircularProgressRing } from "@/components/circular-progress-ring";
 import { PeriodCard } from "@/components/period-card";
 import { NoActiveSchoolNotice } from "@/components/no-active-school-notice";
@@ -48,7 +49,7 @@ export default async function MesPeriodesPage() {
         <Reveal className="card flex flex-col items-center gap-2 p-6 text-center sm:flex-row sm:justify-center sm:gap-6">
           <CircularProgressRing percent={progress.percent} size={120} strokeWidth={9} />
           <p className="text-sm text-stone-600 dark:text-stone-400">
-            {progress.done.toFixed(1)} / {progress.objective.toFixed(0)} périodes effectuées
+            {formatPeriodes(progress.done)} / {formatPeriodes(progress.objective)} périodes effectuées
           </p>
         </Reveal>
       )}

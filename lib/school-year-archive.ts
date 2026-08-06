@@ -3,7 +3,7 @@ import { join } from "path";
 import { prisma } from "@/lib/prisma";
 import { computePeriodStatus } from "@/lib/period-status";
 import { periodTypeLabel } from "@/lib/period-labels";
-import { formatTimeRange } from "@/lib/period-duration";
+import { formatPeriodes, formatTimeRange } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
 import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
@@ -132,7 +132,7 @@ function toPdfRows(periods: ArchivedPeriod[], schoolId: string): ExportPeriodRow
       nature: collaborativeActivityLabel(p.natureActivite) ?? "—",
       description: p.description,
       objectifsPilotage: p.objectifsPilotage ?? "—",
-      dureePeriodes: p.dureePeriodes.toString(),
+      dureePeriodes: formatPeriodes(p.dureePeriodes.toString()),
       status: computePeriodStatus(own),
       participants: own.map((part) => `${part.user.firstName} ${part.user.lastName}`).join(", "),
     };
@@ -207,6 +207,7 @@ export async function writeSchoolYearArchive(schoolYear: {
       date: p.date.toISOString(),
       heureDebut: p.heureDebut,
       heureFin: p.heureFin,
+      // Valeur brute non localisée : l'archive JSON doit rester réimportable.
       dureePeriodes: p.dureePeriodes.toString(),
       natureActivite: p.natureActivite,
       description: p.description,

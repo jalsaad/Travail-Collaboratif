@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { periodesBetween } from "@/lib/period-duration";
+import { formatPeriodes, periodesBetween } from "@/lib/period-duration";
 
 // Date + plage horaire d'une période, partagé par les trois formulaires
 // (déclaration prof, modification prof, modification admin). La durée en
@@ -77,7 +77,7 @@ export function PeriodScheduleFields({
         <p className="text-xs text-stone-500 dark:text-stone-400">
           {periodes === null
             ? "La durée en périodes est calculée à partir des horaires (1 période = 50 minutes)."
-            : `Soit ${periodes} période(s) comptabilisée(s).`}
+            : `Soit ${formatPeriodes(periodes)} période(s) comptabilisée(s).`}
         </p>
       )}
     </div>

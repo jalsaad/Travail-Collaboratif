@@ -5,6 +5,7 @@ import { updatePeriod, type UpdatePeriodState } from "@/app/(app)/mes-periodes/a
 import { ColleaguePicker } from "@/components/colleague-picker";
 import { PeriodScheduleFields } from "@/components/period-schedule-fields";
 import { PeriodTypeFields } from "@/components/period-type-fields";
+import { PeriodDescriptionField } from "@/components/period-description-field";
 import { PilotageObjectivesField } from "@/components/pilotage-objectives-field";
 
 const initialState: UpdatePeriodState = {};
@@ -52,19 +53,7 @@ export function EditPeriodForm({
         defaultHeureFin={heureFin}
       />
 
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-          Description
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          required
-          rows={3}
-          defaultValue={description}
-          className="input-field mt-1.5"
-        />
-      </div>
+      <PeriodDescriptionField defaultValue={description} />
 
       <PilotageObjectivesField defaultValue={objectifsPilotage} />
 

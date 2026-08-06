@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { getSchoolTeachersProgress } from "@/lib/collaboration-progress";
+import { formatPeriodes } from "@/lib/period-duration";
 import { CircularProgressRing } from "@/components/circular-progress-ring";
 import { Reveal } from "@/components/reveal";
 
@@ -50,7 +51,7 @@ export default async function EcoleStatistiquesPage() {
             </p>
             <CircularProgressRing percent={average} size={160} strokeWidth={12} />
             <p className="text-sm text-stone-600 dark:text-stone-400">
-              {averageDone.toFixed(1)} / {averageObjective.toFixed(0)} périodes en moyenne, sur{" "}
+              {formatPeriodes(averageDone)} / {formatPeriodes(averageObjective)} périodes en moyenne, sur{" "}
               {teachers.length} enseignant{teachers.length > 1 ? "s" : ""}
             </p>
           </Reveal>
@@ -78,10 +79,10 @@ export default async function EcoleStatistiquesPage() {
                       <CircularProgressRing percent={teacher.percent} size={56} strokeWidth={5} />
                     </td>
                     <td className="px-5 py-3.5 text-stone-600 dark:text-stone-400">
-                      {teacher.done.toFixed(1)}
+                      {formatPeriodes(teacher.done)}
                     </td>
                     <td className="px-5 py-3.5 text-stone-600 dark:text-stone-400">
-                      {teacher.objective.toFixed(0)}
+                      {formatPeriodes(teacher.objective)}
                     </td>
                   </tr>
                 ))}

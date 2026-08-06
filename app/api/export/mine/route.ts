@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { computePeriodStatus } from "@/lib/period-status";
 import { periodTypeLabel } from "@/lib/period-labels";
-import { formatTimeRange } from "@/lib/period-duration";
+import { formatPeriodes, formatTimeRange } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
 import { parseExportDateRange, InvalidExportRangeError } from "@/lib/export-range";
 import { loadExportHeaderLogos } from "@/lib/export-logos";
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
     nature: collaborativeActivityLabel(p.natureActivite) ?? "—",
     description: p.description,
     objectifsPilotage: p.objectifsPilotage ?? "—",
-    dureePeriodes: p.dureePeriodes.toString(),
+    dureePeriodes: formatPeriodes(p.dureePeriodes.toString()),
     status: computePeriodStatus(p.participants),
     participants: p.participants.map((part) => `${part.user.firstName} ${part.user.lastName}`).join(", "),
   }));

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { updatePeriodAsAdmin, type AdminPeriodActionState } from "@/app/admin/periodes/[periodId]/actions";
 import { PeriodScheduleFields } from "@/components/period-schedule-fields";
 import { PeriodTypeFields } from "@/components/period-type-fields";
+import { PeriodDescriptionField } from "@/components/period-description-field";
 import { PilotageObjectivesField } from "@/components/pilotage-objectives-field";
 
 const initialState: AdminPeriodActionState = {};
@@ -48,23 +49,11 @@ export function AdminEditPeriodForm({
         defaultHeureFin={heureFin}
       />
 
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-          Description
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          required
-          rows={3}
-          defaultValue={description}
-          className="input-field mt-1.5"
-        />
-      </div>
+      <PeriodDescriptionField defaultValue={description} />
 
       <PilotageObjectivesField defaultValue={objectifsPilotage} />
 
-      {state?.error &&<p className="text-sm text-red-600">{state.error}</p>}
+      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
 
       <button type="submit" disabled={pending} className="btn-primary w-full">
         {pending ? "Enregistrement..." : "Enregistrer les modifications"}
