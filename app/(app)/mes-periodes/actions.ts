@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { createPeriodSchema } from "@/app/(app)/declarer/schema";
 import { periodesBetween } from "@/lib/period-duration";
+import { notifyPendingParticipants } from "@/lib/participation-invitations";
 
 // Invariant d'autorisation (cf. permissions.md > assertCanConfirmParticipation) :
 // le where est TOUJOURS construit à partir de session.userId, jamais d'un
@@ -138,6 +139,10 @@ export async function updatePeriod(
       });
     }
   });
+
+  // Après réédition, TOUS les intervenants sont repassés en attente : ils
+  // doivent être prévenus, sans quoi la période resterait bloquée.
+  await notifyPendingParticipants(periodId);
 
   revalidatePath("/mes-periodes");
   redirect("/mes-periodes");

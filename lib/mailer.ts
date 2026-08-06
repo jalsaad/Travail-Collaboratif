@@ -93,3 +93,136 @@ export async function sendSupportTicketNotification(params: {
     `,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Invitation à valider une participation
+// ---------------------------------------------------------------------------
+
+// Gabarit HTML en tableaux et styles en ligne : Outlook ignore les feuilles de
+// style externes et gère mal flexbox/grid. Les couleurs reprennent celles de
+// la plateforme (--color-brand-600 et --color-brand-teal de app/globals.css).
+const BRAND_600 = "#1f6fc4";
+const BRAND_TEAL = "#14b8a6";
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+export type ParticipationInvitationEmail = {
+  to: string;
+  /// « Madame Dubois » / « Monsieur Lefèvre » — cf. lib/civility.ts.
+  inviterCivility: string;
+  /// Durée déjà formatée à la française (cf. formatPeriodes).
+  dureePeriodes: string;
+  dateLabel: string;
+  /// « 09:00 – 10:40 », ou null pour les périodes sans plage horaire.
+  horaire: string | null;
+  typeLabel: string;
+  description: string;
+  schoolName: string;
+  /// Page de confirmation portant le jeton — ne valide rien par elle-même.
+  confirmUrl: string;
+  platformUrl: string;
+};
+
+export async function sendParticipationInvitationEmail(params: ParticipationInvitationEmail) {
+  const {
+    to,
+    inviterCivility,
+    dureePeriodes,
+    dateLabel,
+    horaire,
+    typeLabel,
+    description,
+    schoolName,
+    confirmUrl,
+    platformUrl,
+  } = params;
+
+  const subject = `${inviterCivility} vous invite à valider ${dureePeriodes} période(s) de travail collaboratif`;
+
+  const text = [
+    `${inviterCivility} vous invite à valider votre participation à ${dureePeriodes} période(s) de travail collaboratif.`,
+    ``,
+    `École : ${schoolName}`,
+    `Date : ${dateLabel}${horaire ? ` (${horaire})` : ""}`,
+    `Type : ${typeLabel}`,
+    `Objet : ${description}`,
+    ``,
+    `Pour confirmer votre participation, ouvrez ce lien (valable 30 jours) :`,
+    confirmUrl,
+    ``,
+    `Vous pouvez aussi vous connecter à ${platformUrl} et valider depuis « Mes périodes ».`,
+  ].join("\n");
+
+  if (!SMTP_HOST) {
+    console.log(`[dev] Invitation à valider une participation pour ${to} : ${confirmUrl}`);
+    return;
+  }
+
+  const row = (label: string, value: string) => `
+    <tr>
+      <td style="padding:4px 12px 4px 0;color:#78716c;font-size:13px;white-space:nowrap;">${escapeHtml(label)}</td>
+      <td style="padding:4px 0;color:#1c1917;font-size:13px;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  const html = `
+<div style="margin:0;padding:24px 12px;background:#fafaf9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e7e5e4;border-radius:16px;overflow:hidden;">
+    <tr>
+      <td style="height:6px;background:${BRAND_600};background-image:linear-gradient(90deg,${BRAND_600},${BRAND_TEAL});font-size:0;line-height:6px;">&nbsp;</td>
+    </tr>
+    <tr>
+      <td style="padding:28px 28px 8px 28px;">
+        <p style="margin:0 0 4px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:${BRAND_600};">Travail collaboratif</p>
+        <h1 style="margin:0;font-size:19px;line-height:1.35;color:#1c1917;font-weight:600;">
+          ${escapeHtml(inviterCivility)} vous invite à valider votre participation à ${escapeHtml(dureePeriodes)} période(s) de travail collaboratif.
+        </h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:16px 28px 4px 28px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#fafaf9;border:1px solid #e7e5e4;border-radius:12px;padding:14px 16px;">
+          ${row("École", schoolName)}
+          ${row("Date", horaire ? `${dateLabel} · ${horaire}` : dateLabel)}
+          ${row("Durée", `${dureePeriodes} période(s)`)}
+          ${row("Type", typeLabel)}
+          ${row("Objet", description)}
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:22px 28px 6px 28px;" align="center">
+        <a href="${confirmUrl}" style="display:inline-block;padding:13px 26px;background:${BRAND_600};background-image:linear-gradient(90deg,${BRAND_600},${BRAND_TEAL});color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:10px;">
+          Valider ma participation
+        </a>
+        <p style="margin:12px 0 0;font-size:12px;color:#78716c;">
+          Ce bouton ouvre une page récapitulative : rien n'est validé tant que vous n'avez pas confirmé.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:18px 28px 28px 28px;border-top:1px solid #f5f5f4;">
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#78716c;">
+          Vous pouvez aussi valider depuis « Mes périodes » sur
+          <a href="${platformUrl}" style="color:${BRAND_600};">travail-collaboratif.be</a>.
+          Le lien ci-dessus est valable 30 jours ; passé ce délai, la validation reste possible sur la plateforme.
+        </p>
+      </td>
+    </tr>
+  </table>
+</div>`;
+
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: SMTP_USER ? { user: SMTP_USER, pass: SMTP_PASSWORD } : undefined,
+  });
+
+  await transporter.sendMail({ from: SMTP_FROM, to, subject, text, html });
+}

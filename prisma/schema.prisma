@@ -516,9 +516,32 @@ model PeriodParticipant {
   isInitiator  Boolean           @default(false)
   confirmedAt  DateTime?
 
+  participationTokens ParticipationToken[]
+
   @@unique([periodId, userId])
   @@index([membershipId, status])
   @@map("period_participants")
+}
+
+/// Jeton du bouton « Valider ma participation » des emails d'invitation
+/// (cf. lib/participation-token.ts). Même invariant que PasswordResetToken :
+/// seul le hash vit en base, le jeton brut n'existe que dans l'URL envoyée.
+///
+/// Le lien ne valide RIEN par lui-même : il ouvre une page de confirmation
+/// où la personne voit la période avant de cliquer. Indispensable, car les
+/// filtres anti-hameçonnage préchargent les liens des emails et valideraient
+/// sinon la participation à l'insu de l'intéressé.
+model ParticipationToken {
+  id                  String            @id @default(cuid())
+  periodParticipantId String
+  periodParticipant   PeriodParticipant @relation(fields: [periodParticipantId], references: [id], onDelete: Cascade)
+  tokenHash           String            @unique
+  expiresAt           DateTime
+  usedAt              DateTime?
+  createdAt           DateTime          @default(now())
+
+  @@index([periodParticipantId])
+  @@map("participation_tokens")
 }
 
 model Attachment {
