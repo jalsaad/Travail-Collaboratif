@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CreateSchoolForm } from "@/components/create-school-form";
-import { LogoMark } from "@/components/logo-mark";
+import { LogoHomeLink } from "@/components/logo-home-link";
 import { Reveal } from "@/components/reveal";
 
 export default function CreerEcolePage() {
@@ -16,7 +16,7 @@ export default function CreerEcolePage() {
         />
         <Reveal className="rounded-2xl border border-stone-200 bg-white p-8 dark:border-stone-800 dark:bg-stone-900">
           <div className="flex flex-col items-center text-center">
-            <LogoMark size={40} />
+            <LogoHomeLink />
             <h1 className="mt-3 text-xl font-semibold text-stone-900 dark:text-stone-100">Créer l&apos;espace de votre école</h1>
             <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
               Vous deviendrez titulaire du compte de cette école. La création sera examinée par la
@@ -28,7 +28,7 @@ export default function CreerEcolePage() {
           </div>
           <p className="mt-4 text-center text-sm text-stone-500 dark:text-stone-400">
             Déjà un compte ?{" "}
-            <Link href="/login" className="text-brand-700 hover:underline dark:text-brand-500">
+            <Link href="/login/direction" className="text-brand-700 hover:underline dark:text-brand-500">
               Se connecter
             </Link>
           </p>

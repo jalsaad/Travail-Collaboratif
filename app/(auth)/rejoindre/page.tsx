@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { JoinForm } from "@/components/join-form";
-import { LogoMark } from "@/components/logo-mark";
+import { LogoHomeLink } from "@/components/logo-home-link";
 import { Reveal } from "@/components/reveal";
 
 export default async function RejoindrePage({
@@ -22,7 +22,7 @@ export default async function RejoindrePage({
         />
         <Reveal className="rounded-2xl border border-stone-200 bg-white p-8 dark:border-stone-800 dark:bg-stone-900">
           <div className="flex flex-col items-center text-center">
-            <LogoMark size={40} />
+            <LogoHomeLink />
             <h1 className="mt-3 text-xl font-semibold text-stone-900 dark:text-stone-100">Rejoindre votre école</h1>
             <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
               Utilisez le code de rattachement transmis par votre référent numérique ou votre direction.
@@ -33,7 +33,7 @@ export default async function RejoindrePage({
           </div>
           <p className="mt-5 text-center text-sm text-stone-500 dark:text-stone-400">
             Déjà un compte ?{" "}
-            <Link href="/login" className="font-medium text-brand-700 hover:underline dark:text-brand-500">
+            <Link href="/login/profs" className="font-medium text-brand-700 hover:underline dark:text-brand-500">
               Se connecter
             </Link>
           </p>
