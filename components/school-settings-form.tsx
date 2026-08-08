@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { updateSchoolInfo, type SchoolActionState } from "@/app/(app)/ecole/parametres/actions";
 import { isReseauEtranger, reseauOptionsWithLegacy } from "@/lib/reseau-options";
 import { regionOptionsWithLegacy } from "@/lib/region-options";
+import { SchoolRegionField } from "@/components/school-region-field";
 import { NIVEAU_OPTIONS, TYPE_ENSEIGNEMENT_OPTIONS } from "@/lib/school-classification-options";
 import { AddressFields } from "@/components/address-fields";
 
@@ -11,7 +12,7 @@ const initialState: SchoolActionState = {};
 
 export function SchoolSettingsForm({
   name,
-  reseau,
+  reseau: reseauInitial,
   region,
   niveaux,
   typesEnseignement,
@@ -38,6 +39,11 @@ export function SchoolSettingsForm({
 }) {
   const [state, formAction, pending] = useActionState(updateSchoolInfo, initialState);
 
+  // Le réseau pilote la région et la saisie d'adresse — il doit donc être
+  // contrôlé, sinon le formulaire ne réagirait qu'après enregistrement.
+  const [reseau, setReseau] = useState(reseauInitial);
+  const etranger = isReseauEtranger(reseau);
+
   return (
     <form action={formAction} className="card space-y-4 p-6" encType="multipart/form-data">
       <div>
@@ -51,9 +57,15 @@ export function SchoolSettingsForm({
         <label htmlFor="reseau" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
           Réseau d&apos;enseignement
         </label>
-        <select id="reseau" name="reseau" defaultValue={reseau} className="input-field mt-1.5">
+        <select
+          id="reseau"
+          name="reseau"
+          value={reseau}
+          onChange={(e) => setReseau(e.target.value)}
+          className="input-field mt-1.5"
+        >
           <option value="">— Aucun —</option>
-          {reseauOptionsWithLegacy(reseau).map((option) => (
+          {reseauOptionsWithLegacy(reseauInitial).map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
@@ -61,19 +73,12 @@ export function SchoolSettingsForm({
         </select>
       </div>
 
-      <div>
-        <label htmlFor="region" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-          Région
-        </label>
-        <select id="region" name="region" defaultValue={region} className="input-field mt-1.5">
-          <option value="">— Aucune —</option>
-          {regionOptionsWithLegacy(region).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </div>
+      <SchoolRegionField
+        region={region}
+        etranger={etranger}
+        options={regionOptionsWithLegacy(region)}
+        emptyOption={{ label: "— Aucune —" }}
+      />
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -119,7 +124,7 @@ export function SchoolSettingsForm({
         postalCode={postalCode}
         locality={locality}
         country={country}
-        foreign={isReseauEtranger(reseau)}
+        foreign={etranger}
       />
 
       <div>

@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useActionState } from "react";
 import { createSchool, type CreateSchoolState } from "@/app/(auth)/creer-ecole/actions";
-import { RESEAU_OPTIONS, REGION_ETRANGER, isReseauEtranger } from "@/lib/reseau-options";
+import { RESEAU_OPTIONS, isReseauEtranger } from "@/lib/reseau-options";
 import { REGION_OPTIONS } from "@/lib/region-options";
+import { SchoolRegionField } from "@/components/school-region-field";
 import { NIVEAU_OPTIONS, TYPE_ENSEIGNEMENT_OPTIONS } from "@/lib/school-classification-options";
 import { AddressFields } from "@/components/address-fields";
 import { PasswordInput } from "@/components/password-input";
@@ -62,41 +63,12 @@ export function CreateSchoolForm() {
         </div>
       </div>
 
-      <div>
-        <label htmlFor="region" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-          Région
-        </label>
-        {etranger ? (
-          <>
-            {/* Un <select> désactivé n'est pas soumis : la valeur imposée part
-                par un champ caché, le menu grisé ne servant qu'à l'affichage. */}
-            <select
-              id="region"
-              disabled
-              value={REGION_ETRANGER}
-              className="input-field mt-1.5 cursor-not-allowed opacity-70"
-            >
-              <option value={REGION_ETRANGER}>{REGION_ETRANGER}</option>
-            </select>
-            <input type="hidden" name="region" value={REGION_ETRANGER} />
-            <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-              Imposée par le réseau : les zones de la Fédération ne couvrent pas les écoles
-              situées hors de Belgique.
-            </p>
-          </>
-        ) : (
-          <select id="region" name="region" required defaultValue="" className="input-field mt-1.5">
-            <option value="" disabled>
-              — Sélectionner —
-            </option>
-            {REGION_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
+      <SchoolRegionField
+        etranger={etranger}
+        options={REGION_OPTIONS}
+        required
+        emptyOption={{ label: "— Sélectionner —", disabled: true }}
+      />
 
       <div className="grid grid-cols-2 gap-3">
         <div>
