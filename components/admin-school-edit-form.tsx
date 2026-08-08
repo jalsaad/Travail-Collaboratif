@@ -6,7 +6,7 @@ import {
   deleteSchoolAsAdmin,
   type AdminActionState,
 } from "@/app/admin/ecoles/[schoolId]/actions";
-import { reseauOptionsWithLegacy } from "@/lib/reseau-options";
+import { isReseauEtranger, reseauOptionsWithLegacy } from "@/lib/reseau-options";
 import { regionOptionsWithLegacy } from "@/lib/region-options";
 import { NIVEAU_OPTIONS, TYPE_ENSEIGNEMENT_OPTIONS } from "@/lib/school-classification-options";
 import { AddressFields } from "@/components/address-fields";
@@ -23,6 +23,7 @@ export function AdminSchoolEditForm({
   address,
   postalCode,
   locality,
+  country,
   phone,
   numeroFase,
   logoUrl,
@@ -36,6 +37,7 @@ export function AdminSchoolEditForm({
   address: string;
   postalCode: string;
   locality: string;
+  country: string;
   phone: string;
   numeroFase: string;
   logoUrl: string;
@@ -146,7 +148,9 @@ export function AdminSchoolEditForm({
         </div>
       </div>
 
-      <AddressFields address={address} postalCode={postalCode} locality={locality} />
+      <AddressFields address={address} postalCode={postalCode} locality={locality} country={country}
+        foreign={isReseauEtranger(reseau)}
+      />
 
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-stone-700 dark:text-stone-300">

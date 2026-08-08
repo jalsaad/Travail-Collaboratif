@@ -246,6 +246,10 @@ model School {
   postalCode  String?
   /// Localité correspondant au code postal (un code en dessert plusieurs).
   locality    String?
+  /// Pays, renseigné uniquement pour les écoles à programme belge à
+  /// l'étranger (cf. lib/reseau-options.ts::isReseauEtranger). Vide pour les
+  /// écoles situées en Belgique, dont le code postal suffit à localiser.
+  country     String?
   phone       String?
   /// Logo affiché dans l'espace école (personnalisation par la direction)
   logoUrl     String?

@@ -8,6 +8,7 @@ import { signIn } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { createJoinCodeForSchool } from "@/lib/join-codes";
 import { logAudit, AuditAction } from "@/lib/audit-log";
+import { isReseauEtranger } from "@/lib/reseau-options";
 import { notifyPlatformOfNewSchool } from "@/lib/school-notifications";
 import { computeMatricule, MATRICULE_MANUAL_PATTERN } from "@/lib/matricule";
 import { saveSchoolLogo, validateLogoFile, InvalidLogoError } from "@/lib/school-logo";
@@ -23,7 +24,13 @@ const schoolSchema = z.object({
   locality: z.string().min(1, "Localité requise"),
   phone: z.string().min(1, "Téléphone requis"),
   numeroFase: z.string().min(1, "Numéro FASE requis"),
-});
+  // Exigé uniquement pour les écoles à programme belge à l'étranger, où le
+  // code postal ne suffit pas à localiser l'établissement.
+  country: z.string().transform((v) => v.trim() || null).nullable(),
+}).refine(
+  (data) => !isReseauEtranger(data.reseau) || !!data.country,
+  { message: "Pays requis pour une école à programme belge à l'étranger.", path: ["country"] }
+);
 
 const niveauSchema = z.enum(["MATERNELLE", "PRIMAIRE", "SECONDAIRE"]);
 const typeEnseignementSchema = z.enum(["ORDINAIRE", "SPECIALISE"]);
@@ -73,6 +80,7 @@ export async function createSchool(
     locality: formData.get("locality"),
     phone: formData.get("phone"),
     numeroFase: formData.get("numeroFase"),
+    country: formData.get("country") ?? "",
   });
   if (!parsedSchool.success) {
     return { error: parsedSchool.error.issues[0]?.message ?? "Formulaire invalide." };
@@ -177,6 +185,7 @@ export async function createSchool(
           address: parsedSchool.data.address,
           postalCode: parsedSchool.data.postalCode,
           locality: parsedSchool.data.locality,
+          country: parsedSchool.data.country,
           phone: parsedSchool.data.phone,
           numeroFase: parsedSchool.data.numeroFase,
           // Toute école créée via ce flux public attend une validation par

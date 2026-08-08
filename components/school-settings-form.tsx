@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { updateSchoolInfo, type SchoolActionState } from "@/app/(app)/ecole/parametres/actions";
-import { reseauOptionsWithLegacy } from "@/lib/reseau-options";
+import { isReseauEtranger, reseauOptionsWithLegacy } from "@/lib/reseau-options";
 import { regionOptionsWithLegacy } from "@/lib/region-options";
 import { NIVEAU_OPTIONS, TYPE_ENSEIGNEMENT_OPTIONS } from "@/lib/school-classification-options";
 import { AddressFields } from "@/components/address-fields";
@@ -18,6 +18,7 @@ export function SchoolSettingsForm({
   address,
   postalCode,
   locality,
+  country,
   phone,
   logoUrl,
   numeroFase,
@@ -30,6 +31,7 @@ export function SchoolSettingsForm({
   address: string;
   postalCode: string;
   locality: string;
+  country: string;
   phone: string;
   logoUrl: string;
   numeroFase: string;
@@ -112,7 +114,13 @@ export function SchoolSettingsForm({
         </div>
       </div>
 
-      <AddressFields address={address} postalCode={postalCode} locality={locality} />
+      <AddressFields
+        address={address}
+        postalCode={postalCode}
+        locality={locality}
+        country={country}
+        foreign={isReseauEtranger(reseau)}
+      />
 
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-stone-700 dark:text-stone-300">

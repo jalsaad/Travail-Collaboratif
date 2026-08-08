@@ -34,6 +34,7 @@ export default async function ParametresPage() {
           address={school.address ?? ""}
           postalCode={school.postalCode ?? ""}
           locality={school.locality ?? ""}
+          country={school.country ?? ""}
           phone={school.phone ?? ""}
           logoUrl={school.logoUrl ?? ""}
           numeroFase={school.numeroFase ?? ""}

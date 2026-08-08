@@ -6,8 +6,12 @@ export function formatSchoolAddress(school: {
   address?: string | null;
   postalCode?: string | null;
   locality?: string | null;
+  /// Renseigné seulement pour les écoles à programme belge à l'étranger.
+  country?: string | null;
 }): string | null {
   const cityLine = [school.postalCode, school.locality].filter(Boolean).join(" ");
-  const parts = [school.address, cityLine].map((part) => part?.trim()).filter(Boolean);
+  const parts = [school.address, cityLine, school.country]
+    .map((part) => part?.trim())
+    .filter(Boolean);
   return parts.length > 0 ? parts.join(", ") : null;
 }

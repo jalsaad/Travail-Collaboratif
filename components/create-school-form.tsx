@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useActionState } from "react";
 import { createSchool, type CreateSchoolState } from "@/app/(auth)/creer-ecole/actions";
-import { RESEAU_OPTIONS } from "@/lib/reseau-options";
+import { RESEAU_OPTIONS, REGION_ETRANGER, isReseauEtranger } from "@/lib/reseau-options";
 import { REGION_OPTIONS } from "@/lib/region-options";
 import { NIVEAU_OPTIONS, TYPE_ENSEIGNEMENT_OPTIONS } from "@/lib/school-classification-options";
 import { AddressFields } from "@/components/address-fields";
@@ -15,6 +15,11 @@ const FONCTION_OPTIONS = ["Direction", "Direction adjointe", "Autre"] as const;
 
 export function CreateSchoolForm() {
   const [state, formAction, pending] = useActionState(createSchool, initialState);
+
+  // Le réseau pilote la saisie de l'adresse : une école à programme belge à
+  // l'étranger n'a ni code postal belge, ni zone FWB, et doit préciser son pays.
+  const [reseau, setReseau] = useState("");
+  const etranger = isReseauEtranger(reseau);
   const [fonction, setFonction] = useState<string>("Direction");
 
   return (
@@ -29,9 +34,16 @@ export function CreateSchoolForm() {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label htmlFor="reseau" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-            Réseau d&apos;enseignement
+            Réseau ou PO
           </label>
-          <select id="reseau" name="reseau" required defaultValue="" className="input-field mt-1.5">
+          <select
+            id="reseau"
+            name="reseau"
+            required
+            value={reseau}
+            onChange={(e) => setReseau(e.target.value)}
+            className="input-field mt-1.5"
+          >
             <option value="" disabled>
               — Sélectionner —
             </option>
@@ -54,16 +66,36 @@ export function CreateSchoolForm() {
         <label htmlFor="region" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
           Région
         </label>
-        <select id="region" name="region" required defaultValue="" className="input-field mt-1.5">
-          <option value="" disabled>
-            — Sélectionner —
-          </option>
-          {REGION_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option}
+        {etranger ? (
+          <>
+            {/* Un <select> désactivé n'est pas soumis : la valeur imposée part
+                par un champ caché, le menu grisé ne servant qu'à l'affichage. */}
+            <select
+              id="region"
+              disabled
+              value={REGION_ETRANGER}
+              className="input-field mt-1.5 cursor-not-allowed opacity-70"
+            >
+              <option value={REGION_ETRANGER}>{REGION_ETRANGER}</option>
+            </select>
+            <input type="hidden" name="region" value={REGION_ETRANGER} />
+            <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+              Imposée par le réseau : les zones de la Fédération ne couvrent pas les écoles
+              situées hors de Belgique.
+            </p>
+          </>
+        ) : (
+          <select id="region" name="region" required defaultValue="" className="input-field mt-1.5">
+            <option value="" disabled>
+              — Sélectionner —
             </option>
-          ))}
-        </select>
+            {REGION_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -103,7 +135,7 @@ export function CreateSchoolForm() {
         </div>
       </div>
 
-      <AddressFields required />
+      <AddressFields required foreign={etranger} />
 
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
@@ -240,7 +272,7 @@ export function CreateSchoolForm() {
         </div>
         <div>
           <label htmlFor="passwordConfirmation" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-            Confirmer le mot de passe
+            Confirmation
           </label>
           <PasswordInput
             id="passwordConfirmation"

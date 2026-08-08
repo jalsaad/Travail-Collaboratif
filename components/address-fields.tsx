@@ -18,15 +18,23 @@ export function AddressFields({
   address = "",
   postalCode = "",
   locality = "",
+  country = "",
   required = false,
+  foreign = false,
 }: {
   address?: string;
   postalCode?: string;
   locality?: string;
+  country?: string;
   required?: boolean;
+  /// École à programme belge à l'étranger : le référentiel des codes postaux
+  /// belges ne s'applique pas, tout est en saisie libre et le pays s'ajoute.
+  foreign?: boolean;
 }) {
   const [code, setCode] = useState(postalCode);
-  const localities = localitiesForPostalCode(code);
+  // Aucune restriction de localité hors de Belgique : le code saisi n'a
+  // aucune raison de figurer dans le référentiel belge.
+  const localities = foreign ? [] : localitiesForPostalCode(code);
 
   return (
     <>
@@ -54,18 +62,20 @@ export function AddressFields({
             name="postalCode"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            list="postal-codes"
-            inputMode="numeric"
-            maxLength={4}
+            list={foreign ? undefined : "postal-codes"}
+            inputMode={foreign ? undefined : "numeric"}
+            maxLength={foreign ? 20 : 4}
             required={required}
-            placeholder="ex: 6000"
+            placeholder={foreign ? "ex: 75008" : "ex: 6000"}
             className="input-field mt-1.5"
           />
-          <datalist id="postal-codes">
-            {POSTAL_CODE_LIST.map((option) => (
-              <option key={option} value={option} />
-            ))}
-          </datalist>
+          {!foreign && (
+            <datalist id="postal-codes">
+              {POSTAL_CODE_LIST.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          )}
         </div>
         <div>
           <label htmlFor="locality" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
@@ -92,12 +102,28 @@ export function AddressFields({
               name="locality"
               defaultValue={locality}
               required={required}
-              placeholder="ex: Charleroi"
+              placeholder={foreign ? "ex: Paris" : "ex: Charleroi"}
               className="input-field mt-1.5"
             />
           )}
         </div>
       </div>
+
+      {foreign && (
+        <div>
+          <label htmlFor="country" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+            Pays
+          </label>
+          <input
+            id="country"
+            name="country"
+            defaultValue={country}
+            required={required}
+            placeholder="ex: France"
+            className="input-field mt-1.5"
+          />
+        </div>
+      )}
     </>
   );
 }

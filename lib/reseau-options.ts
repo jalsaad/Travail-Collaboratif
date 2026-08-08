@@ -17,6 +17,18 @@ export const RESEAU_OPTIONS = [
   "Hors réseau",
 ] as const;
 
+/// Réseau des écoles à programme belge situées hors de Belgique. Elles se
+/// saisissent différemment : pas de code postal belge, pas de zone FWB, et un
+/// pays à renseigner (cf. components/address-fields.tsx).
+export const RESEAU_ETRANGER = "Écoles à programme belge à l'étranger (AEBE)";
+
+/// Région imposée à ces écoles — valeur déjà présente dans REGION_OPTIONS.
+export const REGION_ETRANGER = "Hors territoire belge";
+
+export function isReseauEtranger(reseau: string | null | undefined): boolean {
+  return reseau === RESEAU_ETRANGER;
+}
+
 // À utiliser pour un <select> qui édite une valeur déjà en base : si la
 // valeur actuelle ne fait pas partie de la liste fermée (ex: "WBE" saisi
 // avant l'introduction de ce menu), elle est ajoutée en tête pour ne pas la

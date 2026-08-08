@@ -19,6 +19,7 @@ const schoolInfoSchema = z.object({
   address: z.string().optional(),
   postalCode: z.string().optional(),
   locality: z.string().optional(),
+  country: z.string().optional(),
   phone: z.string().optional(),
 });
 
@@ -48,6 +49,7 @@ export async function updateSchoolInfo(
     address: formData.get("address") || undefined,
     postalCode: formData.get("postalCode") || undefined,
     locality: formData.get("locality") || undefined,
+    country: formData.get("country") || undefined,
     phone: formData.get("phone") || undefined,
   });
   if (!parsed.success) {
@@ -87,6 +89,7 @@ export async function updateSchoolInfo(
       address: parsed.data.address || null,
       postalCode: parsed.data.postalCode || null,
       locality: parsed.data.locality || null,
+      country: parsed.data.country || null,
       phone: parsed.data.phone || null,
       ...(logoUrl !== undefined ? { logoUrl } : {}),
     },

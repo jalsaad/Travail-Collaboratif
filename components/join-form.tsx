@@ -115,7 +115,7 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
         </div>
         <div>
           <label htmlFor="passwordConfirmation" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-            Confirmer le mot de passe
+            Confirmation
           </label>
           <PasswordInput
             id="passwordConfirmation"
