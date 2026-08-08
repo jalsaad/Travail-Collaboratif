@@ -402,3 +402,81 @@ export async function sendNewSchoolNotification(params: NewSchoolNotification) {
 
   await transporter.sendMail({ from: SMTP_FROM, to, subject, text, html });
 }
+
+// ---------------------------------------------------------------------------
+// Rappel de remise du travail collaboratif
+// ---------------------------------------------------------------------------
+
+export type TeacherReminderEmail = {
+  /// Enseignant·es de l'école. Mis en copie cachée : ils n'ont pas à voir
+  /// l'adresse de leurs collègues, et un envoi unique évite d'ouvrir autant de
+  /// connexions SMTP que de destinataires.
+  recipients: string[];
+  schoolName: string;
+  /// « Madame Dubois » / « Monsieur Lefèvre » — cf. lib/civility.ts.
+  senderCivility: string;
+  message: string;
+  daysLeft: number;
+  deadlineLabel: string;
+  periodsUrl: string;
+};
+
+export async function sendTeacherReminderEmail(params: TeacherReminderEmail) {
+  const {
+    recipients,
+    schoolName,
+    senderCivility,
+    message,
+    daysLeft,
+    deadlineLabel,
+    periodsUrl,
+  } = params;
+  if (recipients.length === 0) return;
+
+  const joursLabel = `${daysLeft} jour${daysLeft > 1 ? "s" : ""}`;
+  const subject = `Rappel — travail collaboratif à remettre sous ${joursLabel}`;
+
+  const text = [
+    `${senderCivility} vous rappelle de mettre à jour vos périodes de travail collaboratif.`,
+    ``,
+    `École : ${schoolName}`,
+    `Il vous reste ${joursLabel}, jusqu'au ${deadlineLabel}.`,
+    ``,
+    message,
+    ``,
+    `Déclarer vos périodes : ${periodsUrl}`,
+  ].join("\n");
+
+  const transporter = createTransport();
+  if (!transporter) {
+    console.log(
+      `[dev] Rappel « ${schoolName} » (${joursLabel}) — destinataires : ${recipients.join(", ")}`
+    );
+    return;
+  }
+
+  const html = renderBrandedEmail({
+    eyebrow: "Rappel de votre direction",
+    title: `Il vous reste <span style="color:${BRAND_600};">${escapeHtml(joursLabel)}</span> pour mettre à jour vos périodes de travail collaboratif.`,
+    rows: [
+      { label: "École", value: schoolName },
+      { label: "De", value: senderCivility },
+      { label: "Échéance", value: `${deadlineLabel} (${joursLabel})` },
+      { label: "Message", value: message },
+    ],
+    cta: { label: "Déclarer mes périodes", url: periodsUrl },
+    footerHtml: `Ce rappel a été émis par la direction de votre école et expire automatiquement
+          à l'échéance indiquée.`,
+  });
+
+  await transporter.sendMail({
+    from: SMTP_FROM,
+    // Le destinataire visible est l'expéditeur : les enseignant·es sont en
+    // copie cachée, aucun ne voit la liste des autres.
+    to: SMTP_FROM,
+    bcc: recipients,
+    subject,
+    text,
+    html,
+  });
+}

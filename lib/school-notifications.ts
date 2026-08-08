@@ -4,7 +4,9 @@ import {
   getBaseUrl,
   sendNewMemberNotification,
   sendNewSchoolNotification,
+  sendTeacherReminderEmail,
 } from "@/lib/mailer";
+import { civilityAndLastName } from "@/lib/civility";
 
 // Notifications déclenchées par un rattachement ou une inscription d'école.
 //
@@ -105,5 +107,57 @@ export async function notifyPlatformOfNewSchool(
     });
   } catch (error) {
     console.error(`[inscription école] Échec de notification pour ${schoolId} :`, error);
+  }
+}
+
+/// Prévient par email les enseignant·es d'une école qu'un rappel de remise a
+/// été publié, avec le décompte des jours restants.
+///
+/// Le rappel s'affiche déjà dans l'application, mais rien ne garantit qu'ils
+/// s'y connectent avant l'échéance — c'est précisément l'objet d'un rappel.
+export async function notifyTeachersOfReminder(params: {
+  schoolId: string;
+  senderUserId: string;
+  message: string;
+  daysLeft: number;
+  expiresAt: Date;
+}): Promise<void> {
+  try {
+    const { schoolId, senderUserId, message, daysLeft, expiresAt } = params;
+
+    const [school, sender, teachers] = await Promise.all([
+      prisma.school.findUnique({ where: { id: schoolId }, select: { name: true } }),
+      prisma.user.findUnique({
+        where: { id: senderUserId },
+        select: { firstName: true, lastName: true, sex: true },
+      }),
+      // Exactement la cible de l'annonce (cf. AnnouncementTarget créé par
+      // publishTeacherReminder) : les enseignant·es actives de CETTE école.
+      prisma.membership.findMany({
+        where: { schoolId, status: "ACTIVE", role: "ENSEIGNANT" },
+        include: { user: { select: { email: true } } },
+      }),
+    ]);
+    if (!school || !sender) return;
+
+    const recipients = [...new Set(teachers.map((t) => t.user.email))];
+    if (recipients.length === 0) return;
+
+    const baseUrl = await getBaseUrl();
+    await sendTeacherReminderEmail({
+      recipients,
+      schoolName: school.name,
+      senderCivility: civilityAndLastName(sender),
+      message,
+      daysLeft,
+      deadlineLabel: expiresAt.toLocaleDateString("fr-BE", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+      periodsUrl: `${baseUrl}/mes-periodes`,
+    });
+  } catch (error) {
+    console.error(`[rappel] Échec de notification pour l'école ${params.schoolId} :`, error);
   }
 }

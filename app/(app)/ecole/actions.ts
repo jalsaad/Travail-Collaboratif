@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { assertCanManageSchool, ForbiddenError } from "@/lib/school-authorization";
 import { logAudit, AuditAction } from "@/lib/audit-log";
+import { notifyTeachersOfReminder } from "@/lib/school-notifications";
 
 export type ReminderActionState = { error?: string; success?: string };
 
@@ -70,6 +71,16 @@ export async function publishTeacherReminder(
     targetType: "Announcement",
     targetId: announcement.id,
     metadata: { days },
+  });
+
+  // Le rappel s'affiche dans l'application, mais rien ne garantit que les
+  // enseignant·es s'y connectent avant l'échéance.
+  await notifyTeachersOfReminder({
+    schoolId: active.schoolId,
+    senderUserId: session.userId,
+    message: parsed.data.message.trim(),
+    daysLeft: days,
+    expiresAt: announcement.expiresAt!,
   });
 
   revalidatePath("/ecole");
