@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { roleLabel } from "@/lib/role-labels";
 import { AdminSchoolEditForm } from "@/components/admin-school-edit-form";
 import { AdminMemberRowActions } from "@/components/admin-member-row-actions";
+import { JoinPosterLink } from "@/components/join-poster-link";
 import { AdminPeriodList } from "@/components/admin-period-list";
 
 const roleBadgeStyle: Record<string, string> = {
@@ -66,6 +67,15 @@ export default async function AdminSchoolDetailPage({
         <p className="mt-2 rounded-lg bg-stone-50 px-3 py-2 font-mono text-lg tracking-wide text-stone-900 dark:bg-stone-800 dark:text-stone-100">
           {activeJoinCode?.code ?? "Aucun code actif"}
         </p>
+        {activeJoinCode && (
+          <>
+            <JoinPosterLink schoolId={schoolId} />
+            <p className="mt-2 text-xs text-stone-400 dark:text-stone-500">
+              Affiche A4 à placarder dans l&apos;école : le QR code ouvre le formulaire
+              d&apos;inscription avec ce code déjà rempli.
+            </p>
+          </>
+        )}
       </div>
 
       <div>
