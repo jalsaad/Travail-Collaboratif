@@ -11,6 +11,7 @@ import { computeMatricule, MATRICULE_MANUAL_PATTERN } from "@/lib/matricule";
 import { parseLevelHoursFromFormData } from "@/lib/teaching-levels";
 import { resolveOrCreateDiscipline } from "@/lib/discipline-form";
 import { recomputeUserQuotas } from "@/lib/quota-engine";
+import { notifySchoolDirectionOfNewMember } from "@/lib/school-notifications";
 
 export type JoinState = { error?: string };
 
@@ -125,6 +126,9 @@ export async function joinViaCode(
   if (schoolYear) {
     await recomputeUserQuotas(created.user.id, schoolYear.id);
   }
+
+  // Avant signIn, qui redirige : rien ne s'exécuterait après.
+  await notifySchoolDirectionOfNewMember(created.membership.id);
 
   try {
     await signIn("credentials", {

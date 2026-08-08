@@ -11,6 +11,7 @@ import { logAudit, AuditAction } from "@/lib/audit-log";
 import { parseLevelHoursFromFormData } from "@/lib/teaching-levels";
 import { resolveOrCreateDiscipline } from "@/lib/discipline-form";
 import { recomputeUserQuotas } from "@/lib/quota-engine";
+import { notifySchoolDirectionOfNewMember } from "@/lib/school-notifications";
 
 export type JoinSchoolState = { error?: string };
 
@@ -106,6 +107,8 @@ export async function joinSchoolWithCode(
   if (schoolYear) {
     await recomputeUserQuotas(session.userId, schoolYear.id);
   }
+
+  await notifySchoolDirectionOfNewMember(membershipId);
 
   await setActiveSchoolCookie(joinCode.schoolId, session.userId);
   revalidatePath("/", "layout");

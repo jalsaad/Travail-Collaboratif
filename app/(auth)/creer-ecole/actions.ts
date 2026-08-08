@@ -8,6 +8,7 @@ import { signIn } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { createJoinCodeForSchool } from "@/lib/join-codes";
 import { logAudit, AuditAction } from "@/lib/audit-log";
+import { notifyPlatformOfNewSchool } from "@/lib/school-notifications";
 import { computeMatricule, MATRICULE_MANUAL_PATTERN } from "@/lib/matricule";
 import { saveSchoolLogo, validateLogoFile, InvalidLogoError } from "@/lib/school-logo";
 
@@ -230,6 +231,9 @@ export async function createSchool(
     targetType: "School",
     targetId: school.id,
   });
+
+  // L'école reste PENDING : la plateforme doit savoir qu'une demande attend.
+  await notifyPlatformOfNewSchool(school.id, founderUserId);
 
   try {
     await signIn("credentials", {

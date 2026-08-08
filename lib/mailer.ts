@@ -112,6 +112,94 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/// Une ligne « libellé / valeur » de l'encadré récapitulatif.
+export type EmailRow = { label: string; value: string };
+
+/// Gabarit commun à tous les emails de la plateforme : bandeau dégradé,
+/// titre, encadré récapitulatif, bouton d'action facultatif, pied de page.
+/// Toujours en clair : les clients de messagerie gèrent mal les thèmes
+/// sombres, un fond adaptatif y donnerait des rendus illisibles.
+function renderBrandedEmail(params: {
+  eyebrow: string;
+  title: string;
+  rows: EmailRow[];
+  cta?: { label: string; url: string; note?: string };
+  footerHtml: string;
+}): string {
+  const { eyebrow, title, rows, cta, footerHtml } = params;
+
+  const rowsHtml = rows
+    .map(
+      ({ label, value }) => `
+    <tr>
+      <td style="padding:4px 12px 4px 0;color:#78716c;font-size:13px;white-space:nowrap;">${escapeHtml(label)}</td>
+      <td style="padding:4px 0;color:#1c1917;font-size:13px;">${escapeHtml(value)}</td>
+    </tr>`
+    )
+    .join("");
+
+  const ctaHtml = cta
+    ? `
+    <tr>
+      <td style="padding:22px 28px 6px 28px;" align="center">
+        <a href="${cta.url}" style="display:inline-block;padding:13px 26px;background:${BRAND_600};background-image:linear-gradient(90deg,${BRAND_600},${BRAND_TEAL});color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:10px;">
+          ${escapeHtml(cta.label)}
+        </a>${
+          cta.note
+            ? `
+        <p style="margin:12px 0 0;font-size:12px;color:#78716c;">
+          ${escapeHtml(cta.note)}
+        </p>`
+            : ""
+        }
+      </td>
+    </tr>`
+    : "";
+
+  return `
+<div style="margin:0;padding:24px 12px;background:#fafaf9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e7e5e4;border-radius:16px;overflow:hidden;">
+    <tr>
+      <td style="height:6px;background:${BRAND_600};background-image:linear-gradient(90deg,${BRAND_600},${BRAND_TEAL});font-size:0;line-height:6px;">&nbsp;</td>
+    </tr>
+    <tr>
+      <td style="padding:28px 28px 8px 28px;">
+        <p style="margin:0 0 4px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:${BRAND_600};">${escapeHtml(eyebrow)}</p>
+        <h1 style="margin:0;font-size:19px;line-height:1.35;color:#1c1917;font-weight:600;">
+          ${title}
+        </h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:16px 28px 4px 28px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#fafaf9;border:1px solid #e7e5e4;border-radius:12px;padding:14px 16px;">
+          ${rowsHtml}
+        </table>
+      </td>
+    </tr>${ctaHtml}
+    <tr>
+      <td style="padding:18px 28px 28px 28px;border-top:1px solid #f5f5f4;">
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#78716c;">
+          ${footerHtml}
+        </p>
+      </td>
+    </tr>
+  </table>
+</div>`;
+}
+
+/// Transport SMTP partagé. Retourne null quand SMTP_HOST n'est pas configuré
+/// (développement local) — l'appelant journalise alors au lieu d'envoyer.
+function createTransport() {
+  if (!SMTP_HOST) return null;
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: SMTP_USER ? { user: SMTP_USER, pass: SMTP_PASSWORD } : undefined,
+  });
+}
+
 export type ParticipationInvitationEmail = {
   to: string;
   /// « Madame Dubois » / « Monsieur Lefèvre » — cf. lib/civility.ts.
@@ -164,64 +252,152 @@ export async function sendParticipationInvitationEmail(params: ParticipationInvi
     return;
   }
 
-  const row = (label: string, value: string) => `
-    <tr>
-      <td style="padding:4px 12px 4px 0;color:#78716c;font-size:13px;white-space:nowrap;">${escapeHtml(label)}</td>
-      <td style="padding:4px 0;color:#1c1917;font-size:13px;">${escapeHtml(value)}</td>
-    </tr>`;
-
-  const html = `
-<div style="margin:0;padding:24px 12px;background:#fafaf9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e7e5e4;border-radius:16px;overflow:hidden;">
-    <tr>
-      <td style="height:6px;background:${BRAND_600};background-image:linear-gradient(90deg,${BRAND_600},${BRAND_TEAL});font-size:0;line-height:6px;">&nbsp;</td>
-    </tr>
-    <tr>
-      <td style="padding:28px 28px 8px 28px;">
-        <p style="margin:0 0 4px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:${BRAND_600};">Travail collaboratif</p>
-        <h1 style="margin:0;font-size:19px;line-height:1.35;color:#1c1917;font-weight:600;">
-          ${escapeHtml(inviterCivility)} vous invite à valider votre participation à ${escapeHtml(dureePeriodes)} période(s) de travail collaboratif.
-        </h1>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:16px 28px 4px 28px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#fafaf9;border:1px solid #e7e5e4;border-radius:12px;padding:14px 16px;">
-          ${row("École", schoolName)}
-          ${row("Date", horaire ? `${dateLabel} · ${horaire}` : dateLabel)}
-          ${row("Durée", `${dureePeriodes} période(s)`)}
-          ${row("Type", typeLabel)}
-          ${row("Objet", description)}
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:22px 28px 6px 28px;" align="center">
-        <a href="${confirmUrl}" style="display:inline-block;padding:13px 26px;background:${BRAND_600};background-image:linear-gradient(90deg,${BRAND_600},${BRAND_TEAL});color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:10px;">
-          Valider ma participation
-        </a>
-        <p style="margin:12px 0 0;font-size:12px;color:#78716c;">
-          Ce bouton ouvre une page récapitulative : rien n'est validé tant que vous n'avez pas confirmé.
-        </p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:18px 28px 28px 28px;border-top:1px solid #f5f5f4;">
-        <p style="margin:0;font-size:12px;line-height:1.6;color:#78716c;">
-          Vous pouvez aussi valider depuis « Mes périodes » sur
+  const html = renderBrandedEmail({
+    eyebrow: "Travail collaboratif",
+    title: `${escapeHtml(inviterCivility)} vous invite à valider votre participation à ${escapeHtml(dureePeriodes)} période(s) de travail collaboratif.`,
+    rows: [
+      { label: "École", value: schoolName },
+      { label: "Date", value: horaire ? `${dateLabel} · ${horaire}` : dateLabel },
+      { label: "Durée", value: `${dureePeriodes} période(s)` },
+      { label: "Type", value: typeLabel },
+      { label: "Objet", value: description },
+    ],
+    cta: {
+      label: "Valider ma participation",
+      url: confirmUrl,
+      note: "Ce bouton ouvre une page récapitulative : rien n'est validé tant que vous n'avez pas confirmé.",
+    },
+    footerHtml: `Vous pouvez aussi valider depuis « Mes périodes » sur
           <a href="${platformUrl}" style="color:${BRAND_600};">travail-collaboratif.be</a>.
-          Le lien ci-dessus est valable 30 jours ; passé ce délai, la validation reste possible sur la plateforme.
-        </p>
-      </td>
-    </tr>
-  </table>
-</div>`;
+          Le lien ci-dessus est valable 30 jours ; passé ce délai, la validation reste possible sur la plateforme.`,
+  });
 
-  const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_PORT === 465,
-    auth: SMTP_USER ? { user: SMTP_USER, pass: SMTP_PASSWORD } : undefined,
+  await createTransport()!.sendMail({ from: SMTP_FROM, to, subject, text, html });
+}
+
+// ---------------------------------------------------------------------------
+// Notification à la direction : nouveau rattachement d'enseignant
+// ---------------------------------------------------------------------------
+
+export type NewMemberNotification = {
+  /// Direction et référent·es numériques de l'école — les deux rôles qui
+  /// gèrent l'établissement (cf. lib/school-authorization.ts).
+  to: string[];
+  memberName: string;
+  memberEmail: string;
+  schoolName: string;
+  /// Niveaux et disciplines déclarés au rattachement, en une ligne lisible.
+  teachingSummary: string;
+  joinedAtLabel: string;
+  membersUrl: string;
+};
+
+export async function sendNewMemberNotification(params: NewMemberNotification) {
+  const { to, memberName, memberEmail, schoolName, teachingSummary, joinedAtLabel, membersUrl } =
+    params;
+  if (to.length === 0) return;
+
+  const subject = `Nouveau rattachement : ${memberName} — ${schoolName}`;
+  const text = [
+    `${memberName} <${memberEmail}> vient de rejoindre ${schoolName}.`,
+    ``,
+    `Rattachement : ${joinedAtLabel}`,
+    `Enseignement déclaré : ${teachingSummary}`,
+    ``,
+    `Consulter la liste des membres : ${membersUrl}`,
+  ].join("\n");
+
+  const transporter = createTransport();
+  if (!transporter) {
+    console.log(`[dev] Nouveau rattachement ${memberName} à ${schoolName} — destinataires : ${to.join(", ")}`);
+    return;
+  }
+
+  const html = renderBrandedEmail({
+    eyebrow: "Espace direction",
+    title: `${escapeHtml(memberName)} vient de rejoindre ${escapeHtml(schoolName)}.`,
+    rows: [
+      { label: "Enseignant·e", value: memberName },
+      { label: "Email", value: memberEmail },
+      { label: "Rattachement", value: joinedAtLabel },
+      { label: "Enseignement", value: teachingSummary },
+    ],
+    cta: { label: "Voir les membres de l'école", url: membersUrl },
+    footerHtml: `Ce rattachement s'est fait via le code d'accès de l'école. Si cette personne
+          n'aurait pas dû y accéder, vous pouvez la retirer depuis la liste des membres et
+          régénérer le code dans les paramètres.`,
+  });
+
+  await transporter.sendMail({ from: SMTP_FROM, to, subject, text, html });
+}
+
+// ---------------------------------------------------------------------------
+// Notification à la plateforme : nouvelle inscription d'école
+// ---------------------------------------------------------------------------
+
+/// Destinataire des notifications plateforme. Configurable pour ne pas figer
+/// une adresse dans le code, mais l'adresse de service reste le défaut.
+export function platformNotificationRecipient(): string {
+  return process.env.PLATFORM_NOTIFICATION_EMAIL || "admin@travail-collaboratif.be";
+}
+
+export type NewSchoolNotification = {
+  schoolName: string;
+  numeroFase: string | null;
+  reseau: string | null;
+  locality: string | null;
+  founderName: string;
+  founderEmail: string;
+  founderFonction: string | null;
+  adminUrl: string;
+};
+
+export async function sendNewSchoolNotification(params: NewSchoolNotification) {
+  const {
+    schoolName,
+    numeroFase,
+    reseau,
+    locality,
+    founderName,
+    founderEmail,
+    founderFonction,
+    adminUrl,
+  } = params;
+  const to = platformNotificationRecipient();
+
+  const subject = `Nouvelle école à valider : ${schoolName}`;
+  const text = [
+    `${founderName} <${founderEmail}> a inscrit l'école « ${schoolName} ».`,
+    ``,
+    `N° FASE : ${numeroFase ?? "non renseigné"}`,
+    `Réseau : ${reseau ?? "non renseigné"}`,
+    `Localité : ${locality ?? "non renseignée"}`,
+    `Fonction du fondateur : ${founderFonction ?? "non renseignée"}`,
+    ``,
+    `L'école reste en attente de validation et n'est pas opérationnelle tant que`,
+    `la plateforme ne l'a pas approuvée : ${adminUrl}`,
+  ].join("\n");
+
+  const transporter = createTransport();
+  if (!transporter) {
+    console.log(`[dev] Nouvelle école « ${schoolName} » à valider — destinataire : ${to}`);
+    return;
+  }
+
+  const html = renderBrandedEmail({
+    eyebrow: "Administration plateforme",
+    title: `${escapeHtml(founderName)} a inscrit l'école ${escapeHtml(schoolName)}.`,
+    rows: [
+      { label: "École", value: schoolName },
+      { label: "N° FASE", value: numeroFase ?? "non renseigné" },
+      { label: "Réseau", value: reseau ?? "non renseigné" },
+      { label: "Localité", value: locality ?? "non renseignée" },
+      { label: "Fondateur", value: `${founderName} (${founderEmail})` },
+      { label: "Fonction", value: founderFonction ?? "non renseignée" },
+    ],
+    cta: { label: "Examiner la demande", url: adminUrl },
+    footerHtml: `L'école est enregistrée avec le statut « en attente » : ses membres n'ont accès
+          à aucune fonctionnalité tant que la plateforme ne l'a pas approuvée.`,
   });
 
   await transporter.sendMail({ from: SMTP_FROM, to, subject, text, html });
