@@ -7,12 +7,12 @@ export function AboutUsSection() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="mt-16 border-t border-stone-200 pt-6 text-center">
+    <div className="mt-16 border-t border-stone-200 pt-6 text-center dark:border-stone-800">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-500 transition hover:text-brand-700"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-500 transition hover:text-brand-700 dark:text-stone-400 dark:hover:text-brand-400"
       >
         À propos de nous
         <svg
@@ -40,20 +40,29 @@ export function AboutUsSection() {
               height={300}
               className="mx-auto h-auto w-[83px]"
             />
-            <p className="mt-4 text-sm font-semibold text-stone-800">
-              Conçue par des enseignant·es, pour des enseignant·es.
+            <p className="mt-4 text-sm font-semibold text-stone-800 dark:text-stone-100">
+              Conçue par des enseignant·es, pour les enseignant·es.
             </p>
-            <p className="mt-3 text-sm leading-relaxed text-stone-600">
+            <p className="mt-3 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
               Ouverte à tous les collègues de Wallonie — tous réseaux, tous niveaux, de la
               maternelle au secondaire.
             </p>
-            <p className="mt-3 text-sm leading-relaxed text-stone-600">
+            <p className="mt-3 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
               Notre mission : simplifier la gestion de vos heures de travail collaboratif, une
               bonne fois pour toutes.
             </p>
-            <p className="mt-3 text-sm font-medium text-brand-700">
+            <p className="mt-3 text-sm font-medium text-brand-700 dark:text-brand-400">
               100% gratuite, sans limite. Utilisez-la, partagez-la, faites-en profiter vos
               collègues.
+            </p>
+            <p className="mt-4 text-sm text-stone-600 dark:text-stone-300">
+              Une question, une suggestion ?{" "}
+              <a
+                href="mailto:admin@travail-collaboratif.be"
+                className="font-medium text-brand-700 hover:underline dark:text-brand-400"
+              >
+                admin@travail-collaboratif.be
+              </a>
             </p>
           </div>
         </div>
