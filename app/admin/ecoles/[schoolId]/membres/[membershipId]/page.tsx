@@ -3,6 +3,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AdminMemberProfileForm } from "@/components/admin-member-profile-form";
 import { AdminMemberRowActions } from "@/components/admin-member-row-actions";
+import { AdminDeleteAccount } from "@/components/admin-delete-account";
+import { isAnonymizedEmail } from "@/lib/account-deletion";
 
 export default async function AdminMemberDetailPage({
   params,
@@ -46,6 +48,14 @@ export default async function AdminMemberDetailPage({
           isAccountOwner={member.isAccountOwner}
         />
       </div>
+
+      {!isAnonymizedEmail(member.user.email) && (
+        <AdminDeleteAccount
+          userId={member.user.id}
+          email={member.user.email}
+          returnTo={`/admin/ecoles/${schoolId}/membres/${membershipId}`}
+        />
+      )}
     </div>
   );
 }
