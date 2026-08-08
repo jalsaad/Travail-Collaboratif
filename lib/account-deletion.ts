@@ -20,7 +20,7 @@ import { prisma } from "@/lib/prisma";
 
 /// Domaine réservé par la RFC 6761 : aucune adresse de remplacement ne peut
 /// router vers une vraie boîte, même par accident.
-const ANONYMOUS_EMAIL_DOMAIN = "supprime.invalid";
+export const ANONYMOUS_EMAIL_DOMAIN = "supprime.invalid";
 
 export const ANONYMOUS_FIRST_NAME = "Compte";
 export const ANONYMOUS_LAST_NAME = "supprimé";

@@ -9,6 +9,8 @@ import {
 import { ADMIN_DIRECTORY_COLUMNS } from "@/lib/admin-directory-export";
 import { RESEAU_OPTIONS } from "@/lib/reseau-options";
 import { AdminUsersExportPanel } from "@/components/admin-users-export-panel";
+import { AdminOrphanAccounts } from "@/components/admin-orphan-accounts";
+import { ANONYMOUS_EMAIL_DOMAIN } from "@/lib/account-deletion";
 import { SatisfactionStarsDisplay, SatisfactionGradientDef } from "@/components/satisfaction-stars-display";
 
 const PAGE_SIZE = 100;
@@ -46,6 +48,22 @@ export default async function AdminUtilisateursPage({
     }),
     prisma.discipline.findMany({ orderBy: { name: "asc" } }),
   ]);
+
+  // Comptes qui n'apparaissent dans aucune école : le répertoire ci-dessus
+  // est bâti sur les rattachements actifs, ils y sont donc invisibles. C'est
+  // typiquement ce que laisse la suppression d'une école — les rattachements
+  // partent en cascade, la ligne User survit et son email reste pris.
+  // Les superadmins sont exclus : ils n'ont légitimement pas d'école.
+  const orphanAccounts = await prisma.user.findMany({
+    where: {
+      isSuperAdmin: false,
+      memberships: { none: { status: "ACTIVE" } },
+      NOT: { email: { endsWith: `@${ANONYMOUS_EMAIL_DOMAIN}` } },
+    },
+    select: { id: true, email: true, firstName: true, lastName: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -251,6 +269,32 @@ export default async function AdminUtilisateursPage({
               Suivant →
             </Link>
           )}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-base font-semibold tracking-tight text-stone-900 dark:text-stone-100">
+          Comptes sans rattachement ({orphanAccounts.length})
+        </h2>
+        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+          Comptes rattachés à aucune école active — école supprimée, ou membre retiré partout. Leur
+          adresse reste occupée tant que le compte existe. La suppression efface réellement la ligne
+          si le compte n&apos;a laissé aucune trace collaborative, et l&apos;anonymise sinon.
+        </p>
+        <div className="mt-3">
+          <AdminOrphanAccounts
+            accounts={orphanAccounts.map((u) => ({
+              id: u.id,
+              email: u.email,
+              firstName: u.firstName,
+              lastName: u.lastName,
+              createdAtLabel: u.createdAt.toLocaleDateString("fr-BE", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              }),
+            }))}
+          />
         </div>
       </div>
     </div>
