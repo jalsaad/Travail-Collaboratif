@@ -7,14 +7,17 @@ import { Nav } from "@/components/nav";
 import { AnnouncementBanner } from "@/components/announcement-banner";
 import { SchoolApprovalNotice } from "@/components/school-approval-notice";
 import { SchoolLogoBadge } from "@/components/school-logo-badge";
+import { SchoolYearBadge } from "@/components/school-year-badge";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 export default async function TeacherLayout({ children }: { children: ReactNode }) {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const [memberships, currentUser] = await Promise.all([
+  const [memberships, currentUser, schoolYear] = await Promise.all([
     getActiveMemberships(session.userId),
     prisma.user.findUnique({ where: { id: session.userId }, select: { satisfactionRating: true } }),
+    getCurrentSchoolYear(),
   ]);
   const active = await resolveActiveMembership(session.userId, memberships);
   const pending = active && active.schoolStatus !== "APPROVED";
@@ -28,6 +31,11 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
         satisfactionRating={currentUser?.satisfactionRating ?? null}
       />
       {active && <SchoolLogoBadge />}
+      {active && (
+        <div className="mt-2 flex justify-center px-4">
+          <SchoolYearBadge label={schoolYear?.label ?? null} adminLink={session.isSuperAdmin} />
+        </div>
+      )}
       {active && !pending && <AnnouncementBanner userId={session.userId} active={active} />}
       <main className="mx-auto max-w-3xl px-4 py-8">
         {pending ? (

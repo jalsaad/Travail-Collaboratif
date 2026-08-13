@@ -10,6 +10,7 @@ import { ExportPanel } from "@/components/export-panel";
 import { TeacherReminderPanel } from "@/components/teacher-reminder-panel";
 import { CopyCodeBadge } from "@/components/copy-code-badge";
 import { Reveal } from "@/components/reveal";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 export default async function EcolePage() {
   const session = await auth();
@@ -30,7 +31,7 @@ export default async function EcolePage() {
       include: { user: { select: { firstName: true, lastName: true } } },
       orderBy: [{ user: { lastName: "asc" } }, { user: { firstName: "asc" } }],
     }),
-    prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } }),
+    getCurrentSchoolYear(),
     prisma.announcement.findFirst({
       where: {
         status: "PUBLISHED",
@@ -84,6 +85,13 @@ export default async function EcolePage() {
               {formatSchoolAddress(school) ?? "Adresse non renseignée"}
             </p>
             <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Numéro FASE : {school.numeroFase ?? "—"}</p>
+            {/* Les compteurs ci-dessous ne portent que sur l'année courante. */}
+            <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
+              Année scolaire :{" "}
+              <span className="font-semibold text-stone-600 dark:text-stone-300">
+                {schoolYear?.label ?? "aucune ouverte"}
+              </span>
+            </p>
           </div>
           <CopyCodeBadge code={joinCode?.code ?? null} />
         </div>

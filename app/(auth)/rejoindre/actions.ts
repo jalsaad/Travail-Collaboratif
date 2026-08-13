@@ -12,6 +12,7 @@ import { parseLevelHoursFromFormData } from "@/lib/teaching-levels";
 import { resolveOrCreateDiscipline } from "@/lib/discipline-form";
 import { recomputeUserQuotas } from "@/lib/quota-engine";
 import { notifySchoolDirectionOfNewMember } from "@/lib/school-notifications";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 export type JoinState = { error?: string };
 
@@ -122,7 +123,7 @@ export async function joinViaCode(
     targetId: created.membership.id,
   });
 
-  const schoolYear = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
+  const schoolYear = await getCurrentSchoolYear();
   if (schoolYear) {
     await recomputeUserQuotas(created.user.id, schoolYear.id);
   }

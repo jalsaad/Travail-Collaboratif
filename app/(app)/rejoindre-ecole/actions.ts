@@ -12,6 +12,7 @@ import { parseLevelHoursFromFormData } from "@/lib/teaching-levels";
 import { resolveOrCreateDiscipline } from "@/lib/discipline-form";
 import { recomputeUserQuotas } from "@/lib/quota-engine";
 import { notifySchoolDirectionOfNewMember } from "@/lib/school-notifications";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 export type JoinSchoolState = { error?: string };
 
@@ -103,7 +104,7 @@ export async function joinSchoolWithCode(
 
   // Recalcule l'ETP/quota de TOUTES les écoles de cet utilisateur (pas
   // seulement celle-ci) : le total ETP vient de changer, cf. lib/quota-engine.ts.
-  const schoolYear = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
+  const schoolYear = await getCurrentSchoolYear();
   if (schoolYear) {
     await recomputeUserQuotas(session.userId, schoolYear.id);
   }

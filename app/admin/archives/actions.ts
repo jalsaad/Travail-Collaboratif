@@ -7,6 +7,7 @@ import { assertIsSuperAdmin } from "@/lib/admin-authorization";
 import { logAudit, AuditAction } from "@/lib/audit-log";
 import { recomputeUserQuotas } from "@/lib/quota-engine";
 import { ArchiveError, nextSchoolYear, writeSchoolYearArchive } from "@/lib/school-year-archive";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 export type ArchiveActionState = { error?: string; success?: string };
 
@@ -122,7 +123,7 @@ export async function archiveSchoolYear(
   if (!session) throw new Error("Non authentifié.");
   await assertIsSuperAdmin(session.userId);
 
-  const current = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
+  const current = await getCurrentSchoolYear();
   if (!current) return { error: "Aucune année scolaire configurée." };
 
   // Garde-fou contre le clic accidentel : l'opération bascule toute la

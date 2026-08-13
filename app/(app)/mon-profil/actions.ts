@@ -11,6 +11,7 @@ import { logAudit, AuditAction } from "@/lib/audit-log";
 import { parseLevelHoursFromFormData } from "@/lib/teaching-levels";
 import { resolveOrCreateDiscipline } from "@/lib/discipline-form";
 import { recomputeUserQuotas } from "@/lib/quota-engine";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 export type OwnProfileState = { error?: string; success?: string };
 
@@ -154,7 +155,7 @@ export async function updateTeachingInfo(
 
   // L'ETP a potentiellement changé : recalcule le quota sur TOUTES les
   // écoles de cet utilisateur, pas seulement celle-ci (cf. lib/quota-engine.ts).
-  const schoolYear = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
+  const schoolYear = await getCurrentSchoolYear();
   if (schoolYear) {
     if (parsedLevels.data.length === 0) {
       // recomputeUserQuotas ne touche jamais une Membership sans déclaration

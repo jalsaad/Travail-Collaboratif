@@ -9,6 +9,7 @@ import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
 import { parseExportDateRange, InvalidExportRangeError } from "@/lib/export-range";
 import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
   // après un archivage de fin d'année, un relevé sans filtre de dates ne
   // ramène pas les périodes de l'année précédente (elles restent dans
   // l'archive disque, cf. lib/school-year-archive.ts).
-  const schoolYear = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
+  const schoolYear = await getCurrentSchoolYear();
 
   const periods = schoolYear
     ? await prisma.collaborativePeriod.findMany({
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
     participants: p.participants.map((part) => `${part.user.firstName} ${part.user.lastName}`).join(", "),
   }));
 
-  const title = `Relevé individuel — ${active.schoolName}`;
+  const title = `Relevé individuel${schoolYear ? ` ${schoolYear.label}` : ""} — ${active.schoolName}`;
   const logos = await loadExportHeaderLogos(active.schoolLogoUrl);
   const buffer = await buildPeriodsPdf(rows, title, logos);
 

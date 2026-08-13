@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { assertIsSuperAdmin } from "@/lib/admin-authorization";
 import { ForbiddenError } from "@/lib/school-authorization";
 import { LogoMark } from "@/components/logo-mark";
+import { SchoolYearBadge } from "@/components/school-year-badge";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 const tabs = [
   { href: "/admin", label: "Tableau de bord" },
@@ -29,7 +31,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     throw error;
   }
 
-  const openTicketsCount = await prisma.supportTicket.count({ where: { status: "OPEN" } });
+  const [openTicketsCount, schoolYear] = await Promise.all([
+    prisma.supportTicket.count({ where: { status: "OPEN" } }),
+    getCurrentSchoolYear(),
+  ]);
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
@@ -39,6 +44,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <div className="flex items-center gap-2">
               <LogoMark size={26} />
               <span className="font-semibold tracking-tight text-stone-900 dark:text-stone-100">Administration plateforme</span>
+              <SchoolYearBadge label={schoolYear?.label ?? null} adminLink />
             </div>
             <nav className="flex items-center gap-1 text-sm">
               {tabs.map((tab) => (

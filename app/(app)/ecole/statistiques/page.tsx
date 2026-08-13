@@ -6,6 +6,7 @@ import { getSchoolTeachersProgress } from "@/lib/collaboration-progress";
 import { formatPeriodes } from "@/lib/period-duration";
 import { CircularProgressRing } from "@/components/circular-progress-ring";
 import { Reveal } from "@/components/reveal";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 export default async function EcoleStatistiquesPage() {
   const session = await auth();
@@ -14,7 +15,7 @@ export default async function EcoleStatistiquesPage() {
   const active = await resolveActiveMembership(session.userId);
   if (!active) redirect("/mes-periodes");
 
-  const schoolYear = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
+  const schoolYear = await getCurrentSchoolYear();
   const teachers = schoolYear ? await getSchoolTeachersProgress(active.schoolId, schoolYear.id) : [];
 
   const average =
@@ -27,9 +28,16 @@ export default async function EcoleStatistiquesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-lg font-semibold tracking-tight text-stone-900 dark:text-stone-100">
-        Statistiques — {active.schoolName}
-      </h1>
+      <div>
+        <h1 className="text-lg font-semibold tracking-tight text-stone-900 dark:text-stone-100">
+          Statistiques — {active.schoolName}
+        </h1>
+        {schoolYear && (
+          <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
+            Année scolaire {schoolYear.label}
+          </p>
+        )}
+      </div>
 
       {!schoolYear && (
         <div className="card p-6 text-sm text-stone-500 dark:text-stone-400">

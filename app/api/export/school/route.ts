@@ -10,6 +10,7 @@ import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
 import { parseExportDateRange, InvalidExportRangeError } from "@/lib/export-range";
 import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -63,7 +64,7 @@ export async function GET(request: Request) {
   const scope: "SCHOOL" | "INDIVIDUAL" | "BATCH" =
     targetUserIds.length === 0 ? "SCHOOL" : targetUserIds.length === 1 ? "INDIVIDUAL" : "BATCH";
 
-  const schoolYear = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
+  const schoolYear = await getCurrentSchoolYear();
 
   // Scopé sur l'année courante comme l'écran /ecole : après l'archivage de
   // fin d'année (cf. lib/school-year-archive.ts), le relevé collectif ne
@@ -103,12 +104,15 @@ export async function GET(request: Request) {
     participants: p.participants.map((part) => `${part.user.firstName} ${part.user.lastName}`).join(", "),
   }));
 
+  // L'année figure dans le titre : le relevé étant borné à l'année courante,
+  // un exemplaire imprimé et classé serait sinon impossible à dater.
+  const annee = schoolYear ? ` ${schoolYear.label}` : "";
   const title =
     scope === "INDIVIDUAL"
-      ? `Relevé individuel — ${targetMembers[0].user.firstName} ${targetMembers[0].user.lastName}`
+      ? `Relevé individuel${annee} — ${targetMembers[0].user.firstName} ${targetMembers[0].user.lastName}`
       : scope === "BATCH"
-        ? `Relevé — ${targetMembers.length} personnes — ${active.schoolName}`
-        : `Relevé collectif — ${active.schoolName}`;
+        ? `Relevé${annee} — ${targetMembers.length} personnes — ${active.schoolName}`
+        : `Relevé collectif${annee} — ${active.schoolName}`;
 
   const logos = await loadExportHeaderLogos(active.schoolLogoUrl);
   const buffer = await buildPeriodsPdf(rows, title, logos);

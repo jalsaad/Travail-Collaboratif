@@ -6,6 +6,7 @@ import { resolveActiveMembership } from "@/lib/active-school";
 import { roleLabel } from "@/lib/role-labels";
 import { MemberRowActions } from "@/components/member-row-actions";
 import { Reveal } from "@/components/reveal";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 const roleBadgeStyle: Record<string, string> = {
   DIRECTION: "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900",
@@ -20,7 +21,7 @@ export default async function MembresPage() {
   const active = await resolveActiveMembership(session.userId);
   if (!active) redirect("/mes-periodes");
 
-  const schoolYear = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
+  const schoolYear = await getCurrentSchoolYear();
 
   const members = await prisma.membership.findMany({
     where: { schoolId: active.schoolId, status: "ACTIVE" },

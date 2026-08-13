@@ -13,11 +13,12 @@ import {
   EditSchoolYearForm,
 } from "@/components/admin-school-year-form";
 import { Reveal } from "@/components/reveal";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminArchivesPage() {
-  const current = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
+  const current = await getCurrentSchoolYear();
 
   const [periodCount, archivedYears] = await Promise.all([
     current ? prisma.collaborativePeriod.count({ where: { schoolYearId: current.id } }) : 0,

@@ -7,6 +7,7 @@ import { resolveActiveMembership } from "@/lib/active-school";
 import { createPeriodSchema } from "@/app/(app)/declarer/schema";
 import { periodesBetween } from "@/lib/period-duration";
 import { notifyPendingParticipants } from "@/lib/participation-invitations";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 export type CreatePeriodState = { error?: string };
 
@@ -47,7 +48,7 @@ export async function createPeriod(
     },
   });
 
-  const schoolYear = await prisma.schoolYear.findFirst({ orderBy: { startDate: "desc" } });
+  const schoolYear = await getCurrentSchoolYear();
   if (!schoolYear) return { error: "Aucune année scolaire configurée." };
 
   const created = await prisma.collaborativePeriod.create({
