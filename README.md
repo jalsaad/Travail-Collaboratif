@@ -1,6 +1,11 @@
 # Travail Collaboratif
 
-Application de gestion du travail collaboratif enseignant, conforme au vade-mecum de la Circulaire 8894/7167 (Fédération Wallonie-Bruxelles) : déclaration et confirmation des périodes de collaboration entre pairs, tableau de bord direction/référent numérique, rattachement d'école par code, plateforme superadmin (annonces ciblées, flag dons) et exports PDF/XLSX.
+Application de gestion du travail collaboratif enseignant en Fédération Wallonie-Bruxelles : déclaration et confirmation des périodes de collaboration entre pairs, tableau de bord direction/référent numérique, rattachement d'école par code, plateforme superadmin et exports PDF/XLSX.
+
+Le modèle métier suit la **circulaire 7167 du 03/06/2019** (mise en œuvre du décret du 14 mars 2019) et son vade-mecum, complétés par la **circulaire 8894 du 20/04/2023**. Deux points en découlent directement dans le code :
+
+- Le travail collaboratif ne connaît que **deux formes** ayant valeur normative — réunions des équipes pédagogique et éducative, et collaboration à visée pédagogique. C'est l'enum `PeriodType`, et rien d'autre. La qualification fine passe par `CollaborativePeriod.natureActivite`, dont les thèmes viennent du vade-mecum §8 — lequel précise qu'« une liste de thèmes n'est pas imposée » (cf. [`lib/collaborative-activities.ts`](lib/collaborative-activities.ts)).
+- Une **période vaut 50 minutes** et la durée est calculée à la valeur exacte, sans arrondi : le quota annuel de 60 périodes a valeur réglementaire (cf. [`lib/period-duration.ts`](lib/period-duration.ts)).
 
 Les règles d'autorisation (matrice par rôle, cloisonnement inter-écoles, ciblage des annonces...) sont documentées dans [`permissions.md`](permissions.md) — c'est la référence à jour du modèle de droits, à consulter avant toute modification touchant aux accès.
 
@@ -10,7 +15,7 @@ Les règles d'autorisation (matrice par rôle, cloisonnement inter-écoles, cibl
 - [Prisma](https://www.prisma.io/) + PostgreSQL 16
 - [Auth.js v5](https://authjs.dev/) (Credentials, sessions JWT)
 - Tailwind CSS 4
-- `exceljs` / `pdfkit` pour les exports
+- `pdfkit` / `exceljs` pour les exports et l'affiche, `qrcode` pour les QR codes, `nodemailer` pour les emails
 
 ## Démarrage
 
@@ -39,6 +44,32 @@ Mot de passe unique pour tous les comptes : `demo1234`.
 
 Codes de rattachement actifs (pour `/rejoindre` ou `/rejoindre-ecole`) : voir `/ecole/parametres` une fois connecté en direction, ou directement en base (table `join_codes`).
 
+## Configuration
+
+Tout est optionnel hors `DATABASE_URL` et `AUTH_SECRET` : chaque bloc absent dégrade proprement, ce qui permet de développer sans compte cloud. Voir [`.env.example`](.env.example) pour le détail.
+
+| Variable | Effet si absente |
+|---|---|
+| `SMTP_*` | Les emails ne partent pas : liens et notifications sont journalisés dans la console. |
+| `ARCHIVE_DIR` | Les archives de fin d'année sont écrites dans `./archives`, perdu au redéploiement. **À définir en production.** |
+| `PLATFORM_NOTIFICATION_EMAIL` | Les alertes plateforme partent vers `admin@travail-collaboratif.be`. |
+| `S3_*` | Les fichiers uploadés (logos, médias) vont sur le disque local. |
+| `APP_ORIGIN`, `AUTH_TRUST_HOST` | Nécessaires derrière un reverse proxy, sinon les Server Actions et les callbacks NextAuth échouent. |
+
+## Fonctionnalités notables
+
+**Déclaration d'une période** — plage horaire (la durée en périodes en est déduite), forme légale, nature de l'activité, description et objectifs du plan de pilotage. Ce dernier champ reprend la 4ᵉ colonne du formulaire officiel de recensement annexé à la circulaire 7167.
+
+**Validation par email** — chaque collègue invité reçoit un message dont le bouton ouvre une page récapitulative. Le lien ne valide **rien** par lui-même : les filtres anti-hameçonnage préchargent les URL des emails et confirmeraient sinon la participation à l'insu de l'intéressé. Le jeton est haché en base, à usage unique, expirant à 30 jours (cf. [`lib/participation-token.ts`](lib/participation-token.ts)).
+
+**Autres notifications** — rattachement d'un enseignant (vers la direction et les référents), inscription d'une école (vers la plateforme), rappel de remise avec décompte des jours (vers les enseignants, en copie cachée). Un échec SMTP ne fait jamais échouer l'action qui l'a déclenché.
+
+**Affiche à imprimer** — PDF A4 avec QR code menant au formulaire d'inscription, code de l'école pré-rempli. Accessible depuis l'espace Direction et l'administration plateforme (cf. [`lib/join-poster.ts`](lib/join-poster.ts)).
+
+**Archivage de fin d'année** — écrit sur disque un dump JSON et un relevé PDF par école, puis crée l'année suivante. Rien n'est supprimé en base : les périodes déclarées par quelqu'un sont le relevé légal de ses collègues (cf. [`lib/school-year-archive.ts`](lib/school-year-archive.ts)). L'année scolaire va du dernier lundi d'août au premier vendredi de juillet, avec des dates saisissables — la Fédération y déroge certaines années.
+
+**Suppression de compte** — réservée au superadmin. Un compte sans trace collaborative est réellement effacé ; les autres sont anonymisés, leur adresse étant libérée dans les deux cas (cf. [`lib/account-deletion.ts`](lib/account-deletion.ts)).
+
 ## Scripts
 
 | Commande | Effet |
@@ -49,14 +80,32 @@ Codes de rattachement actifs (pour `/rejoindre` ou `/rejoindre-ecole`) : voir `/
 | `npm run prisma:seed` | Recharge le jeu de données de démonstration (idempotent) |
 | `npm run prisma:studio` | Explorateur de données Prisma Studio |
 
+## Déploiement
+
+L'application tourne sous PM2 derrière Nginx. Séquence de mise en production :
+
+```bash
+cd /var/www/Travail-Collaboratif
+git pull origin main
+npm ci                        # sans --omit=dev : le build a besoin des devDependencies
+npx prisma migrate deploy     # jamais migrate dev en production
+npm run build
+pm2 restart travail-collaboratif --update-env
+pm2 save
+```
+
+Nginx doit transmettre `Host` et `X-Forwarded-Proto`, sans quoi les liens absolus des emails partent avec le mauvais hôte ou protocole.
+
 ## Structure
 
 ```
-app/(auth)/       pages publiques (connexion, inscription via code)
+app/(auth)/       pages publiques : connexion, création d'école, rattachement
+                  par code, réinitialisation, validation par jeton (/valider)
 app/(app)/        espace enseignant/direction (école active via cookie)
-app/admin/        espace superadmin (annonces, dons, dashboard d'usage)
-app/api/export/   téléchargement des relevés PDF/XLSX
-lib/              logique métier partagée (autorisations, requêtes, audit)
+app/admin/        espace superadmin (écoles, utilisateurs, annonces, archives, dons)
+app/api/export/   relevés PDF/XLSX
+app/api/affiche/  affiche A4 avec QR code de rattachement
+lib/              logique métier partagée (autorisations, requêtes, audit, emails)
 components/       composants UI
 prisma/           schéma, migrations, seed
 ```
