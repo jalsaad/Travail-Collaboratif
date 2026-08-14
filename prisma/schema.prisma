@@ -369,10 +369,10 @@ model Discipline {
 /// - etp d'une Membership = somme, sur ses MembershipLevelHours, de
 ///   (heures déclarées / heures temps plein du niveau) — cf. lib/quota-engine.ts.
 /// - Quota (objectifPeriodes) calculé sur l'ETP TOTAL de l'utilisateur (somme
-///   sur toutes ses écoles) : ETP total >= 1 (temps plein) => 60 périodes ;
-///   ETP total < 1 (temps partiel) => 30 * ETP total. Ce total est ensuite
-///   réparti entre écoles au prorata de l'ETP de chacune — cf.
-///   lib/quota-engine.ts::recomputeUserQuotas.
+///   sur toutes ses écoles) : 60 périodes pour un temps plein (ETP >= 1),
+///   proportionnellement adaptées en deçà (60 * ETP total) — un mi-temps doit
+///   30 périodes. Ce total est ensuite réparti entre écoles au prorata de
+///   l'ETP de chacune — cf. lib/quota-engine.ts::recomputeUserQuotas.
 /// - somme des (objectifPeriodes / 36 semaines) sur toutes les écoles d'un
 ///   même User, pour une même SchoolYear, ne peut dépasser l'équivalent de
 ///   2 périodes/semaine.
