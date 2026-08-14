@@ -6,6 +6,18 @@
    dans app/layout.tsx et par le toggle lui-même). */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Indique au navigateur quel thème il doit appliquer aux contrôles qu'il
+   dessine LUI-MÊME : sélecteurs de date et d'heure (l'icône calendrier ou
+   horloge des <input type="date"|"time">), listes déroulantes natives,
+   barres de défilement, invites d'autoremplissage. Aucune règle CSS ne peut
+   les recolorer — ils restaient donc noirs sur fond sombre. */
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}
+
 /* Charte graphique alignée sur le logo (monogramme "t" dégradé bleu → sarcelle). */
 @theme {
   --color-brand-50: #eef6fc;
