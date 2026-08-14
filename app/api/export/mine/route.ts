@@ -10,6 +10,7 @@ import { parseExportDateRange, InvalidExportRangeError } from "@/lib/export-rang
 import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
+import { buildExportIdentity } from "@/lib/export-identity";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -69,7 +70,8 @@ export async function GET(request: Request) {
 
   const title = `Relevé individuel${schoolYear ? ` ${schoolYear.label}` : ""} — ${active.schoolName}`;
   const logos = await loadExportHeaderLogos(active.schoolLogoUrl);
-  const buffer = await buildPeriodsPdf(rows, title, logos);
+  const identity = await buildExportIdentity(active.membershipId, schoolYear?.id ?? null);
+  const buffer = await buildPeriodsPdf(rows, title, logos, identity);
 
   if (schoolYear) {
     await prisma.exportLog.create({

@@ -11,6 +11,7 @@ import { parseExportDateRange, InvalidExportRangeError } from "@/lib/export-rang
 import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
+import { buildExportIdentity } from "@/lib/export-identity";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -115,7 +116,13 @@ export async function GET(request: Request) {
         : `Relevé collectif${annee} — ${active.schoolName}`;
 
   const logos = await loadExportHeaderLogos(active.schoolLogoUrl);
-  const buffer = await buildPeriodsPdf(rows, title, logos);
+  // Bloc d'identité réservé au relevé d'UNE personne : un lot ou un relevé
+  // d'école en couvrent plusieurs, aucune identité ne s'y rapporterait.
+  const identity =
+    scope === "INDIVIDUAL"
+      ? await buildExportIdentity(targetMembers[0].id, schoolYear?.id ?? null)
+      : undefined;
+  const buffer = await buildPeriodsPdf(rows, title, logos, identity);
 
   if (schoolYear) {
     await prisma.exportLog.create({

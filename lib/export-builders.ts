@@ -18,6 +18,23 @@ export type ExportPeriodRow = {
   participants: string;
 };
 
+/// Bloc d'identité des relevés individuels : qui est concerné, ce qu'il
+/// enseigne, et où il en est de son obligation annuelle. Absent des exports
+/// par lot et collectifs, qui portent sur plusieurs personnes.
+export type ExportIdentity = {
+  fullName: string;
+  matricule: string;
+  /// « Primaire — Mathématiques (12 h) », niveaux et disciplines réunis.
+  teaching: string;
+  /// Périodes déclarées dans l'école du relevé, et objectif annuel.
+  done: string;
+  objective: string;
+  /// Total agrégé fait ailleurs, ou null si la personne n'enseigne que
+  /// dans cette école — la ligne est alors omise plutôt qu'affichée à zéro.
+  otherSchools: string | null;
+  total: string;
+};
+
 export type ExportHeaderLogos = {
   left: LoadedLogo | null;
   right: LoadedLogo | null;
@@ -49,7 +66,8 @@ const PDF_HEADER_LOGO_BOX = 55;
 export function buildPeriodsPdf(
   rows: ExportPeriodRow[],
   title: string,
-  logos?: ExportHeaderLogos
+  logos?: ExportHeaderLogos,
+  identity?: ExportIdentity
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: PAGE_MARGIN, size: "A4", layout: "landscape" });
@@ -87,6 +105,41 @@ export function buildPeriodsPdf(
       .text(CONFORMITY_MENTION, PAGE_MARGIN, doc.y + 4, { width: contentWidth, align: "center" })
       .fillColor("black");
     doc.moveDown(0.8);
+
+    if (identity) {
+      const lignes: [string, string][] = [
+        ["Enseignant·e", identity.fullName],
+        ["Matricule", identity.matricule],
+        ["Enseignement", identity.teaching],
+        [
+          "Travail collaboratif",
+          identity.otherSchools
+            ? `${identity.done} période(s) dans cette école · ${identity.otherSchools} dans un autre établissement · ${identity.total} au total, pour un objectif de ${identity.objective}`
+            : `${identity.done} période(s) sur un objectif de ${identity.objective}`,
+        ],
+      ];
+
+      const blocTop = doc.y;
+      doc.fontSize(9);
+      for (const [label, valeur] of lignes) {
+        const y = doc.y;
+        doc.font("Helvetica-Bold").fillColor("#57534e").text(label, PAGE_MARGIN + 10, y, { width: 110 });
+        doc
+          .font("Helvetica")
+          .fillColor("black")
+          .text(valeur, PAGE_MARGIN + 125, y, { width: contentWidth - 135 });
+        doc.y = Math.max(doc.y, y) + 2;
+      }
+      // Encadré tracé après coup : sa hauteur dépend du retour à la ligne des
+      // valeurs longues (enseignement multi-niveaux, notamment).
+      doc
+        .roundedRect(PAGE_MARGIN, blocTop - 6, contentWidth, doc.y - blocTop + 10, 6)
+        .lineWidth(0.8)
+        .strokeColor("#e7e5e4")
+        .stroke();
+      doc.y += 14;
+      doc.fillColor("black");
+    }
 
     const drawHeader = () => {
       let x = PAGE_MARGIN;

@@ -25,6 +25,10 @@ export default async function EcoleStatistiquesPage() {
     teachers.length > 0 ? teachers.reduce((sum, t) => sum + t.objective, 0) / teachers.length : 0;
 
   const sortedTeachers = [...teachers].sort((a, b) => b.percent - a.percent);
+  // Les colonnes inter-écoles n'apparaissent que si elles ont matière à
+  // s'afficher : dans une école où personne n'enseigne ailleurs, deux colonnes
+  // vides n'apporteraient rien.
+  const hasMultiSchool = teachers.some((t) => t.otherSchools > 0);
 
   return (
     <div className="space-y-6">
@@ -71,6 +75,10 @@ export default async function EcoleStatistiquesPage() {
                   <th className="px-5 py-3">Enseignant·e</th>
                   <th className="px-5 py-3">Taux</th>
                   <th className="px-5 py-3">Effectuées</th>
+                  {/* Colonne affichée seulement si au moins une personne de
+                      l'école enseigne ailleurs — inutile de la montrer vide. */}
+                  {hasMultiSchool && <th className="px-5 py-3">Ailleurs</th>}
+                  {hasMultiSchool && <th className="px-5 py-3">Total</th>}
                   <th className="px-5 py-3">Objectif</th>
                 </tr>
               </thead>
@@ -89,6 +97,16 @@ export default async function EcoleStatistiquesPage() {
                     <td className="px-5 py-3.5 text-stone-600 dark:text-stone-400">
                       {formatPeriodes(teacher.done)}
                     </td>
+                    {hasMultiSchool && (
+                      <td className="px-5 py-3.5 text-stone-500 dark:text-stone-400">
+                        {teacher.otherSchools > 0 ? formatPeriodes(teacher.otherSchools) : "—"}
+                      </td>
+                    )}
+                    {hasMultiSchool && (
+                      <td className="px-5 py-3.5 font-medium text-stone-800 dark:text-stone-200">
+                        {formatPeriodes(teacher.done + teacher.otherSchools)}
+                      </td>
+                    )}
                     <td className="px-5 py-3.5 text-stone-600 dark:text-stone-400">
                       {formatPeriodes(teacher.objective)}
                     </td>

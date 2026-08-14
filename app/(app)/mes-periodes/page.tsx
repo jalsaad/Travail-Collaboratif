@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
-import { getMembershipProgress } from "@/lib/collaboration-progress";
+import { getMembershipProgress, getOtherSchoolsPeriodes } from "@/lib/collaboration-progress";
 import { formatPeriodes } from "@/lib/period-duration";
 import { CircularProgressRing } from "@/components/circular-progress-ring";
 import { PeriodCard } from "@/components/period-card";
@@ -20,6 +20,11 @@ export default async function MesPeriodesPage() {
 
   const schoolYear = await getCurrentSchoolYear();
   const progress = schoolYear ? await getMembershipProgress(active.membershipId, schoolYear.id) : null;
+  // Périodes déclarées dans les autres écoles de la personne, s'il y en a :
+  // son obligation annuelle porte sur le total, pas sur une seule école.
+  const ailleurs = schoolYear
+    ? await getOtherSchoolsPeriodes(session.userId, active.membershipId, schoolYear.id)
+    : 0;
 
   // Scopé sur l'année courante, comme l'espace Direction (cf. ecole/page.tsx) :
   // c'est ce qui fait repartir l'écran de zéro après l'archivage de fin
@@ -54,6 +59,14 @@ export default async function MesPeriodesPage() {
             {schoolYear && (
               <span className="block text-xs text-stone-400 dark:text-stone-500">
                 pour l&apos;année scolaire {schoolYear.label}
+              </span>
+            )}
+            {ailleurs > 0 && (
+              <span className="mt-1 block text-xs text-stone-500 dark:text-stone-400">
+                dont {formatPeriodes(ailleurs)} période(s) dans un autre établissement —{" "}
+                <span className="font-semibold text-stone-700 dark:text-stone-200">
+                  {formatPeriodes(progress.done + ailleurs)} au total
+                </span>
               </span>
             )}
           </p>
