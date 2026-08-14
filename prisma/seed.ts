@@ -11,6 +11,7 @@ import {
   PeriodType,
   ParticipantStatus,
   AnnouncementStatus,
+  type TeachingLevel,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -18,6 +19,15 @@ const prisma = new PrismaClient();
 
 // Mot de passe unique pour tous les comptes de démo (dev/local uniquement).
 const DEMO_PASSWORD = "demo1234";
+
+/// Minutes entre deux heures "HH:MM" — la durée en périodes s'en déduit
+/// (1 période = 50 minutes, cf. lib/period-duration.ts), plutôt que d'être
+/// recopiée à la main sur chaque ligne au risque d'incohérences.
+function minutesEntre(de: string, a: string): number {
+  const [dh, dm] = de.split(":").map(Number);
+  const [ah, am] = a.split(":").map(Number);
+  return ah * 60 + am - (dh * 60 + dm);
+}
 
 async function main() {
   const demoPasswordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
@@ -80,41 +90,46 @@ async function main() {
   });
 
   // --- Utilisateurs -------------------------------------------------------
+  // Identités complètes (date de naissance, sexe, matricule) : sans elles, le
+  // bloc d'identité des relevés PDF affiche « non renseigné » partout, ce qui
+  // rend le jeu de démonstration inutilisable pour une capture d'écran ou une
+  // vidéo. Les matricules respectent la composition de lib/matricule.ts —
+  // 1 chiffre sexe, 2 décennie, 2 mois, 2 jour, 4 chiffres libres.
   const [christine, sophie, marc, amandine, karim, julie, thomas] = await Promise.all([
     prisma.user.upsert({
       where: { email: "c.toumpsin@ecole-tilleuls.be" },
-      update: { passwordHash: demoPasswordHash },
-      create: { email: "c.toumpsin@ecole-tilleuls.be", firstName: "Christine", lastName: "Toumpsin", passwordHash: demoPasswordHash },
+      update: { passwordHash: demoPasswordHash, dateOfBirth: new Date("1972-03-14"), sex: "F", matricule: "27203140142" },
+      create: { email: "c.toumpsin@ecole-tilleuls.be", firstName: "Christine", lastName: "Toumpsin", passwordHash: demoPasswordHash, dateOfBirth: new Date("1972-03-14"), sex: "F", matricule: "27203140142" },
     }),
     prisma.user.upsert({
       where: { email: "s.dubois@ecole-tilleuls.be" },
-      update: { passwordHash: demoPasswordHash },
-      create: { email: "s.dubois@ecole-tilleuls.be", firstName: "Sophie", lastName: "Dubois", passwordHash: demoPasswordHash },
+      update: { passwordHash: demoPasswordHash, dateOfBirth: new Date("1985-09-02"), sex: "F", matricule: "28509020317" },
+      create: { email: "s.dubois@ecole-tilleuls.be", firstName: "Sophie", lastName: "Dubois", passwordHash: demoPasswordHash, dateOfBirth: new Date("1985-09-02"), sex: "F", matricule: "28509020317" },
     }),
     prisma.user.upsert({
       where: { email: "m.lefevre@ecole-tilleuls.be" },
-      update: { passwordHash: demoPasswordHash },
-      create: { email: "m.lefevre@ecole-tilleuls.be", firstName: "Marc", lastName: "Lefèvre", passwordHash: demoPasswordHash },
+      update: { passwordHash: demoPasswordHash, dateOfBirth: new Date("1978-11-23"), sex: "M", matricule: "17811230884" },
+      create: { email: "m.lefevre@ecole-tilleuls.be", firstName: "Marc", lastName: "Lefèvre", passwordHash: demoPasswordHash, dateOfBirth: new Date("1978-11-23"), sex: "M", matricule: "17811230884" },
     }),
     prisma.user.upsert({
       where: { email: "a.colson@ecole-tilleuls.be" },
-      update: { passwordHash: demoPasswordHash },
-      create: { email: "a.colson@ecole-tilleuls.be", firstName: "Amandine", lastName: "Colson", passwordHash: demoPasswordHash },
+      update: { passwordHash: demoPasswordHash, dateOfBirth: new Date("1990-05-08"), sex: "F", matricule: "29005080261" },
+      create: { email: "a.colson@ecole-tilleuls.be", firstName: "Amandine", lastName: "Colson", passwordHash: demoPasswordHash, dateOfBirth: new Date("1990-05-08"), sex: "F", matricule: "29005080261" },
     }),
     prisma.user.upsert({
       where: { email: "k.benali@ecole-tilleuls.be" },
-      update: { passwordHash: demoPasswordHash },
-      create: { email: "k.benali@ecole-tilleuls.be", firstName: "Karim", lastName: "Benali", passwordHash: demoPasswordHash },
+      update: { passwordHash: demoPasswordHash, dateOfBirth: new Date("1983-07-19"), sex: "M", matricule: "18307190475" },
+      create: { email: "k.benali@ecole-tilleuls.be", firstName: "Karim", lastName: "Benali", passwordHash: demoPasswordHash, dateOfBirth: new Date("1983-07-19"), sex: "M", matricule: "18307190475" },
     }),
     prisma.user.upsert({
       where: { email: "j.vandamme@ecole-tilleuls.be" },
-      update: { passwordHash: demoPasswordHash },
-      create: { email: "j.vandamme@ecole-tilleuls.be", firstName: "Julie", lastName: "Van Damme", passwordHash: demoPasswordHash },
+      update: { passwordHash: demoPasswordHash, dateOfBirth: new Date("1995-01-30"), sex: "F", matricule: "29501300639" },
+      create: { email: "j.vandamme@ecole-tilleuls.be", firstName: "Julie", lastName: "Van Damme", passwordHash: demoPasswordHash, dateOfBirth: new Date("1995-01-30"), sex: "F", matricule: "29501300639" },
     }),
     prisma.user.upsert({
       where: { email: "t.gregoire@val.be" },
-      update: { passwordHash: demoPasswordHash },
-      create: { email: "t.gregoire@val.be", firstName: "Thomas", lastName: "Grégoire", passwordHash: demoPasswordHash },
+      update: { passwordHash: demoPasswordHash, dateOfBirth: new Date("1988-04-11"), sex: "M", matricule: "18804110752" },
+      create: { email: "t.gregoire@val.be", firstName: "Thomas", lastName: "Grégoire", passwordHash: demoPasswordHash, dateOfBirth: new Date("1988-04-11"), sex: "M", matricule: "18804110752" },
     }),
   ]);
 
@@ -211,9 +226,16 @@ async function main() {
   // Codes du référentiel FWB (cf. lib/disciplines.ts) : Mathématiques degré
   // inférieur (26) et Français degré supérieur (228) — cohérents avec les
   // niveaux déclarés ci-dessous.
-  const [maths, francais] = await Promise.all([
+  const [maths, francais, sciences, histoire, instituteur] = await Promise.all([
     prisma.discipline.upsert({ where: { code: "26" }, update: {}, create: { code: "26", name: "Mathématiques" } }),
     prisma.discipline.upsert({ where: { code: "228" }, update: {}, create: { code: "228", name: "Français" } }),
+    prisma.discipline.upsert({ where: { code: "30" }, update: {}, create: { code: "30", name: "Sciences" } }),
+    prisma.discipline.upsert({ where: { code: "23" }, update: {}, create: { code: "23", name: "Histoire" } }),
+    prisma.discipline.upsert({
+      where: { code: "951" },
+      update: {},
+      create: { code: "951", name: "Instituteur·rice primaire" },
+    }),
   ]);
 
   // La discipline se rattache désormais à une ligne niveau/heures (pas à la
@@ -251,6 +273,33 @@ async function main() {
       disciplineId: francais.id,
     },
   });
+
+  // Charges des autres enseignant·es, alignées sur les ETP déclarés plus haut
+  // (cf. FULL_TIME_HOURS dans lib/teaching-levels.ts : 24 h en primaire, 22 h
+  // en secondaire inférieur, 21 h en supérieur). Sans elles, le bloc
+  // d'identité des relevés affiche « non renseigné ».
+  const charges: { membershipId: string; level: TeachingLevel; hours: number; disciplineId: string }[] = [
+    { membershipId: memberMarc.id, level: "SECONDAIRE_INFERIEUR", hours: 22, disciplineId: sciences.id },
+    { membershipId: memberAmandine.id, level: "PRIMAIRE", hours: 24, disciplineId: instituteur.id },
+    { membershipId: memberJulie.id, level: "SECONDAIRE_INFERIEUR", hours: 22, disciplineId: histoire.id },
+    // Karim est à mi-temps (etp 0,5) : 11 h sur les 22 d'un temps plein.
+    { membershipId: memberKarim.id, level: "SECONDAIRE_INFERIEUR", hours: 11, disciplineId: francais.id },
+    // Sophie enseigne aussi au Val, à 0,3 ETP : 6,3 h sur les 21 du supérieur.
+    { membershipId: memberSophieVal.id, level: "SECONDAIRE_SUPERIEUR", hours: 6.3, disciplineId: maths.id },
+  ];
+  for (const charge of charges) {
+    await prisma.membershipLevelHours.upsert({
+      where: {
+        membershipId_level_disciplineId: {
+          membershipId: charge.membershipId,
+          level: charge.level,
+          disciplineId: charge.disciplineId,
+        },
+      },
+      update: { hours: charge.hours },
+      create: charge,
+    });
+  }
 
   // --- Contenu de démo à usage unique --------------------------------------
   // Annonce, code de rattachement et périodes n'ont pas de clé naturelle à
@@ -398,6 +447,132 @@ async function main() {
   }
 
   console.log(`Mot de passe de démonstration (tous les comptes) : ${DEMO_PASSWORD}`);
+
+  // --- Trois mois de périodes pour la démonstration ------------------------
+  // Avril à juin 2026, à l'intérieur de l'année scolaire créée plus haut :
+  // de quoi remplir les compteurs, illustrer les deux formes, les natures
+  // d'activité, les statuts de validation et le cas inter-écoles — matière à
+  // captures d'écran et à une vidéo de prise en main.
+  //
+  // Identifiants déterministes et upsert : rejouer le seed ne fait pas de
+  // doublons et ne touche pas aux périodes créées à la main dans l'interface,
+  // dont les identifiants sont aléatoires.
+  type DemoPeriode = {
+    id: string;
+    date: string;
+    de: string;
+    a: string;
+    type: PeriodType;
+    nature: string | null;
+    description: string;
+    objectifs?: string;
+    auteur: { userId: string; membershipId: string };
+    invites: { userId: string; membershipId: string; statut: ParticipantStatus }[];
+  };
+
+  const A = { userId: amandine.id, membershipId: memberAmandine.id };
+  const J = { userId: julie.id, membershipId: memberJulie.id };
+  const K = { userId: karim.id, membershipId: memberKarim.id };
+  const M = { userId: marc.id, membershipId: memberMarc.id };
+  const S = { userId: sophie.id, membershipId: memberSophieTilleuls.id };
+  const SV = { userId: sophie.id, membershipId: memberSophieVal.id };
+  const T = { userId: thomas.id, membershipId: memberThomasVal.id };
+  const C = { userId: christine.id, membershipId: memberChristine.id };
+  const OK = ParticipantStatus.CONFIRMED;
+  const ATT = ParticipantStatus.PENDING;
+
+  const demoPeriodes: DemoPeriode[] = [
+    // ---- Avril 2026 ----
+    { id: "seed-2026-04-02-a", date: "2026-04-02", de: "08:30", a: "10:10", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "preparation-cours-commun", description: "Préparation commune de la séquence sur les équations du premier degré.",
+      objectifs: "Objectif 2 — relever les résultats en mathématiques au degré inférieur.",
+      auteur: M, invites: [{ ...M, statut: OK }, { ...S, statut: OK }] },
+    { id: "seed-2026-04-09-a", date: "2026-04-09", de: "13:00", a: "15:30", type: PeriodType.REUNION_EQUIPE,
+      nature: "contrat-objectifs", description: "Réunion d'équipe — point d'étape sur la mise en œuvre du contrat d'objectifs.",
+      objectifs: "Toutes stratégies du contrat d'objectifs.",
+      auteur: C, invites: [{ ...C, statut: OK }, { ...M, statut: OK }, { ...A, statut: OK }, { ...J, statut: OK }, { ...K, statut: OK }] },
+    { id: "seed-2026-04-16-a", date: "2026-04-16", de: "10:20", a: "11:35", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "pratiques-evaluation", description: "Harmonisation des critères de correction de l'épreuve commune de français.",
+      auteur: K, invites: [{ ...K, statut: OK }, { ...J, statut: OK }] },
+    { id: "seed-2026-04-23-a", date: "2026-04-23", de: "14:00", a: "15:40", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "accompagnement-debutant", description: "Accompagnement d'une collègue débutante : gestion de classe et rythmes.",
+      auteur: A, invites: [{ ...A, statut: OK }, { ...J, statut: OK }] },
+    { id: "seed-2026-04-30-a", date: "2026-04-30", de: "09:00", a: "10:00", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "concertation-verticale", description: "Concertation verticale primaire / secondaire sur la continuité en lecture.",
+      objectifs: "Objectif 1 — continuité des apprentissages entre cycles.",
+      auteur: A, invites: [{ ...A, statut: OK }, { ...M, statut: ATT }] },
+
+    // ---- Mai 2026 ----
+    { id: "seed-2026-05-07-a", date: "2026-05-07", de: "08:30", a: "10:10", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "co-construction-activite", description: "Co-construction de la semaine de la citoyenneté.",
+      objectifs: "Objectif 3 — climat scolaire et citoyenneté.",
+      auteur: J, invites: [{ ...J, statut: OK }, { ...A, statut: OK }, { ...K, statut: OK }] },
+    { id: "seed-2026-05-12-a", date: "2026-05-12", de: "13:00", a: "14:40", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "sortie-pedagogique", description: "Conception de la sortie au musée des sciences : parcours et exploitation en classe.",
+      auteur: M, invites: [{ ...M, statut: OK }, { ...A, statut: OK }] },
+    { id: "seed-2026-05-19-a", date: "2026-05-19", de: "15:00", a: "16:15", type: PeriodType.REUNION_EQUIPE,
+      nature: "reunion-equipe-educative", description: "Réunion d'équipe éducative — suivi des élèves en difficulté.",
+      auteur: C, invites: [{ ...C, statut: OK }, { ...M, statut: OK }, { ...J, statut: OK }, { ...K, statut: ATT }] },
+    { id: "seed-2026-05-21-a", date: "2026-05-21", de: "10:20", a: "12:00", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "concertation-inter-ecoles", description: "Concertation inter-écoles sur l'épreuve externe de français.",
+      objectifs: "Objectif 1 — harmoniser les pratiques d'évaluation.",
+      auteur: S, invites: [{ ...S, statut: OK }, { ...T, statut: OK }] },
+    { id: "seed-2026-05-28-a", date: "2026-05-28", de: "09:00", a: "10:40", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "intervision", description: "Intervision : analyse de situations de classe rencontrées ce trimestre.",
+      auteur: K, invites: [{ ...K, statut: OK }, { ...M, statut: OK }, { ...A, statut: ATT }] },
+
+    // ---- Juin 2026 ----
+    { id: "seed-2026-06-04-a", date: "2026-06-04", de: "08:30", a: "09:20", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "remediation-depassement", description: "Organisation de la remédiation en mathématiques avant les épreuves.",
+      auteur: M, invites: [{ ...M, statut: OK }, { ...K, statut: OK }] },
+    { id: "seed-2026-06-09-a", date: "2026-06-09", de: "13:30", a: "15:10", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "dacce", description: "Renseignement du dossier d'accompagnement de l'élève pour trois situations.",
+      auteur: J, invites: [{ ...J, statut: OK }, { ...A, statut: OK }] },
+    { id: "seed-2026-06-11-a", date: "2026-06-11", de: "10:00", a: "11:40", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "concertation-inter-ecoles", description: "Préparation conjointe de la passation des épreuves certificatives.",
+      auteur: SV, invites: [{ ...SV, statut: OK }, { ...T, statut: ATT }] },
+    { id: "seed-2026-06-16-a", date: "2026-06-16", de: "14:00", a: "16:30", type: PeriodType.REUNION_EQUIPE,
+      nature: "evaluation-contrat", description: "Évaluation annuelle du contrat d'objectifs par l'équipe éducative.",
+      objectifs: "Auto-évaluation collective, toutes stratégies.",
+      auteur: C, invites: [{ ...C, statut: OK }, { ...M, statut: OK }, { ...A, statut: OK }, { ...J, statut: OK }, { ...K, statut: OK }, { ...S, statut: OK }] },
+    { id: "seed-2026-06-23-a", date: "2026-06-23", de: "09:00", a: "10:40", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "numerique", description: "Prise en main d'un outil de quiz interactif et partage de séquences.",
+      auteur: S, invites: [{ ...S, statut: OK }, { ...J, statut: OK }, { ...M, statut: ATT }] },
+    { id: "seed-2026-06-26-a", date: "2026-06-26", de: "11:00", a: "12:15", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "plan-pilotage", description: "Relecture collective des indicateurs du plan de pilotage avant clôture.",
+      objectifs: "Préparation de l'évaluation intermédiaire.",
+      auteur: A, invites: [{ ...A, statut: OK }, { ...C, statut: OK }] },
+  ];
+
+  for (const p of demoPeriodes) {
+    const dureePeriodes = minutesEntre(p.de, p.a) / 50;
+    await prisma.collaborativePeriod.upsert({
+      where: { id: p.id },
+      update: {},
+      create: {
+        id: p.id,
+        type: p.type,
+        date: new Date(p.date),
+        heureDebut: p.de,
+        heureFin: p.a,
+        dureePeriodes,
+        natureActivite: p.nature,
+        description: p.description,
+        objectifsPilotage: p.objectifs ?? null,
+        schoolYearId: schoolYear.id,
+        createdByUserId: p.auteur.userId,
+        participants: {
+          create: p.invites.map((i) => ({
+            userId: i.userId,
+            membershipId: i.membershipId,
+            status: i.statut,
+            isInitiator: i.userId === p.auteur.userId && i.membershipId === p.auteur.membershipId,
+            confirmedAt: i.statut === ParticipantStatus.CONFIRMED ? new Date(p.date) : null,
+          })),
+        },
+      },
+    });
+  }
 }
 
 main()

@@ -12,6 +12,9 @@ import { defineConfig } from "prisma/config";
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
-    seed: "ts-node prisma/seed.ts",
+    // Options passées en ligne plutôt que via tsconfig.json : celui-ci déclare
+    // `module: "esnext"`, que ts-node charge en silence sans rien exécuter —
+    // le seed sortait en code 0 sans écrire une ligne en base.
+    seed: 'ts-node --compiler-options {"module":"commonjs","moduleResolution":"node"} prisma/seed.ts',
   },
 });
