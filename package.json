@@ -11,7 +11,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "invitations": "ts-node -P tsconfig.scripts.json scripts/inviter-directions.ts",
+    "collecte-emails": "ts-node -P tsconfig.scripts.json scripts/collecter-emails.ts"
   },
   "ts-node": {
     "compilerOptions": {

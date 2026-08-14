@@ -79,6 +79,33 @@ Tout est optionnel hors `DATABASE_URL` et `AUTH_SECRET` : chaque bloc absent dé
 | `npm run prisma:migrate` | Applique une nouvelle migration |
 | `npm run prisma:seed` | Recharge le jeu de données de démonstration (idempotent) |
 | `npm run prisma:studio` | Explorateur de données Prisma Studio |
+| `npm run invitations` | Campagne d'invitation des directions (simulation par défaut) |
+
+## Inviter les directions d'école
+
+`data/prospection-ecoles.csv` liste 491 établissements (266 fondamentaux, 225 secondaires)
+issus de l'annuaire public de la Fédération Wallonie-Bruxelles. **L'annuaire ne publie pas
+les adresses email** : la colonne `email_direction` est vide et doit être complétée avant
+tout envoi — le script ignore silencieusement les lignes sans adresse valide.
+
+```bash
+npm run invitations                              # simulation : compte et liste, n'envoie rien
+npm run invitations -- --apercu                  # écrit data/apercu-invitation.html
+npm run invitations -- --envoyer --limite=25     # première vague de 25
+npm run invitations -- --envoyer --niveau=Secondaire
+```
+
+Rien ne part sans `--envoyer`, et l'envoi exige `SMTP_HOST`. Chaque message est journalisé
+au fil de l'eau dans `data/prospection-journal.csv` : relancer la commande reprend là où
+elle s'était arrêtée et ne réécrit jamais à une adresse déjà servie — c'est aussi ce qui
+permet d'étaler la campagne en plusieurs vagues. Les adresses en doublon (implantations
+partageant une boîte) ne sont servies qu'une fois, l'envoi est espacé de 4 secondes par
+défaut (`--delai`), les réponses arrivent sur `PLATFORM_NOTIFICATION_EMAIL` et chaque
+message porte un en-tête `List-Unsubscribe`.
+
+Le contenu de l'invitation vit dans [`lib/invitation-directions.ts`](lib/invitation-directions.ts)
+et reprend le gabarit commun des emails de la plateforme, extrait dans
+[`lib/email-template.ts`](lib/email-template.ts) pour être utilisable hors requête HTTP.
 
 ## Déploiement
 

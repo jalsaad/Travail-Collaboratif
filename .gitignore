@@ -11,3 +11,10 @@ public/uploads/
 # Le "/" initial ancre la règle à la racine du dépôt : sans lui, le motif
 # matcherait aussi app/admin/archives/, la page d'administration.
 /archives/
+
+# Campagne d'invitation des directions : l'aperçu est régénérable, et le
+# journal contient les adresses réellement contactées (cf. scripts/inviter-directions.ts).
+/data/apercu-invitation.html
+/data/prospection-journal.csv
+/data/prospection-ecoles.csv
+/data/prospection-ecoles.csv
