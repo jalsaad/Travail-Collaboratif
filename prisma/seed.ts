@@ -89,6 +89,32 @@ async function main() {
     },
   });
 
+  // Troisième école, pour que la vue plateforme ait plus de deux
+  // établissements à montrer et qu'une seconde direction existe. Upsert sur le
+  // numéro FASE : si elle a déjà été créée à la main dans l'interface, ses
+  // lignes sont reprises plutôt que dupliquées.
+  const bara = await prisma.school.upsert({
+    where: { numeroFase: "1969" },
+    // Champs d'affichage écrits aussi en update : créée à la main dans
+    // l'interface, l'école n'avait ni code postal, ni localité, ni zone, et
+    // son profil s'affichait à moitié vide.
+    update: {
+      reseau: "Officiel (WBE)",
+      region: "Wallonie Picarde (Zone 8)",
+      postalCode: "7500",
+      locality: "Tournai",
+    },
+    create: {
+      name: "Athénée Royal Jules Bara",
+      reseau: "Officiel (WBE)",
+      region: "Wallonie Picarde (Zone 8)",
+      numeroFase: "1969",
+      address: "Rue Dusquesnoy 27",
+      postalCode: "7500",
+      locality: "Tournai",
+    },
+  });
+
   // --- Utilisateurs -------------------------------------------------------
   // Identités complètes (date de naissance, sexe, matricule) : sans elles, le
   // bloc d'identité des relevés PDF affiche « non renseigné » partout, ce qui
@@ -130,6 +156,31 @@ async function main() {
       where: { email: "t.gregoire@val.be" },
       update: { passwordHash: demoPasswordHash, dateOfBirth: new Date("1988-04-11"), sex: "M", matricule: "18804110752" },
       create: { email: "t.gregoire@val.be", firstName: "Thomas", lastName: "Grégoire", passwordHash: demoPasswordHash, dateOfBirth: new Date("1988-04-11"), sex: "M", matricule: "18804110752" },
+    }),
+  ]);
+
+  // Équipe de l'Athénée Royal Jules Bara : une direction et trois
+  // enseignant·es, dont une à mi-temps pour illustrer le quota proportionnel.
+  const [leandro, nadia, bruno, elodie] = await Promise.all([
+    prisma.user.upsert({
+      where: { email: "l.anzaldi@atheneejulesbara.be" },
+      update: { passwordHash: demoPasswordHash, dateOfBirth: new Date("1975-06-21"), sex: "M", matricule: "17506210538" },
+      create: { email: "l.anzaldi@atheneejulesbara.be", firstName: "Leandro", lastName: "Anzaldi", passwordHash: demoPasswordHash, dateOfBirth: new Date("1975-06-21"), sex: "M", matricule: "17506210538" },
+    }),
+    prisma.user.upsert({
+      where: { email: "n.lemaire@atheneejulesbara.be" },
+      update: { passwordHash: demoPasswordHash, dateOfBirth: new Date("1981-02-17"), sex: "F", matricule: "28102170946" },
+      create: { email: "n.lemaire@atheneejulesbara.be", firstName: "Nadia", lastName: "Lemaire", passwordHash: demoPasswordHash, dateOfBirth: new Date("1981-02-17"), sex: "F", matricule: "28102170946" },
+    }),
+    prisma.user.upsert({
+      where: { email: "b.wauters@atheneejulesbara.be" },
+      update: { passwordHash: demoPasswordHash, dateOfBirth: new Date("1987-10-05"), sex: "M", matricule: "18710050193" },
+      create: { email: "b.wauters@atheneejulesbara.be", firstName: "Bruno", lastName: "Wauters", passwordHash: demoPasswordHash, dateOfBirth: new Date("1987-10-05"), sex: "M", matricule: "18710050193" },
+    }),
+    prisma.user.upsert({
+      where: { email: "e.bastin@atheneejulesbara.be" },
+      update: { passwordHash: demoPasswordHash, dateOfBirth: new Date("1993-12-08"), sex: "F", matricule: "29312080427" },
+      create: { email: "e.bastin@atheneejulesbara.be", firstName: "Élodie", lastName: "Bastin", passwordHash: demoPasswordHash, dateOfBirth: new Date("1993-12-08"), sex: "F", matricule: "29312080427" },
     }),
   ]);
 
@@ -184,6 +235,28 @@ async function main() {
     create: { userId: thomas.id, schoolId: val.id, role: Role.ENSEIGNANT },
   });
 
+  // --- Memberships (Athénée Royal Jules Bara) -----------------------------
+  const memberLeandro = await prisma.membership.upsert({
+    where: { userId_schoolId: { userId: leandro.id, schoolId: bara.id } },
+    update: { role: Role.DIRECTION },
+    create: { userId: leandro.id, schoolId: bara.id, role: Role.DIRECTION, isAccountOwner: true },
+  });
+  const memberNadia = await prisma.membership.upsert({
+    where: { userId_schoolId: { userId: nadia.id, schoolId: bara.id } },
+    update: {},
+    create: { userId: nadia.id, schoolId: bara.id, role: Role.REFERENT_NUMERIQUE },
+  });
+  const memberBruno = await prisma.membership.upsert({
+    where: { userId_schoolId: { userId: bruno.id, schoolId: bara.id } },
+    update: {},
+    create: { userId: bruno.id, schoolId: bara.id, role: Role.ENSEIGNANT },
+  });
+  const memberElodie = await prisma.membership.upsert({
+    where: { userId_schoolId: { userId: elodie.id, schoolId: bara.id } },
+    update: {},
+    create: { userId: elodie.id, schoolId: bara.id, role: Role.ENSEIGNANT },
+  });
+
   // --- Objectifs annuels (ETP → périodes) ---------------------------------
   // Sophie : 0.5 ETP aux Tilleuls + 0.3 ETP au Val = 0.8 ETP au total.
   // 60 * 0.5 = 30 pér. / 60 * 0.3 = 18 pér. → 48 pér. cumulées (cohérent
@@ -221,6 +294,20 @@ async function main() {
     update: {},
     create: { membershipId: memberThomasVal.id, schoolYearId: schoolYear.id, etp: 1, objectifPeriodes: 60 },
   });
+
+  // Athénée Royal Jules Bara — 60 périodes à temps plein, 30 à mi-temps
+  // (cf. lib/quota-engine.ts : 60 * ETP).
+  for (const { m, etp, obj } of [
+    { m: memberNadia, etp: 1, obj: 60 },
+    { m: memberBruno, etp: 1, obj: 60 },
+    { m: memberElodie, etp: 0.5, obj: 30 },
+  ]) {
+    await prisma.annualAssignment.upsert({
+      where: { membershipId_schoolYearId: { membershipId: m.id, schoolYearId: schoolYear.id } },
+      update: {},
+      create: { membershipId: m.id, schoolYearId: schoolYear.id, etp, objectifPeriodes: obj },
+    });
+  }
 
   // --- Disciplines -----------------------------------------------------
   // Codes du référentiel FWB (cf. lib/disciplines.ts) : Mathématiques degré
@@ -286,6 +373,11 @@ async function main() {
     { membershipId: memberKarim.id, level: "SECONDAIRE_INFERIEUR", hours: 11, disciplineId: francais.id },
     // Sophie enseigne aussi au Val, à 0,3 ETP : 6,3 h sur les 21 du supérieur.
     { membershipId: memberSophieVal.id, level: "SECONDAIRE_SUPERIEUR", hours: 6.3, disciplineId: maths.id },
+    // Athénée Royal Jules Bara. Élodie est à mi-temps : 10,5 h sur les 21 du
+    // supérieur, soit 0,5 ETP et donc 30 périodes à faire.
+    { membershipId: memberNadia.id, level: "SECONDAIRE_SUPERIEUR", hours: 21, disciplineId: histoire.id },
+    { membershipId: memberBruno.id, level: "SECONDAIRE_INFERIEUR", hours: 22, disciplineId: sciences.id },
+    { membershipId: memberElodie.id, level: "SECONDAIRE_SUPERIEUR", hours: 10.5, disciplineId: francais.id },
   ];
   for (const charge of charges) {
     await prisma.membershipLevelHours.upsert({
@@ -478,6 +570,11 @@ async function main() {
   const SV = { userId: sophie.id, membershipId: memberSophieVal.id };
   const T = { userId: thomas.id, membershipId: memberThomasVal.id };
   const C = { userId: christine.id, membershipId: memberChristine.id };
+  // Athénée Royal Jules Bara
+  const L = { userId: leandro.id, membershipId: memberLeandro.id };
+  const N = { userId: nadia.id, membershipId: memberNadia.id };
+  const B = { userId: bruno.id, membershipId: memberBruno.id };
+  const E = { userId: elodie.id, membershipId: memberElodie.id };
   const OK = ParticipantStatus.CONFIRMED;
   const ATT = ParticipantStatus.PENDING;
 
@@ -542,6 +639,32 @@ async function main() {
       nature: "plan-pilotage", description: "Relecture collective des indicateurs du plan de pilotage avant clôture.",
       objectifs: "Préparation de l'évaluation intermédiaire.",
       auteur: A, invites: [{ ...A, statut: OK }, { ...C, statut: OK }] },
+
+    // ---- Athénée Royal Jules Bara ----
+    { id: "seed-bara-2026-04-07", date: "2026-04-07", de: "13:00", a: "15:30", type: PeriodType.REUNION_EQUIPE,
+      nature: "plan-pilotage", description: "Réunion d'équipe — priorités du plan de pilotage pour le troisième trimestre.",
+      objectifs: "Objectif 1 — maîtrise de la langue en fin de degré.",
+      auteur: L, invites: [{ ...L, statut: OK }, { ...N, statut: OK }, { ...B, statut: OK }, { ...E, statut: OK }] },
+    { id: "seed-bara-2026-04-21", date: "2026-04-21", de: "10:00", a: "11:40", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "preparation-cours-commun", description: "Préparation commune du module « sources et esprit critique » en histoire.",
+      auteur: N, invites: [{ ...N, statut: OK }, { ...E, statut: OK }] },
+    { id: "seed-bara-2026-05-05", date: "2026-05-05", de: "08:30", a: "10:10", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "pratiques-evaluation", description: "Construction d'une grille d'évaluation commune pour la dissertation.",
+      objectifs: "Objectif 1 — harmoniser les exigences entre classes parallèles.",
+      auteur: E, invites: [{ ...E, statut: OK }, { ...N, statut: OK }] },
+    { id: "seed-bara-2026-05-18", date: "2026-05-18", de: "14:00", a: "15:15", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "numerique", description: "Mise en place d'un carnet de laboratoire numérique en sciences.",
+      auteur: B, invites: [{ ...B, statut: OK }, { ...N, statut: ATT }] },
+    { id: "seed-bara-2026-06-02", date: "2026-06-02", de: "09:00", a: "10:40", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "concertation-verticale", description: "Concertation verticale sciences : continuité entre degrés inférieur et supérieur.",
+      auteur: B, invites: [{ ...B, statut: OK }, { ...E, statut: OK }] },
+    { id: "seed-bara-2026-06-15", date: "2026-06-15", de: "13:30", a: "16:00", type: PeriodType.REUNION_EQUIPE,
+      nature: "evaluation-contrat", description: "Évaluation annuelle du contrat d'objectifs.",
+      objectifs: "Auto-évaluation collective de fin d'année.",
+      auteur: L, invites: [{ ...L, statut: OK }, { ...N, statut: OK }, { ...B, statut: OK }, { ...E, statut: ATT }] },
+    { id: "seed-bara-2026-06-25", date: "2026-06-25", de: "11:00", a: "11:50", type: PeriodType.COLLABORATION_PEDAGOGIQUE,
+      nature: "accompagnement-debutant", description: "Point d'accompagnement avec une collègue en première année de fonction.",
+      auteur: N, invites: [{ ...N, statut: OK }, { ...E, statut: OK }] },
   ];
 
   for (const p of demoPeriodes) {
