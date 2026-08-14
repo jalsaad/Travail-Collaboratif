@@ -3,6 +3,9 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { MemberProfileForm } from "@/components/member-profile-form";
+import { MemberInfoPanel } from "@/components/member-info-panel";
+import { getMembershipProgress, getOtherSchoolsPeriodes } from "@/lib/collaboration-progress";
+import { getCurrentSchoolYear } from "@/lib/current-school-year";
 import { MemberRowActions } from "@/components/member-row-actions";
 import { Reveal } from "@/components/reveal";
 
@@ -20,9 +23,18 @@ export default async function MemberDetailPage({
 
   const member = await prisma.membership.findFirst({
     where: { id: membershipId, schoolId: active.schoolId, status: "ACTIVE" },
-    include: { user: true },
+    include: { user: true, levelHours: { include: { discipline: { select: { name: true } } } } },
   });
   if (!member) notFound();
+
+  // Compteurs de l'année en cours. L'agrégat inter-écoles suit la même règle
+  // que les relevés (cf. lib/collaboration-progress.ts) : un total, sans nom
+  // d'établissement ni détail des périodes.
+  const schoolYear = await getCurrentSchoolYear();
+  const progress = schoolYear ? await getMembershipProgress(member.id, schoolYear.id) : null;
+  const ailleurs = schoolYear
+    ? await getOtherSchoolsPeriodes(member.userId, member.id, schoolYear.id)
+    : 0;
 
   // Indice d'affichage seulement — la vraie barrière est assertCanEditMemberProfile
   // côté serveur, re-vérifiée à chaque soumission indépendamment de ce booléen.
@@ -36,6 +48,21 @@ export default async function MemberDetailPage({
       </h1>
 
       <Reveal>
+        <MemberInfoPanel
+          fullName={`${member.user.firstName} ${member.user.lastName}`}
+          levelHours={member.levelHours.map((lh) => ({
+            level: lh.level,
+            hours: lh.hours.toString(),
+            discipline: lh.discipline.name,
+          }))}
+          done={progress?.done ?? 0}
+          objective={progress?.objective ?? 0}
+          otherSchools={ailleurs > 0 ? ailleurs : null}
+          lastLoginAt={member.user.lastLoginAt}
+        />
+      </Reveal>
+
+      <Reveal delay={60}>
         <MemberProfileForm
           membershipId={member.id}
           firstName={member.user.firstName}
