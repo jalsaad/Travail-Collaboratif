@@ -13,7 +13,7 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   title: "Travail Collaboratif",
-  description: "Gestion du travail collaboratif enseignant — Circulaire 8894/7167",
+  description: "Gestion du travail collaboratif enseignant — circulaires 7167 et 8894 (Fédération Wallonie-Bruxelles)",
 };
 
 // Pose la classe `.dark` sur <html> avant tout rendu/peinture — évite le

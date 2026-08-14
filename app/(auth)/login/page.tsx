@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Reveal } from "@/components/reveal";
+import { CONFORMITY_MENTION } from "@/lib/regulatory-reference";
 import { AboutUsSection } from "@/components/about-us-section";
 import { ReseauxEnseignementSection } from "@/components/reseaux-enseignement-section";
 
@@ -33,6 +34,10 @@ export default function LoginGatewayPage() {
           <h1 className="mx-auto mt-5 max-w-2xl text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl dark:text-stone-100">
             Bienvenue dans votre espace de création et de partage de tâches collaboratives
           </h1>
+
+          <p className="mx-auto mt-4 max-w-xl text-sm text-stone-600 dark:text-stone-300">
+            {CONFORMITY_MENTION}.
+          </p>
 
 
 

@@ -46,7 +46,7 @@ export function buildDirectionInvitation(options: InvitationOptions): Invitation
 
   const paragraphes = [
     "Madame la Directrice, Monsieur le Directeur,",
-    "La circulaire 7167 impose à chaque enseignant·e 60 périodes annuelles de travail " +
+    "Les circulaires 7167 et 8894 imposent à chaque enseignant·e 60 périodes annuelles de travail " +
       "collaboratif, à recenser sur le formulaire annexé. Travail Collaboratif est une " +
       "plateforme web qui prend ce recensement en charge : les enseignant·es déclarent " +
       "leurs périodes, les collègues concernés confirment leur participation, et votre " +
@@ -82,7 +82,7 @@ export function buildDirectionInvitation(options: InvitationOptions): Invitation
       { label: "École", value: school.nom },
       ...(localite ? [{ label: "Localité", value: localite }] : []),
       ...(school.reseau ? [{ label: "Réseau", value: school.reseau }] : []),
-      { label: "Cadre", value: "Circulaire 7167 — 60 périodes par enseignant·e et par an" },
+      { label: "Cadre", value: "Circulaires 7167 et 8894 — 60 périodes par enseignant·e et par an" },
       { label: "Coût", value: "Gratuite, sans limite de comptes" },
     ],
     cta: {
@@ -99,6 +99,98 @@ export function buildDirectionInvitation(options: InvitationOptions): Invitation
 
   return {
     subject: SUBJECT,
+    text,
+    html,
+    listUnsubscribe: `<mailto:${contactEmail}?subject=DESINSCRIPTION>`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Variante adressée au pouvoir organisateur
+// ---------------------------------------------------------------------------
+
+/// Une ligne de data/prospection-po.csv, réduite à ce dont l'email a besoin.
+export type InvitedPo = {
+  nom: string;
+  localite: string;
+  /// Nombre d'écoles de notre liste rattachées à ce PO — c'est l'argument
+  /// principal : un PO ne se décide pas école par école.
+  nbEcoles: number;
+  /// Vrai quand le PO est une commune ou une ville : l'interlocuteur est alors
+  /// l'échevin·e de l'enseignement, membre du collège communal qui exerce le
+  /// pouvoir organisateur.
+  estCommune: boolean;
+};
+
+const SUJET_PO = "Travail collaboratif : un outil gratuit pour les écoles de votre pouvoir organisateur";
+
+export function buildPoInvitation(options: {
+  po: InvitedPo;
+  baseUrl: string;
+  contactEmail: string;
+}): InvitationContent {
+  const { po, baseUrl, contactEmail } = options;
+  const inscriptionUrl = `${baseUrl}/creer-ecole`;
+  const ecolesLabel = `${po.nbEcoles} école${po.nbEcoles > 1 ? "s" : ""}`;
+
+  const paragraphes = [
+    po.estCommune
+      ? "Madame l'Échevine, Monsieur l'Échevin de l'Enseignement,"
+      : "Madame, Monsieur,",
+    `Nous nous adressons à vous en votre qualité de pouvoir organisateur, dont relèvent ` +
+      `${ecolesLabel} de notre relevé.`,
+    "Les circulaires 7167 et 8894 imposent à chaque enseignant·e 60 périodes annuelles de travail " +
+      "collaboratif, à recenser sur le formulaire annexé. Travail Collaboratif est une " +
+      "plateforme web qui prend ce recensement en charge : les enseignant·es déclarent " +
+      "leurs périodes, les collègues concernés confirment leur participation, et chaque " +
+      "direction suit l'avancement de son équipe, exports PDF et Excel compris.",
+    "Chaque école dispose de son propre espace, cloisonné des autres : l'outil se déploie " +
+      "école par école, sans projet informatique ni marché à passer. Il est gratuit et sans " +
+      "limite de comptes, conçu par des enseignant·es.",
+    "Si l'outil vous paraît utile, il suffit d'en informer vos directions — ou de nous dire " +
+      "quand nous pouvons vous le présenter.",
+  ];
+
+  const text = [
+    ...paragraphes,
+    "",
+    `Pouvoir organisateur : ${po.nom}${po.localite ? ` — ${po.localite}` : ""}`,
+    `Écoles concernées : ${ecolesLabel}`,
+    `Créer l'espace d'une école : ${inscriptionUrl}`,
+    "",
+    `Une question ou une présentation ? ${contactEmail}`,
+    "Vous recevez ce message parce que votre institution est le pouvoir organisateur",
+    "d'écoles figurant à l'annuaire public de la Fédération Wallonie-Bruxelles. Pour ne",
+    "plus en recevoir, répondez à cet email avec la mention DESINSCRIPTION.",
+  ].join("\n");
+
+  const html = renderBrandedEmail({
+    eyebrow: "Invitation aux pouvoirs organisateurs",
+    title: `Le travail collaboratif de vos ${ecolesLabel}, suivi sans tableur.`,
+    bodyHtml: paragraphes
+      .map((p) => `<p style="margin:0 0 12px;">${escapeHtml(p)}</p>`)
+      .join("\n        "),
+    rows: [
+      { label: "Pouvoir organisateur", value: po.nom },
+      ...(po.localite ? [{ label: "Localité", value: po.localite }] : []),
+      { label: "Écoles concernées", value: ecolesLabel },
+      { label: "Cadre", value: "Circulaires 7167 et 8894 — 60 périodes par enseignant·e et par an" },
+      { label: "Coût", value: "Gratuite, sans limite de comptes" },
+    ],
+    cta: {
+      label: "Découvrir la plateforme",
+      url: inscriptionUrl,
+      note: "Chaque école crée son espace en deux minutes ; les données restent cloisonnées par établissement.",
+    },
+    footerHtml: `Une question ou une présentation à vos directions ?
+          <a href="mailto:${contactEmail}" style="color:${BRAND_600};">${escapeHtml(contactEmail)}</a>.
+          Vous recevez ce message parce que votre institution est le pouvoir organisateur d'écoles
+          figurant à l'annuaire public de la Fédération Wallonie-Bruxelles ; pour ne plus en
+          recevoir, répondez simplement « DESINSCRIPTION ».`,
+  });
+
+  return {
+    subject: SUJET_PO,
     text,
     html,
     listUnsubscribe: `<mailto:${contactEmail}?subject=DESINSCRIPTION>`,

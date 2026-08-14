@@ -49,7 +49,7 @@ export function PeriodTypeFields({
           <option value="REUNION_EQUIPE">{periodTypeLabel.REUNION_EQUIPE}</option>
         </select>
         <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-          Les deux seules formes prévues par la circulaire 7167 : réunions d&apos;équipe à
+          Les deux seules formes prévues par les circulaires 7167 et 8894 : réunions d&apos;équipe à
           l&apos;initiative de la direction, collaboration pédagogique à l&apos;initiative des
           enseignant·es.
         </p>
@@ -81,7 +81,7 @@ export function PeriodTypeFields({
         </select>
         <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
           {hint ??
-            "Pistes suggérées par le vade-mecum annexé à la circulaire 7167 ; la liste n'est pas imposée, choisissez « Autre » au besoin."}
+            "Pistes suggérées par le vade-mecum des circulaires 7167 et 8894 ; la liste n'est pas imposée, choisissez « Autre » au besoin."}
         </p>
       </div>
     </div>

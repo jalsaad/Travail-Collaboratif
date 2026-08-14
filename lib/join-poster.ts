@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 import type { LoadedLogo } from "@/lib/export-logos";
+import { CONFORMITY_MENTION } from "@/lib/regulatory-reference";
 
 // Affiche A4 à imprimer et placarder en salle des profs : un QR code menant au
 // formulaire de rattachement avec le code de l'école déjà pré-rempli.
@@ -154,6 +155,10 @@ export async function buildJoinPosterPdf(params: {
         width: CONTENT,
         align: "center",
       });
+
+    doc
+      .fontSize(8)
+      .text(CONFORMITY_MENTION, MARGIN, footerTop + 86, { width: CONTENT, align: "center" });
 
     doc.end();
   });

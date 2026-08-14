@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { CONFORMITY_MENTION } from "@/lib/regulatory-reference";
 import type { LoadedLogo } from "@/lib/export-logos";
 
 export type ExportPeriodRow = {
@@ -71,10 +72,20 @@ export function buildPeriodsPdf(
     }
 
     doc.y = headerBottom + 10;
+    const contentWidth = doc.page.width - PAGE_MARGIN * 2;
     doc
       .fontSize(16)
       .font("Helvetica-Bold")
-      .text(title, PAGE_MARGIN, doc.y, { width: doc.page.width - PAGE_MARGIN * 2, align: "center" });
+      .text(title, PAGE_MARGIN, doc.y, { width: contentWidth, align: "center" });
+
+    // Sous-titre réglementaire : un relevé imprimé et transmis à
+    // l'administration doit porter le cadre dont il relève.
+    doc
+      .fontSize(8.5)
+      .font("Helvetica")
+      .fillColor("#78716c")
+      .text(CONFORMITY_MENTION, PAGE_MARGIN, doc.y + 4, { width: contentWidth, align: "center" })
+      .fillColor("black");
     doc.moveDown(0.8);
 
     const drawHeader = () => {
