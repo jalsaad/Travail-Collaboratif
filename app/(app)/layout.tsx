@@ -31,11 +31,7 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
         satisfactionRating={currentUser?.satisfactionRating ?? null}
       />
       {active && <SchoolLogoBadge />}
-      {active && (
-        <div className="mt-2 flex justify-center px-4">
-          <SchoolYearBadge label={schoolYear?.label ?? null} adminLink={session.isSuperAdmin} />
-        </div>
-      )}
+      {active && <SchoolYearBadge label={schoolYear?.label ?? null} adminLink={session.isSuperAdmin} />}
       {active && !pending && <AnnouncementBanner userId={session.userId} active={active} />}
       <main className="mx-auto max-w-3xl px-4 py-8">
         {pending ? (

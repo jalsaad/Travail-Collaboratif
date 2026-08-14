@@ -1,45 +1,51 @@
 import Link from "next/link";
 
-/// Année scolaire en cours, affichée en permanence dans chaque espace.
+/// Année scolaire en cours, épinglée sous le bouton de bascule clair/sombre
+/// (`fixed right-4 top-4`, h-9, cf. components/theme-toggle.tsx) : `top-16`
+/// la place juste dessous, alignée sur le même bord.
 ///
-/// Tous les compteurs, relevés et écrans de périodes sont bornés à cette
-/// année : sans elle à l'écran, un enseignant qui voit son compteur repartir
-/// de zéro après un archivage n'a aucun moyen de comprendre pourquoi.
+/// Réduite au strict libellé — « 2026-2027 » — pour ne pas encombrer le coin
+/// de l'écran. L'intitulé complet reste accessible en infobulle.
 ///
-/// `label` à null signale qu'aucune année n'est ouverte — cas où plus rien ne
-/// peut être déclaré, d'où l'avertissement plutôt qu'un affichage vide.
+/// Montée depuis les layouts authentifiés, jamais depuis le layout racine :
+/// l'année n'a aucun sens sur les pages publiques.
 export function SchoolYearBadge({
   label,
   adminLink = false,
-  className = "",
 }: {
   label: string | null;
-  /// Ajoute un lien vers l'écran de création — réservé au superadmin, seul
-  /// habilité à ouvrir une année.
+  /// Rend la pastille cliquable vers l'écran de création quand aucune année
+  /// n'est ouverte — réservé au superadmin, seul habilité à en ouvrir une.
   adminLink?: boolean;
-  className?: string;
 }) {
+  const position = "fixed right-4 top-16 z-50";
+
   if (!label) {
-    return (
-      <p
-        className={`inline-flex flex-wrap items-center justify-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300 ${className}`}
+    const contenu = (
+      <span
+        title="Aucune année scolaire ouverte : les périodes ne peuvent pas être déclarées."
+        className="block rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 shadow-lg dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
       >
-        Aucune année scolaire ouverte — les périodes ne peuvent pas être déclarées.
-        {adminLink && (
-          <Link href="/admin/archives" className="font-semibold underline">
-            En ouvrir une
-          </Link>
-        )}
-      </p>
+        Aucune année
+      </span>
+    );
+    return adminLink ? (
+      <Link href="/admin/archives" className={position}>
+        {contenu}
+      </Link>
+    ) : (
+      <div className={position}>{contenu}</div>
     );
   }
 
   return (
-    <p
-      className={`inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600 dark:bg-stone-800 dark:text-stone-300 ${className}`}
-    >
-      <span className="text-stone-400 dark:text-stone-500">Année scolaire</span>
-      <span className="font-semibold text-stone-800 dark:text-stone-100">{label}</span>
-    </p>
+    <div className={position}>
+      <span
+        title={`Année scolaire ${label}`}
+        className="block rounded-full border border-stone-300 bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700 shadow-lg dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200"
+      >
+        {label}
+      </span>
+    </div>
   );
 }
