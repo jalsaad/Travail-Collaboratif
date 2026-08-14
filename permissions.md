@@ -93,27 +93,11 @@ async function assertCanConfirmParticipation(userId: string, periodId: string) {
 
 - **Modifier les données personnelles** (`firstName`, `lastName`, `email`) : réservé à `DIRECTION`/`REFERENT_NUMERIQUE` (libellés affichés : Super Admin/Admin) de l'école où le ciblé a une `Membership` `ACTIVE`, ou au titulaire du compte lui-même. Le mot de passe (`passwordHash`) reste hors de ce droit — ni consultable ni modifiable par un tiers, uniquement via le propre flux self-service de l'utilisateur (réinitialisation par email).
 - **« Supprimer le compte »** d'un enseignant, du point de vue Super Admin/Admin, correspond au retrait déjà modélisé : passer sa `Membership` à `status = REMOVED` (+ `removedAt`). Ça ne supprime jamais le `User` — un enseignant partagé entre plusieurs écoles (cas Sophie) garde son compte et son accès aux écoles où il a encore une `Membership` `ACTIVE`. La suppression réelle du `User` n'est pas exposée à Super Admin/Admin : elle casserait l'historique (périodes, audit) et l'accès aux autres écoles.
-- **Attention identité partagée** : `firstName`/`lastName`/`email` vivent sur `User`, pas sur `Membership` — une modification par l'école A se répercute donc aussi sur l'école B si l'enseignant y est aussi rattaché. Toute modification d'email doit déclencher une notification à l'ancienne ET à la nouvelle adresse (protection contre une prise de contrôle de compte), et être journalisée dans `AuditLog`.
+- **Identité non modifiable par l'école** : `firstName`/`lastName`/`email` vivent sur `User`, pas sur `Membership` — une modification par l'école A se répercuterait sur l'école B si l'enseignant y est aussi rattaché. Super Admin/Admin ne peut donc **que consulter** ces champs depuis la fiche d'un membre ; chacun corrige les siens depuis `/mon-profil`. Seul l'administrateur plateforme garde la capacité de les corriger, pour l'assistance (`updateMemberAsAdmin`), avec journalisation dans `AuditLog`.
 - **Enseignant·e** : ne peut agir que sur son propre `User` (modifier ses propres nom/email/mot de passe). Aucune action sur le compte d'un·e collègue, même dans la même école.
 
 ```ts
-async function assertCanEditMemberProfile(actorUserId: string, targetUserId: string, schoolId: string) {
-  if (actorUserId === targetUserId) return; // chacun gère toujours ses propres données
-
-  const actorMembership = await assertCanManageSchool(actorUserId, schoolId); // rôle DIRECTION/REFERENT_NUMERIQUE requis
-  const targetMembership = await prisma.membership.findUnique({
-    where: { userId_schoolId: { userId: targetUserId, schoolId } },
-  });
-  if (!targetMembership || targetMembership.status !== "ACTIVE") {
-    throw new ForbiddenError("Cette personne n'est pas membre active de cette école.");
-  }
-  if (targetMembership.isAccountOwner) {
-    throw new ForbiddenError("Le titulaire du compte ne peut modifier que ses propres données.");
-  }
-  return actorMembership;
-}
-
-// Retrait = suppression du compte côté école, mêmes gardes que l'édition de profil.
+// Retrait d'un membre : rôle de gestion requis, et jamais le titulaire du compte.
 async function assertCanRemoveMember(actorUserId: string, targetUserId: string, schoolId: string) {
   await assertCanManageSchool(actorUserId, schoolId);
   const targetMembership = await prisma.membership.findUnique({

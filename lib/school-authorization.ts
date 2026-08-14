@@ -26,26 +26,6 @@ export async function assertCanManageSchool(userId: string, schoolId: string) {
   return membership;
 }
 
-export async function assertCanEditMemberProfile(
-  actorUserId: string,
-  targetUserId: string,
-  schoolId: string
-) {
-  if (actorUserId === targetUserId) return null; // chacun gère toujours ses propres données
-
-  await assertCanManageSchool(actorUserId, schoolId);
-  const target = await prisma.membership.findUnique({
-    where: { userId_schoolId: { userId: targetUserId, schoolId } },
-  });
-  if (!target || target.status !== "ACTIVE") {
-    throw new ForbiddenError("Cette personne n'est pas membre active de cette école.");
-  }
-  if (target.isAccountOwner) {
-    throw new ForbiddenError("Le titulaire du compte ne peut modifier que ses propres données.");
-  }
-  return target;
-}
-
 export async function assertCanRemoveMember(
   actorUserId: string,
   targetUserId: string,

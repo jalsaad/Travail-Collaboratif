@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
-import { MemberProfileForm } from "@/components/member-profile-form";
 import { MemberInfoPanel } from "@/components/member-info-panel";
 import { getMembershipProgress, getOtherSchoolsPeriodes } from "@/lib/collaboration-progress";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
@@ -36,9 +35,6 @@ export default async function MemberDetailPage({
     ? await getOtherSchoolsPeriodes(member.userId, member.id, schoolYear.id)
     : 0;
 
-  // Indice d'affichage seulement — la vraie barrière est assertCanEditMemberProfile
-  // côté serveur, re-vérifiée à chaque soumission indépendamment de ce booléen.
-  const disabled = member.isAccountOwner && member.userId !== session.userId;
   const canManageRoleOrRemove = member.role !== "DIRECTION" && !member.isAccountOwner;
 
   return (
@@ -62,15 +58,6 @@ export default async function MemberDetailPage({
         />
       </Reveal>
 
-      <Reveal delay={60}>
-        <MemberProfileForm
-          membershipId={member.id}
-          firstName={member.user.firstName}
-          lastName={member.user.lastName}
-          email={member.user.email}
-          disabled={disabled}
-        />
-      </Reveal>
 
       {canManageRoleOrRemove && (
         <Reveal delay={80} className="card p-6">

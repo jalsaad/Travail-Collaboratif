@@ -23,8 +23,11 @@ const profileSchema = z.object({
 
 // Auto-gestion uniquement : l'acteur ne peut ici modifier QUE ses propres
 // données (session.userId, jamais un identifiant fourni par le client) — pas
-// de garde de rôle nécessaire, contrairement à updateMemberProfile qui gère
-// le cas où une direction modifie le profil d'un·e collègue.
+// de garde de rôle nécessaire. C'est désormais le SEUL chemin par lequel un
+// enseignant voit son identité corrigée côté école : une direction ne peut
+// plus modifier le profil de ses membres, elle ne fait que le consulter (cf.
+// app/(app)/ecole/membres/[membershipId]). Le superadmin conserve la
+// capacité, pour l'assistance (cf. updateMemberAsAdmin).
 //
 // dateOfBirth/sex/matricule ne sont volontairement jamais lus depuis
 // formData ici : ces champs servent au calcul du matricule (unique en base)
