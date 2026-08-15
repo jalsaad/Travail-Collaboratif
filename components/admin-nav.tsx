@@ -39,6 +39,10 @@ export function AdminNav({
   const [hasOpenedOnce, setHasOpenedOnce] = useState(false);
   const initial = session.user?.name?.trim().charAt(0).toUpperCase() ?? "?";
 
+  // Deux fermetures, et deux seulement : le bouton X, et un clic dans la page
+  // (le rideau). Naviguer vers une entrée du menu le laisse ouvert — on garde
+  // ainsi le fil de la navigation d'une page à l'autre. Ne pas rajouter de
+  // `onClick` de fermeture sur les liens du tiroir.
   function handleOpenChange(next: boolean) {
     if (next) setHasOpenedOnce(true);
     setOpen(next);
@@ -118,7 +122,6 @@ export function AdminNav({
         <div className="relative z-10 min-h-0 flex-1 overflow-y-auto pt-2">
           <Link
             href="/admin"
-            onClick={() => handleOpenChange(false)}
             className="flex items-center justify-center px-5 py-3"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -132,7 +135,6 @@ export function AdminNav({
               <SchoolYearBadge
                 label={schoolYearLabel}
                 adminLink
-                onNavigate={() => handleOpenChange(false)}
               />
             </div>
           </div>
@@ -141,7 +143,6 @@ export function AdminNav({
               <Link
                 key={tab.href}
                 href={tab.href}
-                onClick={() => handleOpenChange(false)}
                 className={linkClass}
               >
                 <span className="inline-flex items-center gap-1.5">

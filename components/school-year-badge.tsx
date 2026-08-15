@@ -10,14 +10,12 @@ import Link from "next/link";
 export function SchoolYearBadge({
   label,
   adminLink = false,
-  onNavigate,
 }: {
   label: string | null;
   /// Rend la pastille cliquable vers l'écran de création quand aucune année
   /// n'est ouverte — réservé au superadmin, seul habilité à en ouvrir une.
   adminLink?: boolean;
   /// Referme le tiroir au clic, comme les autres liens qu'il contient.
-  onNavigate?: () => void;
 }) {
   if (!label) {
     const contenu = (
@@ -28,7 +26,7 @@ export function SchoolYearBadge({
         Aucune année
       </span>
     );
-    return adminLink ? <Link href="/admin/archives" onClick={onNavigate}>{contenu}</Link> : contenu;
+    return adminLink ? <Link href="/admin/archives">{contenu}</Link> : contenu;
   }
 
   return (

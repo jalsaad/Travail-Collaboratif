@@ -57,6 +57,10 @@ export function Nav({
   const [hasOpenedOnce, setHasOpenedOnce] = useState(false);
   const initial = session.user?.name?.trim().charAt(0).toUpperCase() ?? "?";
 
+  // Deux fermetures, et deux seulement : le bouton X, et un clic dans la page
+  // (le rideau). Naviguer vers une entrée du menu le laisse ouvert — on garde
+  // ainsi le fil de la navigation d'une page à l'autre. Ne pas rajouter de
+  // `onClick` de fermeture sur les liens du tiroir.
   function handleOpenChange(next: boolean) {
     if (next) setHasOpenedOnce(true);
     setOpen(next);
@@ -215,7 +219,6 @@ export function Nav({
         <div className="relative z-10 min-h-0 flex-1 overflow-y-auto pt-2">
           <Link
             href="/mes-periodes"
-            onClick={() => handleOpenChange(false)}
             className="flex items-center justify-center px-5 py-3"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -231,7 +234,6 @@ export function Nav({
               <SchoolYearBadge
                 label={schoolYearLabel}
                 adminLink={session.isSuperAdmin}
-                onNavigate={() => handleOpenChange(false)}
               />
             </div>
           </div>
@@ -246,7 +248,6 @@ export function Nav({
                     <Link
                       key={href}
                       href={href}
-                      onClick={() => handleOpenChange(false)}
                       aria-current={estActif(href) ? "page" : undefined}
                       className={`${linkBase} ${estActif(href) ? linkActive : linkIdle}`}
                     >
@@ -266,7 +267,6 @@ export function Nav({
           )}
           <Link
             href="/mon-profil"
-            onClick={() => handleOpenChange(false)}
             className="flex items-center gap-2 rounded-lg px-1 py-1 text-sm transition hover:bg-brand-50 dark:hover:bg-stone-800"
           >
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-teal text-xs font-semibold text-white">
