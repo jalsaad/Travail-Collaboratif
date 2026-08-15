@@ -61,8 +61,8 @@ export async function GET(request: Request) {
     schoolName: school.name,
     joinCode: joinCode.code,
     joinUrl: `${baseUrl}/rejoindre?code=${encodeURIComponent(joinCode.code)}`,
-    schoolLogo: logos.left,
-    platformLogo: logos.right,
+    schoolLogo: logos.school,
+    platformLogo: logos.platform,
   });
 
   return new NextResponse(new Uint8Array(buffer), {

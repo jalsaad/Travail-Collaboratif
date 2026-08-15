@@ -46,13 +46,15 @@ async function loadUploadedSchoolLogo(logoUrl: string): Promise<LoadedLogo | nul
   return buffer ? { buffer, extension } : null;
 }
 
-// Logos d'en-tête des relevés PDF : logo de l'école (ou sa substitution) à
-// gauche, logo vertical de la plateforme à droite.
+// Les deux logos des documents PDF : celui de l'école (ou sa substitution),
+// qui coiffe le document, et celui de la plateforme, qui en signe le pied.
+// Nommés par leur rôle et non par leur position : celle-ci a changé une fois
+// déjà, l'affiche et les relevés ne les placent pas au même endroit.
 export async function loadExportHeaderLogos(schoolLogoUrl: string | null) {
-  const [uploaded, right] = await Promise.all([
+  const [uploaded, platform] = await Promise.all([
     schoolLogoUrl ? loadUploadedSchoolLogo(schoolLogoUrl) : Promise.resolve(null),
     readBundledAsset("LogoTCvertical.png", "png"),
   ]);
-  const left = uploaded ?? (await loadSubstituteLogo());
-  return { left, right };
+  const school = uploaded ?? (await loadSubstituteLogo());
+  return { school, platform };
 }

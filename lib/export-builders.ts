@@ -36,8 +36,10 @@ export type ExportIdentity = {
 };
 
 export type ExportHeaderLogos = {
-  left: LoadedLogo | null;
-  right: LoadedLogo | null;
+  /// Logo de l'école, en tête du document (cf. lib/export-logos.ts).
+  school: LoadedLogo | null;
+  /// Logo vertical de la plateforme, au pied de chaque page.
+  platform: LoadedLogo | null;
 };
 
 const statusLabel = (status: ExportPeriodRow["status"]) =>
@@ -61,7 +63,13 @@ const COLUMN_LABELS = [
   "Participants",
 ];
 const PAGE_MARGIN = 40;
-const PDF_HEADER_LOGO_BOX = 55;
+/// Boîte du logo de l'école, centrée en tête du document. `fit` y inscrit
+/// l'image en conservant son rapport d'aspect : elle est réduite pour tenir,
+/// jamais rognée, quelles que soient ses proportions d'origine.
+const HEADER_LOGO_BOX = 62;
+/// Hauteur réservée au pied de page, au-dessus de la marge basse. Les lignes
+/// du tableau s'arrêtent avant, sinon elles passeraient sous le logo.
+const FOOTER_HEIGHT = 62;
 
 export function buildPeriodsPdf(
   rows: ExportPeriodRow[],
@@ -76,34 +84,76 @@ export function buildPeriodsPdf(
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
+    const contentWidth = doc.page.width - PAGE_MARGIN * 2;
+
+    // Pied de page repris de l'affiche du code de rattachement (cf.
+    // lib/join-poster.ts) : filet, logo de la plateforme centré, mention de
+    // conformité en dessous. Ancré au bas de la page et redessiné à chaque
+    // nouvelle page, pour que le document reste signé de bout en bout.
+    const drawFooter = () => {
+      const footerTop = doc.page.height - PAGE_MARGIN - FOOTER_HEIGHT;
+      doc
+        .moveTo(PAGE_MARGIN, footerTop)
+        .lineTo(doc.page.width - PAGE_MARGIN, footerTop)
+        .lineWidth(0.8)
+        .strokeColor("#e7e5e4")
+        .stroke();
+
+      if (logos?.platform) {
+        doc.image(logos.platform.buffer, PAGE_MARGIN, footerTop + 10, {
+          fit: [contentWidth, 26],
+          align: "center",
+          valign: "center",
+        });
+      }
+
+      // Un relevé imprimé et transmis à l'administration doit porter le cadre
+      // dont il relève.
+      doc
+        .fontSize(7.5)
+        .font("Helvetica")
+        .fillColor("#78716c")
+        .text(CONFORMITY_MENTION, PAGE_MARGIN, footerTop + 44, {
+          width: contentWidth,
+          align: "center",
+        })
+        .fillColor("black");
+    };
+
+    // `pageAdded` ne se déclenche pas pour la première page, créée par le
+    // constructeur : celle-ci est signée à la main, plus bas. Le curseur est
+    // remis en haut après coup, sans quoi la page suivante commencerait à
+    // écrire sous le pied qu'on vient de dessiner.
+    doc.on("pageAdded", () => {
+      drawFooter();
+      doc.x = PAGE_MARGIN;
+      doc.y = PAGE_MARGIN;
+    });
+
+    // Signée tout de suite, et non à la fin : `doc.end()` survient alors que
+    // le curseur est sur la dernière page, où le pied a déjà été tracé par
+    // `pageAdded`. Le pied occupe une position absolue en bas de page, le
+    // dessiner avant le contenu ne gêne rien.
+    drawFooter();
+    doc.x = PAGE_MARGIN;
+    doc.y = PAGE_MARGIN;
+
     let headerBottom = PAGE_MARGIN;
-    if (logos?.left) {
-      doc.image(logos.left.buffer, PAGE_MARGIN, PAGE_MARGIN, { fit: [60, PDF_HEADER_LOGO_BOX] });
-      headerBottom = Math.max(headerBottom, PAGE_MARGIN + PDF_HEADER_LOGO_BOX);
-    }
-    if (logos?.right) {
-      const rightWidth = 45;
-      doc.image(logos.right.buffer, doc.page.width - PAGE_MARGIN - rightWidth, PAGE_MARGIN, {
-        fit: [rightWidth, PDF_HEADER_LOGO_BOX],
+    if (logos?.school) {
+      doc.image(logos.school.buffer, PAGE_MARGIN, PAGE_MARGIN, {
+        fit: [contentWidth, HEADER_LOGO_BOX],
+        align: "center",
+        valign: "center",
       });
-      headerBottom = Math.max(headerBottom, PAGE_MARGIN + PDF_HEADER_LOGO_BOX);
+      headerBottom = PAGE_MARGIN + HEADER_LOGO_BOX;
     }
 
-    doc.y = headerBottom + 10;
-    const contentWidth = doc.page.width - PAGE_MARGIN * 2;
+    doc.y = headerBottom + 14;
     doc
+      .fillColor("black")
       .fontSize(16)
       .font("Helvetica-Bold")
       .text(title, PAGE_MARGIN, doc.y, { width: contentWidth, align: "center" });
-
-    // Sous-titre réglementaire : un relevé imprimé et transmis à
-    // l'administration doit porter le cadre dont il relève.
-    doc
-      .fontSize(8.5)
-      .font("Helvetica")
-      .fillColor("#78716c")
-      .text(CONFORMITY_MENTION, PAGE_MARGIN, doc.y + 4, { width: contentWidth, align: "center" })
-      .fillColor("black");
     doc.moveDown(0.8);
 
     if (identity) {
@@ -177,7 +227,7 @@ export function buildPeriodsPdf(
       const heights = cells.map((cell, i) => doc.heightOfString(cell, { width: COLUMN_WIDTHS[i] }));
       const rowHeight = Math.max(...heights, 12);
 
-      if (doc.y + rowHeight > doc.page.height - PAGE_MARGIN) {
+      if (doc.y + rowHeight > doc.page.height - PAGE_MARGIN - FOOTER_HEIGHT - 8) {
         doc.addPage();
         drawHeader();
         doc.font("Helvetica").fontSize(8.5);
