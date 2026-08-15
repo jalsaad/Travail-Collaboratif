@@ -1,15 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { Session } from "next-auth";
 import type { ActiveMembership } from "@/lib/active-school";
 import { SchoolSwitcher } from "@/components/school-switcher";
 import { SatisfactionStars } from "@/components/satisfaction-stars";
 import { signOutAction } from "@/app/(app)/actions";
+import {
+  IconAssistance,
+  IconDeclarer,
+  IconEcole,
+  IconJournal,
+  IconParametres,
+  IconPeriodes,
+  IconPlateforme,
+  IconTableauDeBord,
+} from "@/components/nav-icons";
 
-const linkClass =
-  "block rounded-lg px-3 py-2 text-sm text-stone-600 transition hover:bg-brand-50 hover:text-brand-700 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-brand-400";
+// Le menu regroupe désormais toute la navigation, y compris les onglets qui
+// surmontaient l'espace direction : les garder en barre horizontale les aurait
+// dupliqués. Trois sections, dans l'ordre où l'on s'en sert — ce qu'on fait
+// pour soi, ce qu'on pilote pour son école, le reste.
+type NavEntry = { href: string; label: string; Icon: ComponentType<{ className?: string }> };
+type NavSection = { titre: string; entries: NavEntry[] };
+
+const linkBase =
+  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition";
+const linkIdle =
+  "text-stone-600 hover:bg-brand-50 hover:text-brand-700 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-brand-400";
+// L'entrée courante est repérée par un fond plein plutôt qu'un simple gras :
+// le tiroir se lit d'un coup d'œil, sans chercher la nuance de graisse.
+const linkActive =
+  "bg-brand-600 text-white shadow-sm shadow-brand-600/20 dark:bg-brand-600 dark:text-white";
 
 export function Nav({
   session,
@@ -33,6 +57,53 @@ export function Nav({
     if (next) setHasOpenedOnce(true);
     setOpen(next);
   }
+
+  const pathname = usePathname();
+  const peutGererEcole = active?.role === "DIRECTION" || active?.role === "REFERENT_NUMERIQUE";
+
+  // Exact pour les racines, préfixe pour les sous-pages : sans ça, /ecole
+  // resterait allumé en consultant /ecole/parametres, et deux entrées
+  // paraîtraient actives en même temps.
+  const estActif = (href: string) =>
+    href === "/ecole" || href === "/mes-periodes"
+      ? pathname === href
+      : pathname === href || pathname?.startsWith(`${href}/`);
+
+  const sections: NavSection[] = [
+    ...(active
+      ? [
+          {
+            titre: "Mon espace",
+            entries: [
+              { href: "/mes-periodes", label: "Mes périodes", Icon: IconPeriodes },
+              { href: "/declarer", label: "Déclarer une période", Icon: IconDeclarer },
+            ],
+          },
+        ]
+      : []),
+    ...(active && peutGererEcole
+      ? [
+          {
+            titre: "Mon école",
+            entries: [
+              { href: "/ecole", label: "Tableau de bord", Icon: IconTableauDeBord },
+              { href: "/ecole/parametres", label: "Paramètres", Icon: IconParametres },
+              { href: "/ecole/audit", label: "Journal", Icon: IconJournal },
+            ],
+          },
+        ]
+      : []),
+    {
+      titre: "Autres",
+      entries: [
+        { href: "/rejoindre-ecole", label: "Rejoindre une école", Icon: IconEcole },
+        { href: "/assistance", label: "Assistance", Icon: IconAssistance },
+        ...(session.isSuperAdmin
+          ? [{ href: "/admin", label: "Administration plateforme", Icon: IconPlateforme }]
+          : []),
+      ],
+    },
+  ];
 
   const curtainState = !hasOpenedOnce ? "closed" : open ? "opening" : "closing";
 
@@ -137,33 +208,28 @@ export function Nav({
               <span className="block truncate text-sm font-bold text-stone-700 underline dark:text-stone-200">{active.schoolName}</span>
             </div>
           )}
-          <nav className="mt-2 flex flex-col gap-0.5 px-3">
-            {active && (
-              <>
-                <Link href="/mes-periodes" onClick={() => handleOpenChange(false)} className={linkClass}>
-                  Mes périodes
-                </Link>
-                <Link href="/declarer" onClick={() => handleOpenChange(false)} className={linkClass}>
-                  Déclarer
-                </Link>
-                {(active.role === "DIRECTION" || active.role === "REFERENT_NUMERIQUE") && (
-                  <Link href="/ecole" onClick={() => handleOpenChange(false)} className={linkClass}>
-                    École
-                  </Link>
-                )}
-              </>
-            )}
-            <Link href="/rejoindre-ecole" onClick={() => handleOpenChange(false)} className={linkClass}>
-              Rejoindre une école
-            </Link>
-            <Link href="/assistance" onClick={() => handleOpenChange(false)} className={linkClass}>
-              Assistance
-            </Link>
-            {session.isSuperAdmin && (
-              <Link href="/admin" onClick={() => handleOpenChange(false)} className={linkClass}>
-                Plateforme
-              </Link>
-            )}
+          <nav className="mt-2 space-y-4 px-3">
+            {sections.map((section) => (
+              <div key={section.titre}>
+                <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+                  {section.titre}
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  {section.entries.map(({ href, label, Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => handleOpenChange(false)}
+                      aria-current={estActif(href) ? "page" : undefined}
+                      className={`${linkBase} ${estActif(href) ? linkActive : linkIdle}`}
+                    >
+                      <Icon />
+                      {label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
           </nav>
         </div>
 

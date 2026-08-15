@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { assertCanManageSchool, ForbiddenError } from "@/lib/school-authorization";
-import { EcoleTabs } from "@/components/ecole-tabs";
 
 export default async function EcoleLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -21,10 +20,8 @@ export default async function EcoleLayout({ children }: { children: ReactNode })
     throw error;
   }
 
-  return (
-    <div>
-      <EcoleTabs />
-      {children}
-    </div>
-  );
+  // Plus de barre d'onglets ici : Tableau de bord, Paramètres et Journal sont
+  // dans le tiroir (cf. components/nav.tsx, section « Mon école »), qui porte
+  // toute la navigation. Les garder aux deux endroits les aurait dupliqués.
+  return <>{children}</>;
 }
