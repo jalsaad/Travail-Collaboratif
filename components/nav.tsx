@@ -202,12 +202,23 @@ export function Nav({
         <div className="pointer-events-none absolute -bottom-12 -right-16 h-56 w-56 rounded-full bg-brand-teal/20 blur-3xl animate-drift-b" />
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-brand-600/15 to-brand-teal/15 blur-3xl animate-drift-c" />
 
-        <div className="relative z-10 pt-16">
-          <Link href="/mes-periodes" onClick={() => handleOpenChange(false)} className="flex items-center px-5 py-5">
+        {/* `min-h-0` est indispensable : sans lui, un enfant flex refuse de
+            passer sous la hauteur de son contenu, le pied du tiroir est
+            repoussé hors de l'écran et « Déconnexion » disparaît sous
+            l'`overflow-hidden` de l'aside. Ici le haut défile, le pied reste. */}
+        <div className="relative z-10 min-h-0 flex-1 overflow-y-auto pt-2">
+          {/* Décalé à droite du bouton hamburger (fixé à left-4/top-4, 40px de
+              côté) plutôt que poussé dessous : le logo remonte en haut du
+              tiroir sans le recouvrir. */}
+          <Link
+            href="/mes-periodes"
+            onClick={() => handleOpenChange(false)}
+            className="flex items-center py-2 pl-16 pr-5"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/LogoTCvertical.png" alt="Travail Collaboratif" className="h-[60px] w-auto object-contain" />
+            <img src="/LogoTCvertical.png" alt="Travail Collaboratif" className="h-11 w-auto object-contain" />
           </Link>
-          <div className="border-t border-stone-200 px-5 py-3 text-left dark:border-stone-800">
+          <div className="border-t border-stone-200 px-5 py-2.5 text-left dark:border-stone-800">
             {active && (
               <span className="block truncate text-sm font-bold text-stone-700 underline dark:text-stone-200">
                 {active.schoolName}
@@ -246,7 +257,7 @@ export function Nav({
           </nav>
         </div>
 
-        <div className="relative z-10 space-y-3 border-t border-stone-200 bg-white/70 px-3 py-4 backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/70">
+        <div className="relative z-10 shrink-0 space-y-2.5 border-t border-stone-200 bg-white/70 px-3 py-3 backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/70">
           {active && memberships.length > 1 && (
             <SchoolSwitcher memberships={memberships} activeSchoolId={active.schoolId} />
           )}
@@ -260,7 +271,7 @@ export function Nav({
             </span>
             <span className="truncate text-stone-700 dark:text-stone-300">{session.user?.name}</span>
           </Link>
-          <div className="border-t border-stone-100 pt-3 dark:border-stone-800">
+          <div className="border-t border-stone-100 pt-2.5 dark:border-stone-800">
             <SatisfactionStars initialRating={satisfactionRating} />
           </div>
           <form action={signOutAction}>

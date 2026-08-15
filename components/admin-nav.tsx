@@ -105,12 +105,20 @@ export function AdminNav({
         <div className="pointer-events-none absolute -top-12 -left-12 h-56 w-56 rounded-full bg-brand-500/25 blur-3xl animate-drift-a" />
         <div className="pointer-events-none absolute -bottom-12 -right-16 h-56 w-56 rounded-full bg-brand-teal/20 blur-3xl animate-drift-b" />
 
-        <div className="relative z-10 pt-16">
-          <Link href="/admin" onClick={() => handleOpenChange(false)} className="flex items-center px-5 py-5">
+        {/* Même ossature que components/nav.tsx : le haut défile (`min-h-0`,
+            sans quoi le pied serait repoussé hors écran et « Déconnexion »
+            rognée), le pied reste ancré, le logo se range à droite du bouton
+            hamburger pour remonter en haut du tiroir. */}
+        <div className="relative z-10 min-h-0 flex-1 overflow-y-auto pt-2">
+          <Link
+            href="/admin"
+            onClick={() => handleOpenChange(false)}
+            className="flex items-center py-2 pl-16 pr-5"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/LogoTCvertical.png" alt="Travail Collaboratif" className="h-[60px] w-auto object-contain" />
+            <img src="/LogoTCvertical.png" alt="Travail Collaboratif" className="h-11 w-auto object-contain" />
           </Link>
-          <div className="border-t border-stone-200 px-5 py-3 text-left dark:border-stone-800">
+          <div className="border-t border-stone-200 px-5 py-2.5 text-left dark:border-stone-800">
             <span className="block truncate text-sm font-bold text-stone-700 dark:text-stone-200">
               Administration plateforme
             </span>
@@ -144,7 +152,7 @@ export function AdminNav({
           </nav>
         </div>
 
-        <div className="relative z-10 space-y-3 border-t border-stone-200 bg-white/70 px-3 py-4 backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/70">
+        <div className="relative z-10 shrink-0 space-y-2.5 border-t border-stone-200 bg-white/70 px-3 py-3 backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/70">
           <div className="flex items-center gap-2 px-1 py-1 text-sm">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-teal text-xs font-semibold text-white">
               {initial}
