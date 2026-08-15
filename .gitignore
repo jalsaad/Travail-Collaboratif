@@ -16,5 +16,13 @@ public/uploads/
 # journal contient les adresses réellement contactées (cf. scripts/inviter-directions.ts).
 /data/apercu-invitation.html
 /data/prospection-journal.csv
+/data/collecte-rapport.csv
 /data/prospection-ecoles.csv
-/data/prospection-ecoles.csv
+# Pouvoirs organisateurs : fichier de travail, rapport et journal, plus les
+# copies locales des sources publiques (signalétique FWB, sites des communes).
+/data/prospection-po.csv
+/data/prospection-po-journal.csv
+/data/collecte-po-rapport.csv
+/data/fwb-signaletique.json
+/data/communes-sites.json
+/data/prospection.xlsx

@@ -16,30 +16,72 @@
 import fs from "node:fs";
 import path from "node:path";
 import nodemailer from "nodemailer";
-import { buildDirectionInvitation, type InvitedSchool } from "../lib/invitation-directions";
+import {
+  buildDirectionInvitation,
+  buildPoInvitation,
+  type InvitationContent,
+  type InvitedSchool,
+} from "../lib/invitation-directions";
 import { echapperCsv, lireCsv } from "../lib/prospection-csv";
+import { chargerEnvLocal } from "../lib/env-local";
 
 const RACINE = path.resolve(__dirname, "..");
-const FICHIER_DEFAUT = path.join(RACINE, "data/prospection-ecoles.csv");
-const JOURNAL_DEFAUT = path.join(RACINE, "data/prospection-journal.csv");
 const APERCU_DEFAUT = path.join(RACINE, "data/apercu-invitation.html");
 
-// ---------------------------------------------------------------------------
-// Environnement
-// ---------------------------------------------------------------------------
+/// Deux campagnes distinctes : les directions d'école, et les pouvoirs
+/// organisateurs qui les chapeautent (cf. scripts/pouvoirs-organisateurs.ts).
+/// Fichiers, colonnes et texte de l'invitation diffèrent ; le reste — journal,
+/// simulation, espacement, désinscription — est commun.
+type Profil = {
+  fichier: string;
+  journal: string;
+  email: string;
+  nom: string;
+  contenu: (ligne: Record<string, string>, baseUrl: string, contactEmail: string) => InvitationContent;
+  decrire: (ligne: Record<string, string>) => string;
+};
 
-// ts-node ne passe pas par le chargement d'environnement de Next : on lit .env
-// à la main plutôt que d'ajouter une dépendance pour six lignes.
-function chargerEnv() {
-  const fichier = path.join(RACINE, ".env");
-  if (!fs.existsSync(fichier)) return;
-  for (const ligne of fs.readFileSync(fichier, "utf8").split("\n")) {
-    const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(ligne);
-    if (!m) continue;
-    const valeur = m[2].trim().replace(/^["'](.*)["']$/, "$1");
-    if (process.env[m[1]] === undefined) process.env[m[1]] = valeur;
-  }
-}
+const PROFILS: Record<string, Profil> = {
+  ecoles: {
+    fichier: path.join(RACINE, "data/prospection-ecoles.csv"),
+    journal: path.join(RACINE, "data/prospection-journal.csv"),
+    email: "email_direction",
+    nom: "nom",
+    contenu: (r, baseUrl, contactEmail) =>
+      buildDirectionInvitation({
+        school: {
+          nom: r.nom ?? "",
+          ville: r.ville ?? "",
+          codePostal: r.code_postal ?? "",
+          reseau: r.reseau ?? "",
+          niveau: r.niveau ?? "",
+        } satisfies InvitedSchool,
+        baseUrl,
+        contactEmail,
+      }),
+    decrire: (r) => `${r.nom} (${r.code_postal} ${r.ville})`,
+  },
+  po: {
+    fichier: path.join(RACINE, "data/prospection-po.csv"),
+    journal: path.join(RACINE, "data/prospection-po-journal.csv"),
+    email: "email_po",
+    nom: "nom_po",
+    contenu: (r, baseUrl, contactEmail) =>
+      buildPoInvitation({
+        po: {
+          nom: r.nom_po ?? "",
+          localite: r.localite ?? "",
+          nbEcoles: Number(r.nb_ecoles ?? "1") || 1,
+          // Le collège communal exerce le pouvoir organisateur : l'invitation
+          // s'adresse alors à l'échevin·e de l'enseignement.
+          estCommune: (r.reseaux ?? "").includes("Subventionné communal"),
+        },
+        baseUrl,
+        contactEmail,
+      }),
+    decrire: (r) => `${r.nom_po} — ${r.nb_ecoles} école(s)`,
+  },
+};
 
 const EMAIL_VALIDE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -78,6 +120,7 @@ function journaliser(chemin: string, entree: EntreeJournal) {
 // ---------------------------------------------------------------------------
 
 type Options = {
+  profil: Profil;
   fichier: string;
   journal: string;
   envoyer: boolean;
@@ -98,9 +141,17 @@ function lireOptions(argv: string[]): Options {
   };
   const present = (nom: string) => argv.some((a) => a === `--${nom}` || a.startsWith(`--${nom}=`));
 
+  const nomProfil = valeur("profil") ?? "ecoles";
+  const profil = PROFILS[nomProfil];
+  if (!profil) {
+    console.error(`Profil inconnu : ${nomProfil} (attendu : ${Object.keys(PROFILS).join(", ")})`);
+    process.exit(1);
+  }
+
   return {
-    fichier: valeur("fichier") ?? FICHIER_DEFAUT,
-    journal: valeur("journal") ?? JOURNAL_DEFAUT,
+    profil,
+    fichier: valeur("fichier") ?? profil.fichier,
+    journal: valeur("journal") ?? profil.journal,
     envoyer: present("envoyer"),
     apercu: present("apercu") ? valeur("apercu") ?? APERCU_DEFAUT : null,
     limite: valeur("limite") ? Number(valeur("limite")) : null,
@@ -121,7 +172,7 @@ const attendre = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // ---------------------------------------------------------------------------
 
 async function main() {
-  chargerEnv();
+  chargerEnvLocal(RACINE);
   const options = lireOptions(process.argv.slice(2));
 
   if (!fs.existsSync(options.fichier)) {
@@ -136,14 +187,15 @@ async function main() {
       .map((e) => e.email)
   );
 
+  const { profil } = options;
   const ecoles = lignes.filter((r) => !options.niveau || r.niveau === options.niveau);
-  const sansEmail = ecoles.filter((r) => !EMAIL_VALIDE.test(r.email_direction ?? ""));
+  const sansEmail = ecoles.filter((r) => !EMAIL_VALIDE.test(r[profil.email] ?? ""));
 
   // Une même adresse peut couvrir plusieurs implantations : on n'écrit qu'une
   // fois, en gardant la première école rencontrée comme référence.
   const vues = new Set<string>();
   const destinataires = ecoles.filter((r) => {
-    const email = (r.email_direction ?? "").toLowerCase();
+    const email = (r[profil.email] ?? "").toLowerCase();
     if (!EMAIL_VALIDE.test(email) || vues.has(email) || dejaServis.has(email)) return false;
     vues.add(email);
     return true;
@@ -152,33 +204,20 @@ async function main() {
   const aTraiter = options.limite ? destinataires.slice(0, options.limite) : destinataires;
 
   console.log(`Fichier          : ${path.relative(RACINE, options.fichier)}`);
-  console.log(`Écoles listées   : ${ecoles.length}${options.niveau ? ` (niveau ${options.niveau})` : ""}`);
+  console.log(`Destinataires    : ${ecoles.length}${options.niveau ? ` (niveau ${options.niveau})` : ""}`);
   console.log(`Sans adresse     : ${sansEmail.length}`);
   console.log(`Déjà invitées    : ${dejaServis.size}`);
   console.log(`À inviter        : ${destinataires.length}${aTraiter.length !== destinataires.length ? ` (limité à ${aTraiter.length})` : ""}`);
   console.log(`Lien d'inscription : ${options.baseUrl}/creer-ecole`);
 
-  const enEcole = (r: Record<string, string>): InvitedSchool => ({
-    nom: r.nom ?? "",
-    ville: r.ville ?? "",
-    codePostal: r.code_postal ?? "",
-    reseau: r.reseau ?? "",
-    niveau: r.niveau ?? "",
-  });
 
   if (options.apercu) {
     const modele = aTraiter[0] ?? ecoles[0];
-    const contenu = buildDirectionInvitation({
-      school: modele ? enEcole(modele) : {
-        nom: "École fondamentale libre Saint-Michel",
-        ville: "Charleroi",
-        codePostal: "6044",
-        reseau: "Libre confessionnel",
-        niveau: "Fondamental",
-      },
-      baseUrl: options.baseUrl,
-      contactEmail: options.contactEmail,
-    });
+    if (!modele) {
+      console.error("Fichier vide : rien à prévisualiser.");
+      process.exit(1);
+    }
+    const contenu = profil.contenu(modele, options.baseUrl, options.contactEmail);
     fs.writeFileSync(options.apercu, contenu.html, "utf8");
     console.log(`\nAperçu écrit     : ${path.relative(RACINE, options.apercu)}`);
     console.log(`Objet            : ${contenu.subject}`);
@@ -187,7 +226,7 @@ async function main() {
   if (!options.envoyer) {
     console.log(`\nSimulation — rien n'a été envoyé. Ajoutez --envoyer pour lancer la campagne.`);
     for (const r of aTraiter.slice(0, 10)) {
-      console.log(`  · ${r.email_direction} — ${r.nom} (${r.code_postal} ${r.ville})`);
+      console.log(`  · ${r[profil.email]} — ${profil.decrire(r)}`);
     }
     if (aTraiter.length > 10) console.log(`  … et ${aTraiter.length - 10} autres.`);
     return;
@@ -220,12 +259,8 @@ async function main() {
   let echecs = 0;
 
   for (const [index, r] of aTraiter.entries()) {
-    const email = r.email_direction.toLowerCase();
-    const contenu = buildDirectionInvitation({
-      school: enEcole(r),
-      baseUrl: options.baseUrl,
-      contactEmail: options.contactEmail,
-    });
+    const email = r[profil.email].toLowerCase();
+    const contenu = profil.contenu(r, options.baseUrl, options.contactEmail);
 
     try {
       await transport.sendMail({
@@ -242,23 +277,23 @@ async function main() {
       envoyes++;
       journaliser(options.journal, {
         email,
-        ecole: r.nom ?? "",
+        ecole: r[profil.nom] ?? "",
         date: new Date().toISOString(),
         statut: "envoye",
         detail: "",
       });
-      console.log(`  ✓ ${email} — ${r.nom}`);
+      console.log(`  ✓ ${email} — ${r[profil.nom]}`);
     } catch (erreur) {
       echecs++;
       const detail = erreur instanceof Error ? erreur.message : String(erreur);
       journaliser(options.journal, {
         email,
-        ecole: r.nom ?? "",
+        ecole: r[profil.nom] ?? "",
         date: new Date().toISOString(),
         statut: "echec",
         detail,
       });
-      console.error(`  ✗ ${email} — ${r.nom} : ${detail}`);
+      console.error(`  ✗ ${email} — ${r[profil.nom]} : ${detail}`);
     }
 
     if (index < aTraiter.length - 1) await attendre(options.delaiMs);

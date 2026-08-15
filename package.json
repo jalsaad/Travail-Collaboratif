@@ -13,7 +13,9 @@
     "prisma:seed": "prisma db seed",
     "prisma:studio": "prisma studio",
     "invitations": "ts-node -P tsconfig.scripts.json scripts/inviter-directions.ts",
-    "collecte-emails": "ts-node -P tsconfig.scripts.json scripts/collecter-emails.ts"
+    "collecte-emails": "ts-node -P tsconfig.scripts.json scripts/collecter-emails.ts",
+    "po": "ts-node -P tsconfig.scripts.json scripts/pouvoirs-organisateurs.ts",
+    "export-prospection": "ts-node -P tsconfig.scripts.json scripts/exporter-prospection.ts"
   },
   "ts-node": {
     "compilerOptions": {
