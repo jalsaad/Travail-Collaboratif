@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { MemberInfoPanel } from "@/components/member-info-panel";
+import { SchoolPeriodList } from "@/components/school-period-list";
+import { ExportPanel } from "@/components/export-panel";
 import { getMembershipProgress, getOtherSchoolsPeriodes } from "@/lib/collaboration-progress";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 import { MemberRowActions } from "@/components/member-row-actions";
@@ -35,6 +37,25 @@ export default async function MemberDetailPage({
     ? await getOtherSchoolsPeriodes(member.userId, member.id, schoolYear.id)
     : 0;
 
+  // Périodes de CETTE personne dans CETTE école. Le filtre sur les
+  // participants est obligatoire (cf. permissions.md) : sans lui, une période
+  // inter-écoles exposerait les collègues d'un autre établissement.
+  const periods = schoolYear
+    ? await prisma.collaborativePeriod.findMany({
+        where: {
+          schoolYearId: schoolYear.id,
+          participants: { some: { membershipId: member.id } },
+        },
+        include: {
+          participants: {
+            where: { membership: { schoolId: active.schoolId } },
+            include: { user: true },
+          },
+        },
+        orderBy: { date: "desc" },
+      })
+    : [];
+
   const canManageRoleOrRemove = member.role !== "DIRECTION" && !member.isAccountOwner;
 
   return (
@@ -58,6 +79,19 @@ export default async function MemberDetailPage({
         />
       </Reveal>
 
+
+      <Reveal delay={120}>
+        <div className="space-y-3">
+          <h2 className="text-base font-semibold tracking-tight text-stone-900 dark:text-stone-100">
+            Périodes déclarées ({periods.length})
+          </h2>
+          {/* Même relevé que celui de l'enseignant·e, servi par la route de
+              l'école avec la personne figée : le PDF porte alors son bloc
+              d'identité (cf. lib/export-identity.ts). */}
+          <ExportPanel action="/api/export/school" fixedUserId={member.userId} />
+          <SchoolPeriodList periods={periods} />
+        </div>
+      </Reveal>
 
       {canManageRoleOrRemove && (
         <Reveal delay={80} className="card p-6">

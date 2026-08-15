@@ -7,15 +7,22 @@ export type ExportPanelMember = { userId: string; name: string };
 export function ExportPanel({
   action,
   members,
+  fixedUserId,
 }: {
   action: string;
   members?: ExportPanelMember[];
+  /// Relevé d'UNE personne déjà désignée par le contexte (fiche membre) :
+  /// la portée part en champ caché plutôt qu'en case à cocher, le serveur la
+  /// déduisant du nombre d'userIds reçus comme pour la sélection libre.
+  fixedUserId?: string;
 }) {
   return (
     <form
       action={action}
       className="space-y-3 rounded-lg border border-stone-200 bg-stone-50/60 p-4 dark:border-stone-800 dark:bg-stone-900/60"
     >
+      {fixedUserId && <input type="hidden" name="userIds" value={fixedUserId} />}
+
       {members && members.length > 0 && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
