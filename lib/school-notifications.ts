@@ -70,7 +70,7 @@ export async function notifySchoolDirectionOfNewMember(membershipId: string): Pr
         month: "long",
         year: "numeric",
       }),
-      membersUrl: `${baseUrl}/ecole/membres`,
+      membersUrl: `${baseUrl}/ecole`,
     });
   } catch (error) {
     console.error(`[rattachement] Échec de notification pour ${membershipId} :`, error);

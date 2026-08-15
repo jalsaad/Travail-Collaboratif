@@ -56,7 +56,7 @@ export async function removeMember(
     metadata: { targetUserId: target.userId, targetEmail: target.user.email },
   });
 
-  revalidatePath("/ecole/membres");
+  revalidatePath("/ecole");
   return { success: "Membre retiré de l'école." };
 }
 
@@ -98,6 +98,6 @@ export async function updateMemberRole(
     metadata: { from: target.role, to: parsedRole.data },
   });
 
-  revalidatePath("/ecole/membres");
+  revalidatePath("/ecole");
   return { success: "Rôle mis à jour." };
 }
