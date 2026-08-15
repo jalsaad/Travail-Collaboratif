@@ -213,10 +213,14 @@ export function Nav({
           <Link
             href="/mes-periodes"
             onClick={() => handleOpenChange(false)}
-            className="flex items-center py-2 pl-16 pr-5"
+            className="flex items-center py-2 pl-14 pr-2"
           >
+            {/* Hauteur calée sur la largeur disponible, pas choisie à l'œil :
+                tiroir 240px moins les 56px occupés par le bouton hamburger et
+                une gouttière, soit 174px — le logo étant au ratio 3:1 (900×300),
+                58px de haut le remplissent sans le rétrécir ni le tronquer. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/LogoTCvertical.png" alt="Travail Collaboratif" className="h-11 w-auto object-contain" />
+            <img src="/LogoTCvertical.png" alt="Travail Collaboratif" className="h-[58px] w-auto object-contain" />
           </Link>
           <div className="border-t border-stone-200 px-5 py-2.5 text-left dark:border-stone-800">
             {active && (
