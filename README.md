@@ -80,6 +80,9 @@ Tout est optionnel hors `DATABASE_URL` et `AUTH_SECRET` : chaque bloc absent dé
 | `npm run prisma:seed` | Recharge le jeu de données de démonstration (idempotent) |
 | `npm run prisma:studio` | Explorateur de données Prisma Studio |
 | `npm run invitations` | Campagne d'invitation des directions (simulation par défaut) |
+| `npm run collecte-emails` | Collecte des adresses des directions sur les sites d'école |
+| `npm run po` | Liste des pouvoirs organisateurs des écoles de prospection |
+| `npm run export-prospection` | Classeur XLSX de toute la prospection (Sheets/Excel) |
 
 ## Inviter les directions d'école
 
@@ -94,6 +97,75 @@ npm run invitations -- --apercu                  # écrit data/apercu-invitation
 npm run invitations -- --envoyer --limite=25     # première vague de 25
 npm run invitations -- --envoyer --niveau=Secondaire
 ```
+
+### Collecter les adresses des directions
+
+L'annuaire de la Fédération ne publie pas les emails : `npm run collecte-emails` va les
+chercher sur le site des écoles et remplit la colonne `email_direction`.
+
+```bash
+npm run collecte-emails                      # écoles dont l'annuaire donne le site
+npm run collecte-emails -- --recherche       # + recherche du site pour les autres
+npm run collecte-emails -- --limite=20 --concurrence=2
+```
+
+Le robot visite la page d'accueil puis les pages de contact qu'elle référence (4 pages max
+par site), décode les adresses masquées en entités HTML, écarte les adresses techniques,
+les exemples laissés par les thèmes et **celles des prestataires** — le pied de page qui
+crédite l'agence web est reconnu, et toute adresse portant son nom de domaine est
+disqualifiée quelle que soit sa forme —, puis classe les candidates : direction, secrétariat et
+adresses génériques d'abord, sur le domaine de l'école de préférence. Il se présente sous
+un `User-Agent` identifiable, respecte `robots.txt`, ne réessaie qu'une fois en cas de 503.
+
+Seules les cases vides sont remplies — une adresse saisie à la main n'est jamais écrasée —
+et le détail (candidates écartées, score, statut) part dans `data/collecte-rapport.csv`.
+`--recherche` couvre les écoles dont l'annuaire ne donne aucun site : il faut alors une clé
+`BRAVE_SEARCH_API_KEY` (offre gratuite). Le script ne scrape aucun moteur de recherche —
+DuckDuckGo, Mojeek et Startpage interdisent `/search` dans leur robots.txt — et **les
+adresses obtenues par cette voie sont à vérifier** : le site retenu est le premier résultat
+plausible, ce qui reste une supposition.
+
+Relancer la commande ne visite que les écoles encore sans adresse, ce qui rattrape les
+sites momentanément indisponibles ; `--toutes` revisite tout le monde pour reconstituer le
+rapport, sans jamais réécrire une adresse déjà en place. Le rapport est cumulatif.
+
+### Relire la prospection dans un tableur
+
+`npm run export-prospection` réunit les quatre fichiers dans `data/prospection.xlsx` :
+une synthèse chiffrée, les écoles, les pouvoirs organisateurs et les deux rapports de
+collecte, en-têtes figés, filtres actifs et cases d'adresse manquante surlignées. À importer
+dans Google Sheets (Drive → Nouveau → Importation de fichier) ou à ouvrir dans Excel.
+
+Le classeur est une photographie : les scripts d'envoi lisent les CSV, pas lui.
+
+### Contacter les pouvoirs organisateurs
+
+Le PO est l'employeur juridique des enseignant·es : pour les 4 050 écoles de l'officiel
+subventionné c'est la commune — concrètement l'échevin·e de l'enseignement, membre du
+collège communal qui exerce le pouvoir organisateur —, pour le provincial la province,
+pour le réseau WBE l'organisme unique. `npm run po` construit `data/prospection-po.csv`,
+la liste des PO de nos 491 écoles, avec le nombre d'écoles que chacun couvre.
+
+```bash
+npm run po                                   # construit ou met à jour le fichier
+npm run po -- --rafraichir                   # redemande les sources au lieu du cache
+npm run collecte-emails -- --profil=po       # cherche leurs adresses
+npm run invitations -- --profil=po --apercu  # invitation adressée au PO
+```
+
+Deux sources publiques : le fichier signalétique des établissements de la FWB (Open Data
+Wallonie-Bruxelles), qui donne le PO de chaque école mais aucune adresse email, et
+Wikidata, pour le site officiel des communes et provinces. Le rapprochement école ↔ PO se
+fait sur le nom et le code postal, et n'accepte une correspondance approchée qu'au-delà de
+la moitié des mots en commun — un mauvais PO enverrait l'invitation à la mauvaise
+institution.
+
+Le profil `po` du collecteur vise l'adresse du service enseignement ou de l'échevin·e :
+il suit les liens vers le collège communal, accorde un bonus aux adresses entourées des
+mots « échevin » et « enseignement » dans la page, et **n'accepte que les adresses sur le
+domaine de l'institution** — le seul email en pied de page d'un site communal est celui de
+l'agence web qui l'a réalisé. En deçà d'un score minimum, rien n'est retenu : les
+candidates restent visibles dans `data/collecte-po-rapport.csv`.
 
 Rien ne part sans `--envoyer`, et l'envoi exige `SMTP_HOST`. Chaque message est journalisé
 au fil de l'eau dans `data/prospection-journal.csv` : relancer la commande reprend là où
