@@ -50,12 +50,18 @@ export function AdminNav({
 
   return (
     <>
+      {/* Ouvert, le bouton glisse hors du tiroir (240px de large) pour se poser
+          sur le rideau, à sa droite : l'entête est alors libre de tout obstacle
+          et le logo peut s'y centrer à pleine taille. Le déplacement dure
+          autant que celui du panneau, les deux avancent ensemble. */}
       <button
         type="button"
         onClick={() => handleOpenChange(!open)}
         aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
         aria-expanded={open}
-        className="fixed left-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-brand-600 to-brand-teal text-white shadow-lg transition hover:brightness-105"
+        className={`fixed top-4 z-50 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-brand-600 to-brand-teal text-white shadow-lg transition-all duration-300 hover:brightness-105 ${
+          open ? "left-[16rem]" : "left-4"
+        }`}
       >
         {open ? (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
@@ -113,14 +119,10 @@ export function AdminNav({
           <Link
             href="/admin"
             onClick={() => handleOpenChange(false)}
-            className="flex items-center py-2 pl-14 pr-2"
+            className="flex items-center justify-center px-5 py-3"
           >
-            {/* Hauteur calée sur la largeur disponible, pas choisie à l'œil :
-                tiroir 240px moins les 56px occupés par le bouton hamburger et
-                une gouttière, soit 174px — le logo étant au ratio 3:1 (900×300),
-                58px de haut le remplissent sans le rétrécir ni le tronquer. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/LogoTCvertical.png" alt="Travail Collaboratif" className="h-[58px] w-auto object-contain" />
+            <img src="/LogoTCvertical.png" alt="Travail Collaboratif" className="h-[60px] w-auto object-contain" />
           </Link>
           <div className="border-t border-stone-200 px-5 py-2.5 text-left dark:border-stone-800">
             <span className="block truncate text-sm font-bold text-stone-700 dark:text-stone-200">
