@@ -6,7 +6,6 @@ import { assertIsSuperAdmin } from "@/lib/admin-authorization";
 import { ForbiddenError } from "@/lib/school-authorization";
 import { AdminNav, type AdminNavTab } from "@/components/admin-nav";
 import { SchoolLogoBadge } from "@/components/school-logo-badge";
-import { SchoolYearBadge } from "@/components/school-year-badge";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 const tabs: AdminNavTab[] = [
@@ -42,8 +41,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   // tiroir, pour que les trois espaces se pilotent de la même façon.
   return (
     <div className="min-h-screen bg-stone-50 pt-4 dark:bg-stone-950">
-      <AdminNav session={session} tabs={tabs} openTicketsCount={openTicketsCount} />
-      <SchoolYearBadge label={schoolYear?.label ?? null} adminLink />
+      <AdminNav
+        session={session}
+        tabs={tabs}
+        openTicketsCount={openTicketsCount}
+        schoolYearLabel={schoolYear?.label ?? null}
+      />
       <SchoolLogoBadge />
       <p className="mt-1 text-center text-sm font-semibold text-stone-500 dark:text-stone-400">
         Administration plateforme

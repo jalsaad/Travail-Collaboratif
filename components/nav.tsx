@@ -7,6 +7,7 @@ import type { Session } from "next-auth";
 import type { ActiveMembership } from "@/lib/active-school";
 import { SchoolSwitcher } from "@/components/school-switcher";
 import { SatisfactionStars } from "@/components/satisfaction-stars";
+import { SchoolYearBadge } from "@/components/school-year-badge";
 import { signOutAction } from "@/app/(app)/actions";
 import {
   IconAssistance,
@@ -40,11 +41,14 @@ export function Nav({
   active,
   memberships,
   satisfactionRating,
+  schoolYearLabel,
 }: {
   session: Session;
   active: ActiveMembership | null;
   memberships: ActiveMembership[];
   satisfactionRating: number | null;
+  /// Libellé de l'année scolaire courante, null si aucune n'est ouverte.
+  schoolYearLabel: string | null;
 }) {
   const [open, setOpen] = useState(false);
   // Distingue "jamais encore ouvert" de "en train de se refermer" : sans ça,
@@ -203,11 +207,18 @@ export function Nav({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/LogoTCvertical.png" alt="Travail Collaboratif" className="h-[60px] w-auto object-contain" />
           </Link>
-          {active && (
-            <div className="border-t border-stone-200 px-5 py-3 text-left dark:border-stone-800">
-              <span className="block truncate text-sm font-bold text-stone-700 underline dark:text-stone-200">{active.schoolName}</span>
-            </div>
-          )}
+          <div className="border-t border-stone-200 px-5 py-3 text-left dark:border-stone-800">
+            <SchoolYearBadge
+              label={schoolYearLabel}
+              adminLink={session.isSuperAdmin}
+              onNavigate={() => handleOpenChange(false)}
+            />
+            {active && (
+              <span className="mt-2 block truncate text-sm font-bold text-stone-700 underline dark:text-stone-200">
+                {active.schoolName}
+              </span>
+            )}
+          </div>
           <nav className="mt-2 space-y-4 px-3">
             {sections.map((section) => (
               <div key={section.titre}>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Session } from "next-auth";
 import { signOutAction } from "@/app/(app)/actions";
+import { SchoolYearBadge } from "@/components/school-year-badge";
 
 // Menu de l'administration plateforme, calqué sur celui des espaces Profs et
 // Direction (cf. components/nav.tsx) : même bouton hamburger, même rideau
@@ -24,10 +25,13 @@ export function AdminNav({
   session,
   tabs,
   openTicketsCount,
+  schoolYearLabel,
 }: {
   session: Session;
   tabs: AdminNavTab[];
   openTicketsCount: number;
+  /// Libellé de l'année scolaire courante, null si aucune n'est ouverte.
+  schoolYearLabel: string | null;
 }) {
   const [open, setOpen] = useState(false);
   // Distingue "jamais encore ouvert" de "en train de se refermer", sans quoi
@@ -107,7 +111,12 @@ export function AdminNav({
             <img src="/LogoTCvertical.png" alt="Travail Collaboratif" className="h-[60px] w-auto object-contain" />
           </Link>
           <div className="border-t border-stone-200 px-5 py-3 text-left dark:border-stone-800">
-            <span className="block truncate text-sm font-bold text-stone-700 dark:text-stone-200">
+            <SchoolYearBadge
+              label={schoolYearLabel}
+              adminLink
+              onNavigate={() => handleOpenChange(false)}
+            />
+            <span className="mt-2 block truncate text-sm font-bold text-stone-700 dark:text-stone-200">
               Administration plateforme
             </span>
           </div>

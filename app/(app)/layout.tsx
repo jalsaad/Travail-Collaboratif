@@ -7,7 +7,6 @@ import { Nav } from "@/components/nav";
 import { AnnouncementBanner } from "@/components/announcement-banner";
 import { SchoolApprovalNotice } from "@/components/school-approval-notice";
 import { SchoolLogoBadge } from "@/components/school-logo-badge";
-import { SchoolYearBadge } from "@/components/school-year-badge";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 export default async function TeacherLayout({ children }: { children: ReactNode }) {
@@ -29,9 +28,9 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
         active={active}
         memberships={memberships}
         satisfactionRating={currentUser?.satisfactionRating ?? null}
+        schoolYearLabel={schoolYear?.label ?? null}
       />
       {active && <SchoolLogoBadge />}
-      {active && <SchoolYearBadge label={schoolYear?.label ?? null} adminLink={session.isSuperAdmin} />}
       {active && !pending && <AnnouncementBanner userId={session.userId} active={active} />}
       <main className="mx-auto max-w-3xl px-4 py-8">
         {pending ? (
