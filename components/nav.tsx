@@ -208,16 +208,18 @@ export function Nav({
             <img src="/LogoTCvertical.png" alt="Travail Collaboratif" className="h-[60px] w-auto object-contain" />
           </Link>
           <div className="border-t border-stone-200 px-5 py-3 text-left dark:border-stone-800">
-            <SchoolYearBadge
-              label={schoolYearLabel}
-              adminLink={session.isSuperAdmin}
-              onNavigate={() => handleOpenChange(false)}
-            />
             {active && (
-              <span className="mt-2 block truncate text-sm font-bold text-stone-700 underline dark:text-stone-200">
+              <span className="block truncate text-sm font-bold text-stone-700 underline dark:text-stone-200">
                 {active.schoolName}
               </span>
             )}
+            <div className={active ? "mt-2" : ""}>
+              <SchoolYearBadge
+                label={schoolYearLabel}
+                adminLink={session.isSuperAdmin}
+                onNavigate={() => handleOpenChange(false)}
+              />
+            </div>
           </div>
           <nav className="mt-2 space-y-4 px-3">
             {sections.map((section) => (

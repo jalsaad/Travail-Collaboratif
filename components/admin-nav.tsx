@@ -111,14 +111,16 @@ export function AdminNav({
             <img src="/LogoTCvertical.png" alt="Travail Collaboratif" className="h-[60px] w-auto object-contain" />
           </Link>
           <div className="border-t border-stone-200 px-5 py-3 text-left dark:border-stone-800">
-            <SchoolYearBadge
-              label={schoolYearLabel}
-              adminLink
-              onNavigate={() => handleOpenChange(false)}
-            />
-            <span className="mt-2 block truncate text-sm font-bold text-stone-700 dark:text-stone-200">
+            <span className="block truncate text-sm font-bold text-stone-700 dark:text-stone-200">
               Administration plateforme
             </span>
+            <div className="mt-2">
+              <SchoolYearBadge
+                label={schoolYearLabel}
+                adminLink
+                onNavigate={() => handleOpenChange(false)}
+              />
+            </div>
           </div>
           <nav className="mt-2 flex flex-col gap-0.5 px-3">
             {tabs.map((tab) => (
