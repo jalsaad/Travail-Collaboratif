@@ -51,6 +51,7 @@ export default async function MemberDetailPage({
             where: { membership: { schoolId: active.schoolId } },
             include: { user: true },
           },
+          externalParticipants: true,
         },
         orderBy: { date: "desc" },
       })

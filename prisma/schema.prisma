@@ -505,6 +505,13 @@ model CollaborativePeriod {
   participants PeriodParticipant[]
   attachments  Attachment[]
 
+  /// Personnes présentes qui ne relèvent pas du travail collaboratif
+  /// enseignant — éducateur·rice, personnel ouvrier, direction, intervenant
+  /// extérieur. Elles n'ont pas de compte, ne valident rien et n'entrent dans
+  /// le quota de personne (cf. lib/quota-engine.ts, qui part des Membership) :
+  /// leur présence documente la période, elle ne la comptabilise pas.
+  externalParticipants ExternalParticipant[]
+
   @@index([schoolYearId, type])
   @@map("collaborative_periods")
 }
@@ -724,4 +731,29 @@ model FeatureFlag {
   updatedAt DateTime @updatedAt
 
   @@map("feature_flags")
+}
+
+/// Statut des personnes présentes sans être concernées par l'obligation de
+/// travail collaboratif enseignant. Liste fermée pour que les relevés restent
+/// lisibles d'une école à l'autre ; AUTRE laisse la porte ouverte au cas
+/// particulier, précisé alors dans le nom.
+enum ExternalParticipantStatus {
+  EDUCATEUR
+  DIRECTION
+  PERSONNEL_ADMINISTRATIF
+  PERSONNEL_OUVRIER
+  CPMS
+  INTERVENANT_EXTERNE
+  AUTRE
+}
+
+model ExternalParticipant {
+  id       String                    @id @default(cuid())
+  periodId String
+  period   CollaborativePeriod       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  fullName String
+  status   ExternalParticipantStatus
+
+  @@index([periodId])
+  @@map("external_participants")
 }

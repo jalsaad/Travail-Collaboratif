@@ -19,7 +19,7 @@ export default async function ModifierPeriodePage({
 
   const period = await prisma.collaborativePeriod.findUnique({
     where: { id: periodId },
-    include: { participants: true },
+    include: { participants: true, externalParticipants: true },
   });
   // Seul·e l'initiateur·rice peut accéder à l'édition — même garde que
   // l'action serveur updatePeriod (défense en profondeur).
@@ -59,6 +59,10 @@ export default async function ModifierPeriodePage({
             name: `${m.user.firstName} ${m.user.lastName}`,
           }))}
           selectedMembershipIds={selectedMembershipIds}
+          externalParticipants={period.externalParticipants.map((e) => ({
+            fullName: e.fullName,
+            status: e.status,
+          }))}
         />
       </Reveal>
     </div>

@@ -11,6 +11,7 @@ import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 import { buildExportIdentity } from "@/lib/export-identity";
+import { formatExternalParticipant } from "@/lib/external-participants";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -51,7 +52,7 @@ export async function GET(request: Request) {
         // Périodes déclarées par soi-même OU par d'autres intervenant·es dès
         // lors qu'on y participe — le statut affiché (validée/en attente)
         // reflète la confirmation des pairs, jamais une validation direction.
-        include: { participants: { include: { user: true } } },
+        include: { participants: { include: { user: true } }, externalParticipants: true },
         orderBy: { date: "desc" },
       })
     : [];
@@ -65,7 +66,10 @@ export async function GET(request: Request) {
     objectifsPilotage: p.objectifsPilotage ?? "—",
     dureePeriodes: formatPeriodes(p.dureePeriodes.toString()),
     status: computePeriodStatus(p.participants),
-    participants: p.participants.map((part) => `${part.user.firstName} ${part.user.lastName}`).join(", "),
+    participants: [
+      ...p.participants.map((part) => `${part.user.firstName} ${part.user.lastName}`),
+      ...p.externalParticipants.map(formatExternalParticipant),
+    ].join(", "),
   }));
 
   const title = `Relevé individuel${schoolYear ? ` ${schoolYear.label}` : ""} — ${active.schoolName}`;

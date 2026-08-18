@@ -8,6 +8,7 @@ import { createPeriodSchema } from "@/app/(app)/declarer/schema";
 import { periodesBetween } from "@/lib/period-duration";
 import { notifyPendingParticipants } from "@/lib/participation-invitations";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
+import { zipExternalParticipants } from "@/lib/external-participants";
 
 export type CreatePeriodState = { error?: string };
 
@@ -30,6 +31,10 @@ export async function createPeriod(
     description: formData.get("description"),
     objectifsPilotage: formData.get("objectifsPilotage") ?? "",
     colleagueMembershipIds: formData.getAll("colleagueMembershipIds"),
+    externalParticipants: zipExternalParticipants(
+      formData.getAll("externalName"),
+      formData.getAll("externalStatus")
+    ),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide. Vérifiez les champs." };
@@ -79,6 +84,10 @@ export async function createPeriod(
           })),
         ],
       },
+      // Aucun statut à confirmer ici : ces personnes n'ont pas de compte. Leur
+      // présence documente la période sans peser sur la validation, qui reste
+      // celle des seuls enseignants.
+      externalParticipants: { create: parsed.data.externalParticipants },
     },
   });
 

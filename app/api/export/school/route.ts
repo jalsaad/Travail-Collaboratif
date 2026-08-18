@@ -12,6 +12,7 @@ import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 import { buildExportIdentity } from "@/lib/export-identity";
+import { formatExternalParticipant } from "@/lib/external-participants";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -89,6 +90,9 @@ export async function GET(request: Request) {
         where: { membership: { schoolId: active.schoolId } },
         include: { user: true },
       },
+      // Pas de cloisonnement à opérer ici : ces personnes n'appartiennent à
+      // aucune école de la plateforme, elles sont attachées à la période seule.
+      externalParticipants: true,
     },
     orderBy: { date: "desc" },
   });
@@ -102,7 +106,10 @@ export async function GET(request: Request) {
     objectifsPilotage: p.objectifsPilotage ?? "—",
     dureePeriodes: formatPeriodes(p.dureePeriodes.toString()),
     status: computePeriodStatus(p.participants),
-    participants: p.participants.map((part) => `${part.user.firstName} ${part.user.lastName}`).join(", "),
+    participants: [
+      ...p.participants.map((part) => `${part.user.firstName} ${part.user.lastName}`),
+      ...p.externalParticipants.map(formatExternalParticipant),
+    ].join(", "),
   }));
 
   // L'année figure dans le titre : le relevé étant borné à l'année courante,

@@ -121,6 +121,7 @@ export default async function EcolePage() {
             where: { membership: { schoolId: active.schoolId } },
             include: { user: true },
           },
+          externalParticipants: true,
         },
         orderBy: { date: "desc" },
       })

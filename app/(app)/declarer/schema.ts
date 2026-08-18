@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { isValidTime, periodesBetween } from "@/lib/period-duration";
 import { isCollaborativeActivitySlug } from "@/lib/collaborative-activities";
+import {
+  isExternalParticipantStatus,
+  MAX_EXTERNAL_PARTICIPANTS,
+} from "@/lib/external-participants";
 
 /// Champs communs à la déclaration et à la modification d'une période, côté
 /// enseignant comme côté admin (cf. app/admin/periodes/[periodId]/actions.ts).
@@ -38,9 +42,26 @@ export const timeRangeIsOrdered = {
   },
 };
 
+/// Personnes présentes hors travail collaboratif enseignant : elles n'ont pas
+/// de compte, leur nom est donc du texte libre — borné, et débarrassé des
+/// espaces superflus avant d'atteindre la base.
+export const externalParticipantsField = z
+  .array(
+    z.object({
+      fullName: z
+        .string()
+        .transform((v) => v.trim())
+        .pipe(z.string().min(2, "Nom trop court").max(120, "Nom trop long (120 caractères maximum)")),
+      status: z.string().refine(isExternalParticipantStatus, "Statut inconnu"),
+    })
+  )
+  .max(MAX_EXTERNAL_PARTICIPANTS, `Pas plus de ${MAX_EXTERNAL_PARTICIPANTS} personnes extérieures.`)
+  .default([]);
+
 export const createPeriodSchema = z
   .object({
     ...periodCoreFields,
     colleagueMembershipIds: z.array(z.string()).default([]),
+    externalParticipants: externalParticipantsField,
   })
   .refine(timeRangeIsOrdered.check, timeRangeIsOrdered.params);

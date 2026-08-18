@@ -8,6 +8,7 @@ import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
 import { schoolYearDates } from "@/lib/school-year-dates";
 import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
+import { formatExternalParticipant } from "@/lib/external-participants";
 
 // Archivage de fin d'année scolaire.
 //
@@ -104,6 +105,7 @@ function loadPeriods(schoolYearId: string) {
     where: { schoolYearId },
     include: {
       attachments: true,
+      externalParticipants: true,
       participants: {
         include: {
           user: { select: { id: true, firstName: true, lastName: true, email: true, matricule: true } },
@@ -130,7 +132,10 @@ function toPdfRows(periods: ArchivedPeriod[], schoolId: string): ExportPeriodRow
       objectifsPilotage: p.objectifsPilotage ?? "—",
       dureePeriodes: formatPeriodes(p.dureePeriodes.toString()),
       status: computePeriodStatus(own),
-      participants: own.map((part) => `${part.user.firstName} ${part.user.lastName}`).join(", "),
+      participants: [
+        ...own.map((part) => `${part.user.firstName} ${part.user.lastName}`),
+        ...p.externalParticipants.map(formatExternalParticipant),
+      ].join(", "),
     };
   });
 }

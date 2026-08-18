@@ -1,12 +1,21 @@
-import type { CollaborativePeriod, PeriodParticipant, User } from "@prisma/client";
+import type {
+  CollaborativePeriod,
+  ExternalParticipant,
+  PeriodParticipant,
+  User,
+} from "@prisma/client";
 import { computePeriodStatus } from "@/lib/period-status";
 import { periodTypeLabel, participantStatusLabel } from "@/lib/period-labels";
 import { formatPeriodSchedule } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
+import { ExternalParticipantChips } from "@/components/external-participant-chips";
 import { Reveal } from "@/components/reveal";
 
 type ParticipantWithUser = PeriodParticipant & { user: User };
-type PeriodWithParticipants = CollaborativePeriod & { participants: ParticipantWithUser[] };
+type PeriodWithParticipants = CollaborativePeriod & {
+  participants: ParticipantWithUser[];
+  externalParticipants: ExternalParticipant[];
+};
 
 // Lecture seule pour le tableau de bord direction/référent — volontairement
 // distinct de PeriodCard, qui porte des actions de confirmation propres à
@@ -77,6 +86,8 @@ export function SchoolPeriodList({ periods }: { periods: PeriodWithParticipants[
                 </li>
               ))}
             </ul>
+
+            <ExternalParticipantChips participants={period.externalParticipants} />
           </Reveal>
         );
       })}

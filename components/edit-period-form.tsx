@@ -3,6 +3,10 @@
 import { useActionState } from "react";
 import { updatePeriod, type UpdatePeriodState } from "@/app/(app)/mes-periodes/actions";
 import { ColleaguePicker } from "@/components/colleague-picker";
+import {
+  ExternalParticipantsField,
+  type ExternalParticipantDraft,
+} from "@/components/external-participants-field";
 import { PeriodScheduleFields } from "@/components/period-schedule-fields";
 import { PeriodTypeFields } from "@/components/period-type-fields";
 import { PeriodDescriptionField } from "@/components/period-description-field";
@@ -21,6 +25,7 @@ export function EditPeriodForm({
   objectifsPilotage,
   colleagues,
   selectedMembershipIds,
+  externalParticipants,
 }: {
   periodId: string;
   type: string;
@@ -34,6 +39,7 @@ export function EditPeriodForm({
   objectifsPilotage: string;
   colleagues: { membershipId: string; name: string }[];
   selectedMembershipIds: string[];
+  externalParticipants: ExternalParticipantDraft[];
 }) {
   const updatePeriodWithId = updatePeriod.bind(null, periodId);
   const [state, formAction, pending] = useActionState(updatePeriodWithId, initialState);
@@ -61,6 +67,19 @@ export function EditPeriodForm({
         <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">Collègues à inviter</span>
         <div className="mt-1.5">
           <ColleaguePicker colleagues={colleagues} initialSelected={selectedMembershipIds} />
+        </div>
+      </div>
+
+      <div>
+        <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+          Autres personnes présentes <span className="font-normal text-stone-400">(facultatif)</span>
+        </span>
+        <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
+          Éducateur·rice, direction, personnel ouvrier, intervenant·e externe… Ces personnes ne
+          valident pas la période et leur présence n&apos;entre dans le quota de personne.
+        </p>
+        <div className="mt-1.5">
+          <ExternalParticipantsField initial={externalParticipants} />
         </div>
       </div>
 

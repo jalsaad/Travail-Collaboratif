@@ -40,6 +40,7 @@ export default async function MesPeriodesPage() {
           participants: {
             include: { user: true, membership: { include: { school: true } } },
           },
+          externalParticipants: true,
         },
         orderBy: { date: "desc" },
       })

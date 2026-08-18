@@ -5,11 +5,13 @@ import type {
   User,
   Membership,
   School,
+  ExternalParticipant,
 } from "@prisma/client";
 import { computePeriodStatus } from "@/lib/period-status";
 import { periodTypeLabel, participantStatusLabel } from "@/lib/period-labels";
 import { formatPeriodSchedule } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
+import { ExternalParticipantChips } from "@/components/external-participant-chips";
 import { ParticipationActions } from "@/components/participation-actions";
 import { DeletePeriodButton } from "@/components/delete-period-button";
 import { Reveal } from "@/components/reveal";
@@ -21,6 +23,7 @@ type ParticipantWithRelations = PeriodParticipant & {
 
 type PeriodWithParticipants = CollaborativePeriod & {
   participants: ParticipantWithRelations[];
+  externalParticipants: ExternalParticipant[];
 };
 
 export function PeriodCard({
@@ -93,6 +96,8 @@ export function PeriodCard({
           </li>
         ))}
       </ul>
+
+      <ExternalParticipantChips participants={period.externalParticipants} />
 
       {myParticipation && myParticipation.status === "PENDING" && (
         <div className="mt-4">

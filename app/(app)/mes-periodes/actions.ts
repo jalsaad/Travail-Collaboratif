@@ -8,6 +8,7 @@ import { resolveActiveMembership } from "@/lib/active-school";
 import { createPeriodSchema } from "@/app/(app)/declarer/schema";
 import { periodesBetween } from "@/lib/period-duration";
 import { notifyPendingParticipants } from "@/lib/participation-invitations";
+import { zipExternalParticipants } from "@/lib/external-participants";
 
 // Invariant d'autorisation (cf. permissions.md > assertCanConfirmParticipation) :
 // le where est TOUJOURS construit à partir de session.userId, jamais d'un
@@ -73,6 +74,10 @@ export async function updatePeriod(
     description: formData.get("description"),
     objectifsPilotage: formData.get("objectifsPilotage") ?? "",
     colleagueMembershipIds: formData.getAll("colleagueMembershipIds"),
+    externalParticipants: zipExternalParticipants(
+      formData.getAll("externalName"),
+      formData.getAll("externalStatus")
+    ),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide. Vérifiez les champs." };
@@ -105,6 +110,15 @@ export async function updatePeriod(
         objectifsPilotage: parsed.data.objectifsPilotage,
       },
     });
+
+    // Réécrites en bloc plutôt que rapprochées une à une : ces lignes n'ont
+    // ni identité stable ni statut à préserver, la liste soumise fait foi.
+    await tx.externalParticipant.deleteMany({ where: { periodId } });
+    if (parsed.data.externalParticipants.length > 0) {
+      await tx.externalParticipant.createMany({
+        data: parsed.data.externalParticipants.map((e) => ({ ...e, periodId })),
+      });
+    }
 
     // Toute réédition doit être revalidée par TOUS les intervenants, y
     // compris l'initiateur·rice — on repart donc de zéro sur les statuts.
