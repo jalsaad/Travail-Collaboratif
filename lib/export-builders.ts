@@ -276,25 +276,24 @@ export function buildPeriodsPdf(
     }
 
     // Numérotation ajoutée après coup, sur des pages déjà écrites : le total
-    // n'existe qu'ici. Rien sur un document d'une seule page — « 1/1 » ne
-    // renseigne personne et alourdit un pied déjà chargé.
+    // n'existe qu'ici. Portée aussi sur les documents d'une seule page —
+    // « 1/1 » atteste qu'il ne manque pas de feuille, ce qui vaut d'être dit
+    // sur une pièce transmise à l'administration.
     const pages = doc.bufferedPageRange();
-    if (pages.count > 1) {
-      for (let i = 0; i < pages.count; i++) {
-        doc.switchToPage(pages.start + i);
-        doc
-          .fontSize(7.5)
-          .font("Helvetica")
-          .fillColor("#78716c")
-          // Sur la ligne de la mention de conformité, à l'opposé : celle-ci est
-          // centrée et s'arrête bien avant la marge, la place est libre.
-          .text(
-            `${i + 1}/${pages.count}`,
-            PAGE_MARGIN,
-            doc.page.height - PAGE_MARGIN - FOOTER_HEIGHT + 44,
-            { width: contentWidth, align: "right" }
-          );
-      }
+    for (let i = 0; i < pages.count; i++) {
+      doc.switchToPage(pages.start + i);
+      doc
+        .fontSize(7.5)
+        .font("Helvetica")
+        .fillColor("#78716c")
+        // Sur la ligne de la mention de conformité, à l'opposé : celle-ci est
+        // centrée et s'arrête bien avant la marge, la place est libre.
+        .text(
+          `${i + 1}/${pages.count}`,
+          PAGE_MARGIN,
+          doc.page.height - PAGE_MARGIN - FOOTER_HEIGHT + 44,
+          { width: contentWidth, align: "right" }
+        );
     }
 
     doc.end();
