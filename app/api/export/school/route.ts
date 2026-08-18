@@ -6,7 +6,11 @@ import { assertCanManageSchool, ForbiddenError } from "@/lib/school-authorizatio
 import { periodTypeLabel } from "@/lib/period-labels";
 import { formatPeriodes, formatTimeRange } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
-import { parseExportDateRange, InvalidExportRangeError } from "@/lib/export-range";
+import {
+  parseExportDateRange,
+  formatExportRange,
+  InvalidExportRangeError,
+} from "@/lib/export-range";
 import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
@@ -110,15 +114,19 @@ export async function GET(request: Request) {
     ].join(", "),
   }));
 
-  // L'année figure dans le titre : le relevé étant borné à l'année courante,
-  // un exemplaire imprimé et classé serait sinon impossible à dater.
+  // L'année et les bornes figurent dans le titre : un exemplaire imprimé et
+  // classé serait sinon impossible à dater. Le nom de l'école n'y est plus,
+  // son logo le porte en tête ; en revanche le relevé d'un lot ou d'une
+  // équipe garde de qui il parle, aucun bloc d'identité ne le disant.
   const annee = schoolYear ? ` ${schoolYear.label}` : "";
+  const periode = formatExportRange(range.start, range.end, schoolYear);
+  const bornes = periode ? ` — ${periode}` : "";
   const title =
     scope === "INDIVIDUAL"
-      ? `Relevé individuel${annee} — ${targetMembers[0].user.firstName} ${targetMembers[0].user.lastName}`
+      ? `Relevé individuel${annee}${bornes}`
       : scope === "BATCH"
-        ? `Relevé${annee} — ${targetMembers.length} personnes — ${active.schoolName}`
-        : `Relevé collectif${annee} — ${active.schoolName}`;
+        ? `Relevé${annee} — ${targetMembers.length} personnes${bornes}`
+        : `Relevé collectif${annee}${bornes}`;
 
   const logos = await loadExportHeaderLogos(active.schoolLogoUrl);
   // Bloc d'identité réservé au relevé d'UNE personne : un lot ou un relevé

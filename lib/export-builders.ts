@@ -155,10 +155,10 @@ export function buildPeriodsPdf(
         .fillColor("black");
     };
 
-    // Bandeau d'en-tête : logo de l'école à gauche, identité de l'enseignant à
-    // droite, titre en dessous. Répété sur chaque page — un relevé transmis à
-    // l'administration circule feuille par feuille, et une page détachée doit
-    // dire à elle seule de qui et de quelle année elle parle.
+    // Bandeau d'en-tête : logo de l'école à gauche, titre du relevé à droite,
+    // identité de l'enseignant en dessous. Répété sur chaque page — un relevé
+    // transmis à l'administration circule feuille par feuille, et une page
+    // détachée doit dire à elle seule de qui et de quelle période elle parle.
     const drawDocumentHeader = () => {
       let headerBottom = PAGE_MARGIN;
       if (logos?.school) {
@@ -168,22 +168,42 @@ export function buildPeriodsPdf(
         headerBottom = PAGE_MARGIN + HEADER_LOGO_BOX;
       }
 
-      // Le relevé individuel se lit comme un en-tête de courrier : de qui il
-      // s'agit à droite, sous quelle bannière à gauche. Les exports collectifs
-      // n'ont pas d'identité unique, la bande reste alors au seul logo.
+      // Aligné à droite en vis-à-vis du logo, et non centré sur la page : entre
+      // les deux, un titre centré chevaucherait la bannière dès qu'elle est
+      // large. La largeur restante lui suffit, et il passe à la ligne au besoin.
+      const titreX = PAGE_MARGIN + HEADER_LOGO_WIDTH + 20;
+      doc
+        .fillColor("black")
+        .fontSize(14)
+        .font("Helvetica-Bold")
+        .text(title, titreX, PAGE_MARGIN + 4, {
+          width: doc.page.width - PAGE_MARGIN - titreX,
+          align: "right",
+        });
+      headerBottom = Math.max(headerBottom, doc.y);
+
+      // Les exports collectifs ou par lot n'ont pas d'identité unique : le
+      // bandeau s'arrête alors au logo et au titre.
       if (identity) {
         const lignes = identityLines(identity);
 
-        // Colonne des intitulés taillée sur le plus long d'entre eux, mesuré
-        // dans sa police : `widthOfString` rapporte la largeur pour la fonte
-        // et le corps courants. Une largeur en dur se déréglerait au premier
-        // intitulé ajouté.
+        // Colonnes taillées sur leur contenu, mesuré dans la police où il sera
+        // écrit — `widthOfString` rapporte la largeur pour la fonte et le corps
+        // courants. Des largeurs en dur se dérégleraient au premier intitulé
+        // ajouté, et fausseraient le centrage du bloc.
         doc.fontSize(8).font("Helvetica-Bold");
         const largeurIntitules = Math.max(...lignes.map(([label]) => doc.widthOfString(label)));
+        doc.font("Helvetica");
+        const largeurValeurs = Math.min(
+          Math.max(...lignes.map(([, valeur]) => doc.widthOfString(valeur))),
+          IDENTITY_VALUE_WIDTH
+        );
 
-        const labelX = doc.page.width - PAGE_MARGIN - IDENTITY_VALUE_WIDTH - IDENTITY_GAP - largeurIntitules;
+        // Centré sur l'encre et non sur des boîtes surdimensionnées : le bloc
+        // paraîtrait poussé à gauche si l'on centrait la largeur maximale.
+        const labelX = (doc.page.width - (largeurIntitules + IDENTITY_GAP + largeurValeurs)) / 2;
         const valueX = labelX + largeurIntitules + IDENTITY_GAP;
-        let y = PAGE_MARGIN;
+        let y = headerBottom + 14;
 
         for (const [label, valeur] of lignes) {
           doc
@@ -196,21 +216,17 @@ export function buildPeriodsPdf(
           doc
             .font("Helvetica")
             .fillColor("black")
-            .text(valeur, valueX, y, { width: IDENTITY_VALUE_WIDTH });
+            .text(valeur, valueX, y, { width: largeurValeurs });
           // La valeur peut passer à la ligne (enseignement multi-niveaux), pas
           // l'intitulé : c'est la plus haute des deux qui commande la suivante.
           y = Math.max(apresLabel, doc.y) + 2;
         }
-        headerBottom = Math.max(headerBottom, y);
+        headerBottom = y;
       }
 
-      doc.y = headerBottom + 16;
-      doc
-        .fillColor("black")
-        .fontSize(16)
-        .font("Helvetica-Bold")
-        .text(title, PAGE_MARGIN, doc.y, { width: contentWidth, align: "center" });
-      doc.moveDown(0.8);
+      doc.fillColor("black");
+      doc.x = PAGE_MARGIN;
+      doc.y = headerBottom + 14;
     };
 
     // `pageAdded` ne se déclenche pas pour la première page, créée par le

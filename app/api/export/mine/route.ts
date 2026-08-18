@@ -5,7 +5,11 @@ import { resolveActiveMembership } from "@/lib/active-school";
 import { periodTypeLabel } from "@/lib/period-labels";
 import { formatPeriodes, formatTimeRange } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
-import { parseExportDateRange, InvalidExportRangeError } from "@/lib/export-range";
+import {
+  parseExportDateRange,
+  formatExportRange,
+  InvalidExportRangeError,
+} from "@/lib/export-range";
 import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
@@ -70,7 +74,12 @@ export async function GET(request: Request) {
     ].join(", "),
   }));
 
-  const title = `Relevé individuel${schoolYear ? ` ${schoolYear.label}` : ""} — ${active.schoolName}`;
+  // La période couverte remplace le nom de l'école, que le logo et le bloc
+  // d'identité annoncent déjà. Ce qu'un exemplaire classé ne dit pas de
+  // lui-même, ce sont ses bornes.
+  const periode = formatExportRange(range.start, range.end, schoolYear);
+  const title =
+    `Relevé individuel${schoolYear ? ` ${schoolYear.label}` : ""}` + (periode ? ` — ${periode}` : "");
   const logos = await loadExportHeaderLogos(active.schoolLogoUrl);
   const identity = await buildExportIdentity(active.membershipId, schoolYear?.id ?? null);
   const buffer = await buildPeriodsPdf(rows, title, logos, identity);
