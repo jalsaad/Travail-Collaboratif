@@ -65,15 +65,21 @@ export async function sendSupportTicketNotification(params: {
   requesterName: string;
   requesterEmail: string;
   adminUrl: string;
+  /// Pièce jointe facultative : signalée et liée, jamais réexpédiée en
+  /// attachement — le fichier reste sur la plateforme.
+  attachment?: { name: string; url: string } | null;
 }) {
-  const { to, category, subject, message, requesterName, requesterEmail, adminUrl } = params;
+  const { to, category, subject, message, requesterName, requesterEmail, adminUrl, attachment } =
+    params;
   const categoryLabel = SUPPORT_CATEGORY_LABEL[category];
 
   if (to.length === 0) return;
 
   if (!SMTP_HOST) {
     console.log(
-      `[dev] Nouveau ticket (${categoryLabel}) de ${requesterName} <${requesterEmail}> : "${subject}" — destinataires : ${to.join(", ")} — ${adminUrl}`
+      `[dev] Nouveau ticket (${categoryLabel}) de ${requesterName} <${requesterEmail}> : "${subject}"` +
+        (attachment ? ` — pièce jointe : ${attachment.name} (${attachment.url})` : "") +
+        ` — destinataires : ${to.join(", ")} — ${adminUrl}`
     );
     return;
   }
@@ -89,11 +95,15 @@ export async function sendSupportTicketNotification(params: {
     from: SMTP_FROM,
     to,
     subject: `[${categoryLabel}] ${subject}`,
-    text: `${requesterName} <${requesterEmail}> a ouvert un ticket (${categoryLabel}) :\n\n${subject}\n\n${message}\n\nVoir dans l'administration : ${adminUrl}`,
+    text:
+      `${requesterName} <${requesterEmail}> a ouvert un ticket (${categoryLabel}) :\n\n${subject}\n\n${message}\n\n` +
+      (attachment ? `Pièce jointe : ${attachment.name} — ${attachment.url}\n\n` : "") +
+      `Voir dans l'administration : ${adminUrl}`,
     html: `
       <p><strong>${requesterName}</strong> (${requesterEmail}) a ouvert un ticket — ${categoryLabel}.</p>
       <p><strong>${subject}</strong></p>
       <p>${message.replace(/\n/g, "<br/>")}</p>
+      ${attachment ? `<p>Pièce jointe : <a href="${attachment.url}">${attachment.name}</a></p>` : ""}
       <p><a href="${adminUrl}">Voir dans l'administration</a></p>
     `,
   });

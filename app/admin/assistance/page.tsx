@@ -64,7 +64,15 @@ export default async function AdminAssistancePage() {
                   </span>
                 </td>
                 <td className="px-5 py-3.5">
-                  <SupportTicketSubject subject={ticket.subject} message={ticket.message} />
+                  <SupportTicketSubject
+                    subject={ticket.subject}
+                    message={ticket.message}
+                    attachment={
+                      ticket.attachmentUrl
+                        ? { url: ticket.attachmentUrl, name: ticket.attachmentName ?? "Pièce jointe" }
+                        : null
+                    }
+                  />
                 </td>
                 <td className="px-5 py-3.5 text-xs text-stone-500 dark:text-stone-400">
                   {ticket.user.firstName} {ticket.user.lastName}

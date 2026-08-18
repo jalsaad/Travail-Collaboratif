@@ -128,42 +128,42 @@ enum DonationStatus {
 // ---------------------------------------------------------------------------
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  firstName    String
-  lastName     String
-  passwordHash String?
-  dateOfBirth  DateTime?
-  sex          Sex?
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  firstName           String
+  lastName            String
+  passwordHash        String?
+  dateOfBirth         DateTime?
+  sex                 Sex?
   /// Numéro à 11 chiffres calculé à la création du compte (cf. lib/matricule.ts) :
   /// 1 chiffre sexe + 2 chiffres décennie de naissance + 2 chiffres mois +
   /// 2 chiffres jour + 4 chiffres encodés manuellement par l'utilisateur.
   /// Nullable : les comptes créés avant l'introduction de ce champ n'en ont pas.
-  matricule    String?  @unique
+  matricule           String?   @unique
   /// Compte plateforme, transverse à toutes les écoles — distinct des rôles
   /// Membership (qui restent scopés à une école). Réservé à l'équipe produit
   /// pour assister les directions ; ne pas confondre avec Role.DIRECTION.
-  isSuperAdmin Boolean  @default(false)
-  lastLoginAt  DateTime?
+  isSuperAdmin        Boolean   @default(false)
+  lastLoginAt         DateTime?
   /// Note de satisfaction courante (1 à 5), modifiable à tout moment depuis
   /// le widget étoiles du menu (cf. components/satisfaction-stars.tsx) — une
   /// seule valeur "actuelle" par compte, pas un historique.
   satisfactionRating  Int?
   satisfactionRatedAt DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  memberships       Membership[]
-  createdPeriods    CollaborativePeriod[] @relation("PeriodAuthor")
+  memberships          Membership[]
+  createdPeriods       CollaborativePeriod[] @relation("PeriodAuthor")
   periodParticipations PeriodParticipant[]
-  invitationsSent   Invitation[]           @relation("InvitationsSentBy")
-  exportsRequested  ExportLog[]
-  auditLogs         AuditLog[]
+  invitationsSent      Invitation[]          @relation("InvitationsSentBy")
+  exportsRequested     ExportLog[]
+  auditLogs            AuditLog[]
   announcementsCreated Announcement[]
-  announcementReads AnnouncementRead[]
-  donations         Donation[]
-  passwordResetTokens PasswordResetToken[]
-  supportTickets    SupportTicket[]
+  announcementReads    AnnouncementRead[]
+  donations            Donation[]
+  passwordResetTokens  PasswordResetToken[]
+  supportTickets       SupportTicket[]
 
   @@map("users")
 }
@@ -202,78 +202,83 @@ enum SupportTicketStatus {
 }
 
 model SupportTicket {
-  id         String                @id @default(cuid())
-  userId     String
-  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String                @id @default(cuid())
+  userId         String
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// École et rôle actifs de l'auteur au moment de la création du ticket —
   /// déduits automatiquement de sa Membership active (cf.
   /// lib/active-school.ts::resolveActiveMembership), jamais demandés dans le
   /// formulaire. Nullables : un compte sans école active peut aussi ouvrir un
   /// ticket (ex: administrateur plateforme pur).
-  schoolId   String?
-  school     School?               @relation(fields: [schoolId], references: [id], onDelete: SetNull)
-  role       Role?
-  category   SupportTicketCategory
-  subject    String
-  message    String
-  status     SupportTicketStatus   @default(OPEN)
-  createdAt  DateTime              @default(now())
-  resolvedAt DateTime?
+  schoolId       String?
+  school         School?               @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  role           Role?
+  category       SupportTicketCategory
+  subject        String
+  message        String
+  /// Pièce jointe facultative (capture d'écran, PDF...) : URL renvoyée par le
+  /// stockage (cf. lib/file-storage.ts) et nom d'origine, conservé pour
+  /// l'affichage seul — le fichier stocké porte un nom aléatoire.
+  attachmentUrl  String?
+  attachmentName String?
+  status         SupportTicketStatus   @default(OPEN)
+  createdAt      DateTime              @default(now())
+  resolvedAt     DateTime?
 
   @@index([status])
   @@map("support_tickets")
 }
 
 model School {
-  id          String   @id @default(cuid())
-  name        String
+  id                String          @id @default(cuid())
+  name              String
   /// Réseau d'enseignement (WBE, officiel subventionné, libre subventionné...)
-  reseau      String?
+  reseau            String?
   /// Région/province — texte libre (pas d'enum : les découpages varient),
   /// renseigné par l'admin plateforme (cf. AdminSchoolEditForm).
-  region      String?
+  region            String?
   /// Niveaux offerts (maternelle/primaire/secondaire) — admin uniquement.
-  niveaux     SchoolLevel[]   @default([])
+  niveaux           SchoolLevel[]   @default([])
   /// Type(s) d'enseignement (ordinaire/spécialisé) — admin uniquement.
   typesEnseignement EducationType[] @default([])
   /// Numéro FASE / matricule officiel de l'établissement
-  numeroFase  String?  @unique
+  numeroFase        String?         @unique
   /// Rue et numéro. Les écoles créées avant le découpage de l'adresse y ont
   /// encore leur adresse complète en texte libre (code postal et localité
   /// restent alors vides jusqu'à la prochaine édition du formulaire).
-  address     String?
+  address           String?
   /// Code postal belge à 4 chiffres — cf. lib/belgian-postal-codes.ts.
-  postalCode  String?
+  postalCode        String?
   /// Localité correspondant au code postal (un code en dessert plusieurs).
-  locality    String?
+  locality          String?
   /// Pays, renseigné uniquement pour les écoles à programme belge à
   /// l'étranger (cf. lib/reseau-options.ts::isReseauEtranger). Vide pour les
   /// écoles situées en Belgique, dont le code postal suffit à localiser.
-  country     String?
-  phone       String?
+  country           String?
+  phone             String?
   /// Logo affiché dans l'espace école (personnalisation par la direction)
-  logoUrl     String?
-  status      SchoolStatus @default(APPROVED)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  logoUrl           String?
+  status            SchoolStatus    @default(APPROVED)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
-  implantations Implantation[]
-  memberships   Membership[]
-  invitations   Invitation[]
-  joinCodes     JoinCode[]
-  exportLogs    ExportLog[]
-  auditLogs     AuditLog[]
+  implantations       Implantation[]
+  memberships         Membership[]
+  invitations         Invitation[]
+  joinCodes           JoinCode[]
+  exportLogs          ExportLog[]
+  auditLogs           AuditLog[]
   announcementTargets AnnouncementTarget[]
-  supportTickets SupportTicket[]
+  supportTickets      SupportTicket[]
 
   @@map("schools")
 }
 
 /// Site/implantation d'une école à adresses multiples.
 model Implantation {
-  id       String @id @default(cuid())
+  id       String  @id @default(cuid())
   schoolId String
-  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school   School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   name     String
   address  String?
 
@@ -291,9 +296,9 @@ model SchoolYear {
   startDate DateTime
   endDate   DateTime
 
-  annualAssignments   AnnualAssignment[]
+  annualAssignments    AnnualAssignment[]
   collaborativePeriods CollaborativePeriod[]
-  exportLogs          ExportLog[]
+  exportLogs           ExportLog[]
 
   @@map("school_years")
 }
@@ -327,7 +332,7 @@ model Membership {
   removedAt      DateTime?
 
   annualAssignments  AnnualAssignment[]
-  authoredInvitation Invitation[]        @relation("InvitationAcceptedAs")
+  authoredInvitation Invitation[]           @relation("InvitationAcceptedAs")
   periodParticipants PeriodParticipant[]
   levelHours         MembershipLevelHours[]
 
@@ -342,7 +347,7 @@ model Membership {
 /// différente) — cf. commentaire de MembershipLevelHours. Sert aussi au
 /// ciblage des annonces plateforme.
 model Discipline {
-  id   String @id @default(cuid())
+  id   String  @id @default(cuid())
   /// Libellé affiché — pas la clé d'unicité (cf. code) : deux "fonctions"
   /// officielles distinctes (ex: Français degré inférieur / degré
   /// supérieur) peuvent légitimement partager le même libellé usuel.
@@ -377,13 +382,13 @@ model Discipline {
 ///   même User, pour une même SchoolYear, ne peut dépasser l'équivalent de
 ///   2 périodes/semaine.
 model AnnualAssignment {
-  id             String     @id @default(cuid())
-  membershipId   String
-  membership     Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
-  schoolYearId   String
-  schoolYear     SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
-  etp            Decimal    @db.Decimal(4, 2)
-  objectifPeriodes Decimal  @db.Decimal(5, 2)
+  id               String     @id @default(cuid())
+  membershipId     String
+  membership       Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  schoolYearId     String
+  schoolYear       SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  etp              Decimal    @db.Decimal(4, 2)
+  objectifPeriodes Decimal    @db.Decimal(5, 2)
 
   @@unique([membershipId, schoolYearId])
   @@map("annual_assignments")
@@ -425,13 +430,13 @@ model MembershipLevelHours {
 /// Code générique permettant à un enseignant de rejoindre une école
 /// (flux "code d'école", distinct des invitations nominatives par email).
 model JoinCode {
-  id          String   @id @default(cuid())
-  schoolId    String
-  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  code        String   @unique
-  active      Boolean  @default(true)
-  createdById String
-  createdAt   DateTime @default(now())
+  id            String    @id @default(cuid())
+  schoolId      String
+  school        School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  code          String    @unique
+  active        Boolean   @default(true)
+  createdById   String
+  createdAt     DateTime  @default(now())
   /// Régénérer un code désactive l'ancien plutôt que de le supprimer,
   /// pour conserver la traçabilité des rattachements passés.
   deactivatedAt DateTime?
@@ -442,20 +447,20 @@ model JoinCode {
 
 /// Invitation nominative par email, avec attribution du rôle cible.
 model Invitation {
-  id             String           @id @default(cuid())
-  schoolId       String
-  school         School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  email          String
-  role           Role
-  status         InvitationStatus @default(PENDING)
-  invitedById    String
-  invitedBy      User             @relation("InvitationsSentBy", fields: [invitedById], references: [id])
-  token          String           @unique
-  createdAt      DateTime         @default(now())
-  expiresAt      DateTime
-  acceptedAt     DateTime?
-  acceptedAsId   String?
-  acceptedAs     Membership?      @relation("InvitationAcceptedAs", fields: [acceptedAsId], references: [id])
+  id           String           @id @default(cuid())
+  schoolId     String
+  school       School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  email        String
+  role         Role
+  status       InvitationStatus @default(PENDING)
+  invitedById  String
+  invitedBy    User             @relation("InvitationsSentBy", fields: [invitedById], references: [id])
+  token        String           @unique
+  createdAt    DateTime         @default(now())
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  acceptedAsId String?
+  acceptedAs   Membership?      @relation("InvitationAcceptedAs", fields: [acceptedAsId], references: [id])
 
   @@index([schoolId, status])
   @@map("invitations")
@@ -469,33 +474,33 @@ model Invitation {
 /// Le statut global affiché à l'écran se déduit des PeriodParticipant liés :
 /// VALIDEE si tous les participants requis ont CONFIRMED, EN_ATTENTE sinon.
 model CollaborativePeriod {
-  id             String     @id @default(cuid())
-  type           PeriodType
-  date           DateTime
+  id                String     @id @default(cuid())
+  type              PeriodType
+  date              DateTime
   /// Heure de début / de fin, format "HH:MM" en heure locale de l'école.
   /// Nullables : les périodes déclarées avant l'introduction de la plage
   /// horaire n'ont qu'une durée, et l'affichage retombe alors sur celle-ci.
-  heureDebut     String?
-  heureFin       String?
+  heureDebut        String?
+  heureFin          String?
   /// Nombre de périodes, incréments de 0.5 possibles. Dérivé de la plage
   /// horaire à la saisie (cf. lib/period-duration.ts) mais conservé en base :
   /// c'est l'unité de l'objectif annuel et des exports.
-  dureePeriodes  Decimal    @db.Decimal(4, 2)
+  dureePeriodes     Decimal    @db.Decimal(4, 2)
   /// Thème de l'activité, slug du référentiel lib/collaborative-activities.ts
   /// tiré du vade-mecum §8. Facultatif : le vade-mecum précise qu'« une liste
   /// de thèmes n'est pas imposée », et les périodes antérieures n'en ont pas.
-  natureActivite String?
-  description    String
+  natureActivite    String?
+  description       String
   /// 4e colonne du formulaire officiel de recensement (annexe circulaire
   /// 7167) : « En lien éventuel avec quels objectifs du plan de pilotage ? ».
   /// Texte libre, facultatif comme dans le formulaire.
   objectifsPilotage String?
-  schoolYearId   String
-  schoolYear     SchoolYear @relation(fields: [schoolYearId], references: [id])
-  createdByUserId String
-  createdBy      User       @relation("PeriodAuthor", fields: [createdByUserId], references: [id])
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  schoolYearId      String
+  schoolYear        SchoolYear @relation(fields: [schoolYearId], references: [id])
+  createdByUserId   String
+  createdBy         User       @relation("PeriodAuthor", fields: [createdByUserId], references: [id])
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   participants PeriodParticipant[]
   attachments  Attachment[]
@@ -509,15 +514,15 @@ model CollaborativePeriod {
 /// participant — c'est ce qui permet à une direction de ne voir, pour une
 /// période inter-écoles, que la part concernant son propre personnel.
 model PeriodParticipant {
-  id           String            @id @default(cuid())
+  id           String              @id @default(cuid())
   periodId     String
   period       CollaborativePeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
   userId       String
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   membershipId String
-  membership   Membership        @relation(fields: [membershipId], references: [id], onDelete: Cascade)
-  status       ParticipantStatus @default(PENDING)
-  isInitiator  Boolean           @default(false)
+  membership   Membership          @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  status       ParticipantStatus   @default(PENDING)
+  isInitiator  Boolean             @default(false)
   confirmedAt  DateTime?
 
   participationTokens ParticipationToken[]
@@ -568,27 +573,27 @@ model Attachment {
 /// Historique des exports générés (individuel ou école entière), en fin de
 /// période scolaire — conservé pour audit et re-téléchargement.
 model ExportLog {
-  id             String       @id @default(cuid())
-  schoolId       String
-  school         School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  schoolYearId   String
-  schoolYear     SchoolYear   @relation(fields: [schoolYearId], references: [id])
-  scope          ExportScope
-  format         ExportFormat
+  id            String       @id @default(cuid())
+  schoolId      String
+  school        School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolYearId  String
+  schoolYear    SchoolYear   @relation(fields: [schoolYearId], references: [id])
+  scope         ExportScope
+  format        ExportFormat
   /// Renseigné si scope = INDIVIDUAL
-  targetUserId   String?
+  targetUserId  String?
   /// Renseigné si scope = BATCH (liste des personnes sélectionnées par la
   /// direction/le·la référent·e — jamais utilisé pour INDIVIDUAL/SCHOOL)
-  targetUserIds  String[]     @default([])
+  targetUserIds String[]     @default([])
   /// Bornes de la période chronologique demandée (filtre optionnel sur
   /// CollaborativePeriod.date) — nulles si l'export ne restreint pas les
   /// dates (ex: relevé collectif complet).
-  rangeStart     DateTime?
-  rangeEnd       DateTime?
-  requestedById  String
-  requestedBy    User         @relation(fields: [requestedById], references: [id])
-  fileUrl        String
-  createdAt      DateTime     @default(now())
+  rangeStart    DateTime?
+  rangeEnd      DateTime?
+  requestedById String
+  requestedBy   User         @relation(fields: [requestedById], references: [id])
+  fileUrl       String
+  createdAt     DateTime     @default(now())
 
   @@map("export_logs")
 }
@@ -662,17 +667,17 @@ model AnnouncementMedia {
 /// combinent en OU (ex: élargir à un deuxième réseau). Un critère laissé
 /// à null = pas de restriction sur ce critère.
 model AnnouncementTarget {
-  id             String @id @default(cuid())
+  id             String       @id @default(cuid())
   announcementId String
   announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
   role           Role?
   schoolId       String?
-  school         School?     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school         School?      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   /// Filtre sur School.reseau (ex: "WBE") — indépendant de schoolId, pour
   /// cibler tout un réseau sans lister chaque école.
   reseau         String?
   disciplineId   String?
-  discipline     Discipline? @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
+  discipline     Discipline?  @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
 
   @@index([schoolId])
   @@index([reseau])

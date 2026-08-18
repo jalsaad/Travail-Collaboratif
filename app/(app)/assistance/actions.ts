@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { getBaseUrl, sendSupportTicketNotification } from "@/lib/mailer";
+import { saveSupportAttachment, InvalidAttachmentError } from "@/lib/support-attachment";
 import { logAudit, AuditAction } from "@/lib/audit-log";
 
 export type SupportTicketState = { error?: string; success?: string };
@@ -36,6 +37,22 @@ export async function createSupportTicket(
   // sont déduits de la même façon, depuis la Membership active (pas un champ
   // du formulaire) — cf. lib/active-school.ts, déjà utilisé partout ailleurs
   // dans l'app pour cette notion d'"école active".
+
+  // Le fichier est écrit avant la création du ticket : un format refusé ou
+  // trop lourd rend la main sur le formulaire sans laisser de ticket muet
+  // derrière lui. Un champ vide arrive comme un File de taille nulle, pas
+  // comme null — d'où le test sur la taille plutôt que sur la présence.
+  const jointe = formData.get("attachment");
+  let attachment: { url: string; name: string } | null = null;
+  if (jointe instanceof File && jointe.size > 0) {
+    try {
+      attachment = await saveSupportAttachment(jointe);
+    } catch (error) {
+      if (error instanceof InvalidAttachmentError) return { error: error.message };
+      throw error;
+    }
+  }
+
   const requester = await prisma.user.findUniqueOrThrow({ where: { id: session.userId } });
   const active = await resolveActiveMembership(requester.id);
 
@@ -47,6 +64,8 @@ export async function createSupportTicket(
       category: parsed.data.category,
       subject: parsed.data.subject,
       message: parsed.data.message,
+      attachmentUrl: attachment?.url,
+      attachmentName: attachment?.name,
     },
   });
 
@@ -68,6 +87,11 @@ export async function createSupportTicket(
     requesterName: `${requester.firstName} ${requester.lastName}`,
     requesterEmail: requester.email,
     adminUrl: `${baseUrl}/admin/assistance`,
+    attachment: attachment && {
+      name: attachment.name,
+      // Absolue : le lien est cliqué depuis une boîte mail, pas depuis le site.
+      url: attachment.url.startsWith("http") ? attachment.url : `${baseUrl}${attachment.url}`,
+    },
   });
 
   return { success: "Votre message a été transmis. Nous reviendrons vers vous par email." };
