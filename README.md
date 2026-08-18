@@ -194,6 +194,15 @@ pm2 restart travail-collaboratif --update-env
 pm2 save
 ```
 
+Ne sautez pas `npm ci` sous prétexte que `package-lock.json` n'a pas bougé : son script de
+post-installation régénère le client Prisma, du code dérivé de `prisma/schema.prisma`. Sans
+lui, un schéma modifié fait échouer le build sur des colonnes que le client ignore encore —
+et le `.next` laissé à moitié écrit met le site à terre au redémarrage suivant. Si vous
+tenez à l'éviter, `npx prisma generate` avant le build joue le même rôle.
+
+Le redémarrage ne se fait qu'après un build **terminé** : `next start` sur un `.next`
+incomplet échoue en boucle, et PM2 affiche « online » pendant que Nginx répond 502.
+
 Nginx doit transmettre `Host` et `X-Forwarded-Proto`, sans quoi les liens absolus des emails partent avec le mauvais hôte ou protocole.
 
 ### Repartir d'une base propre
