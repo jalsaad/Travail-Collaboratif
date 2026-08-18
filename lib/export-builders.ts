@@ -161,7 +161,15 @@ export function buildPeriodsPdf(
     // détachée doit dire à elle seule de qui et de quelle période elle parle.
     const drawDocumentHeader = () => {
       let headerBottom = PAGE_MARGIN;
+      // Largeur réellement occupée, et non les 260 points réservés : `fit`
+      // réduit l'image à hauteur constante, un logo étroit n'en consomme qu'une
+      // fraction. La mesurer rend au titre la place que le logo n'a pas prise.
+      let largeurLogo = 0;
       if (logos?.school) {
+        largeurLogo = Math.min(
+          HEADER_LOGO_WIDTH,
+          (HEADER_LOGO_BOX * logos.school.width) / logos.school.height
+        );
         doc.image(logos.school.buffer, PAGE_MARGIN, PAGE_MARGIN, {
           fit: [HEADER_LOGO_WIDTH, HEADER_LOGO_BOX],
         });
@@ -171,15 +179,17 @@ export function buildPeriodsPdf(
       // Aligné à droite en vis-à-vis du logo, et non centré sur la page : entre
       // les deux, un titre centré chevaucherait la bannière dès qu'elle est
       // large. La largeur restante lui suffit, et il passe à la ligne au besoin.
-      const titreX = PAGE_MARGIN + HEADER_LOGO_WIDTH + 20;
-      doc
-        .fillColor("black")
-        .fontSize(14)
-        .font("Helvetica-Bold")
-        .text(title, titreX, PAGE_MARGIN + 4, {
-          width: doc.page.width - PAGE_MARGIN - titreX,
-          align: "right",
-        });
+      const titreX = PAGE_MARGIN + largeurLogo + 24;
+      const largeurTitre = doc.page.width - PAGE_MARGIN - titreX;
+      doc.fillColor("black").fontSize(18).font("Helvetica-Bold");
+      // Centré verticalement sur la hauteur du logo : mesuré d'abord, car un
+      // titre long passe à la ligne et ne se cale pas comme un titre court.
+      // Sans logo, il n'y a pas de bande sur laquelle se centrer.
+      const hauteurTitre = doc.heightOfString(title, { width: largeurTitre, align: "right" });
+      const titreY = logos?.school
+        ? PAGE_MARGIN + Math.max(0, (HEADER_LOGO_BOX - hauteurTitre) / 2)
+        : PAGE_MARGIN;
+      doc.text(title, titreX, titreY, { width: largeurTitre, align: "right" });
       headerBottom = Math.max(headerBottom, doc.y);
 
       // Les exports collectifs ou par lot n'ont pas d'identité unique : le
@@ -194,14 +204,16 @@ export function buildPeriodsPdf(
         doc.fontSize(8).font("Helvetica-Bold");
         const largeurIntitules = Math.max(...lignes.map(([label]) => doc.widthOfString(label)));
         doc.font("Helvetica");
+        // Plafond de retour à la ligne, non largeur imposée : une valeur plus
+        // courte n'occupe que ce qu'elle vaut, le bloc étant aligné à gauche.
         const largeurValeurs = Math.min(
           Math.max(...lignes.map(([, valeur]) => doc.widthOfString(valeur))),
           IDENTITY_VALUE_WIDTH
         );
 
-        // Centré sur l'encre et non sur des boîtes surdimensionnées : le bloc
-        // paraîtrait poussé à gauche si l'on centrait la largeur maximale.
-        const labelX = (doc.page.width - (largeurIntitules + IDENTITY_GAP + largeurValeurs)) / 2;
+        // Calé sur la marge gauche, à l'aplomb du logo et de la première
+        // colonne du tableau : le regard n'a qu'une verticale à suivre.
+        const labelX = PAGE_MARGIN;
         const valueX = labelX + largeurIntitules + IDENTITY_GAP;
         let y = headerBottom + 14;
 
