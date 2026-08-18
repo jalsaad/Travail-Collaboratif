@@ -68,11 +68,15 @@ const PAGE_MARGIN = 40;
 /// rognée, quelles que soient ses proportions d'origine.
 const HEADER_LOGO_BOX = 62;
 const HEADER_LOGO_WIDTH = 260;
-/// Bloc d'identité, en vis-à-vis du logo : colonne des intitulés puis colonne
-/// des valeurs, toutes deux alignées à droite — les valeurs viennent ainsi
-/// mourir sur la marge, et les intitulés sur une verticale commune.
-const IDENTITY_LABEL_WIDTH = 108;
-const IDENTITY_VALUE_WIDTH = 232;
+/// Bloc d'identité, en vis-à-vis du logo. Chaque ligne est composée de droite
+/// à gauche : la valeur vient mourir sur la marge, l'intitulé se pose juste
+/// devant elle. Deux colonnes fixes aligneraient les intitulés sur une
+/// verticale commune, au prix d'un vide béant devant les valeurs courtes — un
+/// nom de quinze caractères dans une colonne qui en accepte cinquante.
+const IDENTITY_VALUE_MAX_WIDTH = 250;
+/// Blanc entre l'intitulé et sa valeur. Assez large pour qu'on ne les lise pas
+/// d'un seul tenant, assez court pour qu'on les rattache l'un à l'autre.
+const IDENTITY_GAP = 10;
 /// Hauteur réservée au pied de page, au-dessus de la marge basse. Les lignes
 /// du tableau s'arrêtent avant, sinon elles passeraient sous le logo.
 const FOOTER_HEIGHT = 62;
@@ -168,21 +172,34 @@ export function buildPeriodsPdf(
       // s'agit à droite, sous quelle bannière à gauche. Les exports collectifs
       // n'ont pas d'identité unique, la bande reste alors au seul logo.
       if (identity) {
-        const labelX = doc.page.width - PAGE_MARGIN - IDENTITY_VALUE_WIDTH - IDENTITY_LABEL_WIDTH - 6;
-        const valueX = doc.page.width - PAGE_MARGIN - IDENTITY_VALUE_WIDTH;
+        const droite = doc.page.width - PAGE_MARGIN;
         let y = PAGE_MARGIN;
 
         doc.fontSize(8);
         for (const [label, valeur] of identityLines(identity)) {
+          // Mesurées dans la police où elles seront écrites : `widthOfString`
+          // rapporte la largeur pour la fonte et le corps courants.
+          doc.font("Helvetica-Bold");
+          const largeurLabel = doc.widthOfString(label);
+          doc.font("Helvetica");
+          // Plafonnée : au-delà, la valeur passe à la ligne dans sa boîte
+          // plutôt que de repousser l'intitulé sur le logo.
+          const largeurValeur = Math.min(doc.widthOfString(valeur), IDENTITY_VALUE_MAX_WIDTH);
+
+          const valueX = droite - largeurValeur;
+          const labelX = valueX - IDENTITY_GAP - largeurLabel;
+
           doc
             .font("Helvetica-Bold")
             .fillColor("#78716c")
-            .text(label, labelX, y, { width: IDENTITY_LABEL_WIDTH, align: "right" });
+            // +1 point de marge : sans lui, un arrondi de mesure suffit à
+            // renvoyer le dernier caractère à la ligne suivante.
+            .text(label, labelX, y, { width: largeurLabel + 1, lineBreak: false });
           const apresLabel = doc.y;
           doc
             .font("Helvetica")
             .fillColor("black")
-            .text(valeur, valueX, y, { width: IDENTITY_VALUE_WIDTH, align: "right" });
+            .text(valeur, valueX, y, { width: largeurValeur, align: "right" });
           // La valeur peut passer à la ligne (enseignement multi-niveaux), pas
           // l'intitulé : c'est la plus haute des deux qui commande la suivante.
           y = Math.max(apresLabel, doc.y) + 2;
