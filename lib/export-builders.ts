@@ -68,14 +68,14 @@ const PAGE_MARGIN = 40;
 /// rognée, quelles que soient ses proportions d'origine.
 const HEADER_LOGO_BOX = 62;
 const HEADER_LOGO_WIDTH = 260;
-/// Bloc d'identité, en vis-à-vis du logo. Chaque ligne est composée de droite
-/// à gauche : la valeur vient mourir sur la marge, l'intitulé se pose juste
-/// devant elle. Deux colonnes fixes aligneraient les intitulés sur une
-/// verticale commune, au prix d'un vide béant devant les valeurs courtes — un
-/// nom de quinze caractères dans une colonne qui en accepte cinquante.
-const IDENTITY_VALUE_MAX_WIDTH = 250;
-/// Blanc entre l'intitulé et sa valeur. Assez large pour qu'on ne les lise pas
-/// d'un seul tenant, assez court pour qu'on les rattache l'un à l'autre.
+/// Bloc d'identité, en vis-à-vis du logo : deux colonnes alignées à gauche,
+/// l'ensemble calé sur la marge droite. Aligner les valeurs à droite les
+/// éloignait de leur intitulé à proportion de leur brièveté — « Leandro
+/// Anzaldi » laissait cent-soixante-dix points de vide. Ici l'écart ne dépend
+/// plus de ce qu'on écrit, et les deux colonnes tombent chacune sur sa
+/// verticale.
+const IDENTITY_VALUE_WIDTH = 250;
+/// Blanc entre la colonne des intitulés et celle des valeurs.
 const IDENTITY_GAP = 10;
 /// Hauteur réservée au pied de page, au-dessus de la marge basse. Les lignes
 /// du tableau s'arrêtent avant, sinon elles passeraient sous le logo.
@@ -172,34 +172,31 @@ export function buildPeriodsPdf(
       // s'agit à droite, sous quelle bannière à gauche. Les exports collectifs
       // n'ont pas d'identité unique, la bande reste alors au seul logo.
       if (identity) {
-        const droite = doc.page.width - PAGE_MARGIN;
+        const lignes = identityLines(identity);
+
+        // Colonne des intitulés taillée sur le plus long d'entre eux, mesuré
+        // dans sa police : `widthOfString` rapporte la largeur pour la fonte
+        // et le corps courants. Une largeur en dur se déréglerait au premier
+        // intitulé ajouté.
+        doc.fontSize(8).font("Helvetica-Bold");
+        const largeurIntitules = Math.max(...lignes.map(([label]) => doc.widthOfString(label)));
+
+        const labelX = doc.page.width - PAGE_MARGIN - IDENTITY_VALUE_WIDTH - IDENTITY_GAP - largeurIntitules;
+        const valueX = labelX + largeurIntitules + IDENTITY_GAP;
         let y = PAGE_MARGIN;
 
-        doc.fontSize(8);
-        for (const [label, valeur] of identityLines(identity)) {
-          // Mesurées dans la police où elles seront écrites : `widthOfString`
-          // rapporte la largeur pour la fonte et le corps courants.
-          doc.font("Helvetica-Bold");
-          const largeurLabel = doc.widthOfString(label);
-          doc.font("Helvetica");
-          // Plafonnée : au-delà, la valeur passe à la ligne dans sa boîte
-          // plutôt que de repousser l'intitulé sur le logo.
-          const largeurValeur = Math.min(doc.widthOfString(valeur), IDENTITY_VALUE_MAX_WIDTH);
-
-          const valueX = droite - largeurValeur;
-          const labelX = valueX - IDENTITY_GAP - largeurLabel;
-
+        for (const [label, valeur] of lignes) {
           doc
             .font("Helvetica-Bold")
             .fillColor("#78716c")
-            // +1 point de marge : sans lui, un arrondi de mesure suffit à
-            // renvoyer le dernier caractère à la ligne suivante.
-            .text(label, labelX, y, { width: largeurLabel + 1, lineBreak: false });
+            // +1 point : sans lui, un arrondi de mesure suffit à renvoyer le
+            // dernier caractère de l'intitulé le plus long à la ligne suivante.
+            .text(label, labelX, y, { width: largeurIntitules + 1, lineBreak: false });
           const apresLabel = doc.y;
           doc
             .font("Helvetica")
             .fillColor("black")
-            .text(valeur, valueX, y, { width: largeurValeur, align: "right" });
+            .text(valeur, valueX, y, { width: IDENTITY_VALUE_WIDTH });
           // La valeur peut passer à la ligne (enseignement multi-niveaux), pas
           // l'intitulé : c'est la plus haute des deux qui commande la suivante.
           y = Math.max(apresLabel, doc.y) + 2;
