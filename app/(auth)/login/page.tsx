@@ -79,6 +79,17 @@ export default function LoginGatewayPage() {
                 className="hidden h-auto w-full dark:block"
               />
             </Link>
+            {/* Guide contextuel à l'espace juste au-dessus : c'est ici,
+                au moment de choisir son espace, qu'on a besoin de savoir à
+                quoi s'attendre — pas enfoui plus bas dans la page. */}
+            <a
+              href="https://claude.ai/code/artifact/720459c8-47b5-45d5-ad90-66bf14ee7182"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative mt-3 flex items-center justify-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-brand-700 shadow-sm ring-1 ring-brand-100 transition hover:-translate-y-0.5 hover:shadow-md dark:bg-stone-800 dark:text-brand-400 dark:ring-stone-700"
+            >
+              📘 Guide enseignant·e
+            </a>
           </Reveal>
           <Reveal delay={0} className="group relative isolate w-full max-w-[240px] sm:max-w-[260px]">
             <div
@@ -106,8 +117,16 @@ export default function LoginGatewayPage() {
                 className="hidden h-auto w-full dark:block"
               />
             </Link>
+            <a
+              href="https://claude.ai/code/artifact/d797ec71-ed42-403a-be13-5cb1f9cacfcd"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative mt-3 flex items-center justify-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-brand-700 shadow-sm ring-1 ring-brand-100 transition hover:-translate-y-0.5 hover:shadow-md dark:bg-stone-800 dark:text-brand-400 dark:ring-stone-700"
+            >
+              📗 Guide direction
+            </a>
           </Reveal>
-      
+
         </div>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-stone-600 sm:text-lg dark:text-stone-400">
             Fini les tableaux Excel que chacun gère de son côté, fini les feuilles volantes qui se

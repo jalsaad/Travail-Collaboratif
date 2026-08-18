@@ -101,7 +101,15 @@ export function buildPeriodsPdf(
   identity?: ExportIdentity
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: PAGE_MARGIN, size: "A4", layout: "landscape" });
+    // `bufferPages` retient les pages au lieu de les émettre au fil de l'eau :
+    // c'est la seule façon d'écrire « 3/5 » alors que le total n'est connu
+    // qu'une fois la dernière ligne posée. On y revient juste avant `end()`.
+    const doc = new PDFDocument({
+      margin: PAGE_MARGIN,
+      size: "A4",
+      layout: "landscape",
+      bufferPages: true,
+    });
     const chunks: Buffer[] = [];
     doc.on("data", (chunk) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
@@ -143,67 +151,75 @@ export function buildPeriodsPdf(
         .fillColor("black");
     };
 
+    // Bandeau d'en-tête : logo de l'école à gauche, identité de l'enseignant à
+    // droite, titre en dessous. Répété sur chaque page — un relevé transmis à
+    // l'administration circule feuille par feuille, et une page détachée doit
+    // dire à elle seule de qui et de quelle année elle parle.
+    const drawDocumentHeader = () => {
+      let headerBottom = PAGE_MARGIN;
+      if (logos?.school) {
+        doc.image(logos.school.buffer, PAGE_MARGIN, PAGE_MARGIN, {
+          fit: [HEADER_LOGO_WIDTH, HEADER_LOGO_BOX],
+        });
+        headerBottom = PAGE_MARGIN + HEADER_LOGO_BOX;
+      }
+
+      // Le relevé individuel se lit comme un en-tête de courrier : de qui il
+      // s'agit à droite, sous quelle bannière à gauche. Les exports collectifs
+      // n'ont pas d'identité unique, la bande reste alors au seul logo.
+      if (identity) {
+        const labelX = doc.page.width - PAGE_MARGIN - IDENTITY_VALUE_WIDTH - IDENTITY_LABEL_WIDTH - 6;
+        const valueX = doc.page.width - PAGE_MARGIN - IDENTITY_VALUE_WIDTH;
+        let y = PAGE_MARGIN;
+
+        doc.fontSize(8);
+        for (const [label, valeur] of identityLines(identity)) {
+          doc
+            .font("Helvetica-Bold")
+            .fillColor("#78716c")
+            .text(label, labelX, y, { width: IDENTITY_LABEL_WIDTH, align: "right" });
+          const apresLabel = doc.y;
+          doc
+            .font("Helvetica")
+            .fillColor("black")
+            .text(valeur, valueX, y, { width: IDENTITY_VALUE_WIDTH, align: "right" });
+          // La valeur peut passer à la ligne (enseignement multi-niveaux), pas
+          // l'intitulé : c'est la plus haute des deux qui commande la suivante.
+          y = Math.max(apresLabel, doc.y) + 2;
+        }
+        headerBottom = Math.max(headerBottom, y);
+      }
+
+      doc.y = headerBottom + 16;
+      doc
+        .fillColor("black")
+        .fontSize(16)
+        .font("Helvetica-Bold")
+        .text(title, PAGE_MARGIN, doc.y, { width: contentWidth, align: "center" });
+      doc.moveDown(0.8);
+    };
+
     // `pageAdded` ne se déclenche pas pour la première page, créée par le
-    // constructeur : celle-ci est signée à la main, plus bas. Le curseur est
-    // remis en haut après coup, sans quoi la page suivante commencerait à
-    // écrire sous le pied qu'on vient de dessiner.
+    // constructeur : celle-ci est coiffée et signée à la main, juste après.
+    // Le curseur est remis en haut avant l'en-tête, sans quoi la page
+    // commencerait à écrire sous le pied qu'on vient de dessiner.
     doc.on("pageAdded", () => {
       drawFooter();
       doc.x = PAGE_MARGIN;
       doc.y = PAGE_MARGIN;
+      drawDocumentHeader();
     });
 
-    // Signée tout de suite, et non à la fin : `doc.end()` survient alors que
-    // le curseur est sur la dernière page, où le pied a déjà été tracé par
-    // `pageAdded`. Le pied occupe une position absolue en bas de page, le
-    // dessiner avant le contenu ne gêne rien.
+    // Le pied est tracé tout de suite, et non à la fin : `doc.end()` survient
+    // alors que le curseur est sur la dernière page, où `pageAdded` l'a déjà
+    // posé. Il occupe une position absolue en bas de page, le dessiner avant
+    // le contenu ne gêne rien.
     drawFooter();
     doc.x = PAGE_MARGIN;
     doc.y = PAGE_MARGIN;
+    drawDocumentHeader();
 
-    let headerBottom = PAGE_MARGIN;
-    if (logos?.school) {
-      doc.image(logos.school.buffer, PAGE_MARGIN, PAGE_MARGIN, {
-        fit: [HEADER_LOGO_WIDTH, HEADER_LOGO_BOX],
-      });
-      headerBottom = PAGE_MARGIN + HEADER_LOGO_BOX;
-    }
-
-    // Le relevé individuel se lit comme un en-tête de courrier : de qui il
-    // s'agit à droite, sous quelle bannière à gauche. Les exports collectifs
-    // n'ont pas d'identité unique, la bande reste alors au seul logo.
-    if (identity) {
-      const labelX = doc.page.width - PAGE_MARGIN - IDENTITY_VALUE_WIDTH - IDENTITY_LABEL_WIDTH - 6;
-      const valueX = doc.page.width - PAGE_MARGIN - IDENTITY_VALUE_WIDTH;
-      let y = PAGE_MARGIN;
-
-      doc.fontSize(8);
-      for (const [label, valeur] of identityLines(identity)) {
-        doc
-          .font("Helvetica-Bold")
-          .fillColor("#78716c")
-          .text(label, labelX, y, { width: IDENTITY_LABEL_WIDTH, align: "right" });
-        const apresLabel = doc.y;
-        doc
-          .font("Helvetica")
-          .fillColor("black")
-          .text(valeur, valueX, y, { width: IDENTITY_VALUE_WIDTH, align: "right" });
-        // La valeur peut passer à la ligne (enseignement multi-niveaux), pas
-        // l'intitulé : c'est la plus haute des deux qui commande la suivante.
-        y = Math.max(apresLabel, doc.y) + 2;
-      }
-      headerBottom = Math.max(headerBottom, y);
-    }
-
-    doc.y = headerBottom + 16;
-    doc
-      .fillColor("black")
-      .fontSize(16)
-      .font("Helvetica-Bold")
-      .text(title, PAGE_MARGIN, doc.y, { width: contentWidth, align: "center" });
-    doc.moveDown(0.8);
-
-    const drawHeader = () => {
+    const drawTableHeader = () => {
       let x = PAGE_MARGIN;
       const y = doc.y;
       doc.fontSize(9).font("Helvetica-Bold");
@@ -220,7 +236,7 @@ export function buildPeriodsPdf(
       doc.moveDown(0.3);
     };
 
-    drawHeader();
+    drawTableHeader();
     doc.font("Helvetica").fontSize(8.5);
 
     for (const row of rows) {
@@ -239,8 +255,10 @@ export function buildPeriodsPdf(
       const rowHeight = Math.max(...heights, 12);
 
       if (doc.y + rowHeight > doc.page.height - PAGE_MARGIN - FOOTER_HEIGHT - 8) {
+        // L'en-tête de page est reposé par `pageAdded`, il ne reste qu'à
+        // réafficher les intitulés de colonnes sous lui.
         doc.addPage();
-        drawHeader();
+        drawTableHeader();
         doc.font("Helvetica").fontSize(8.5);
       }
 
@@ -255,6 +273,28 @@ export function buildPeriodsPdf(
 
     if (rows.length === 0) {
       doc.text("Aucune période à exporter.");
+    }
+
+    // Numérotation ajoutée après coup, sur des pages déjà écrites : le total
+    // n'existe qu'ici. Rien sur un document d'une seule page — « 1/1 » ne
+    // renseigne personne et alourdit un pied déjà chargé.
+    const pages = doc.bufferedPageRange();
+    if (pages.count > 1) {
+      for (let i = 0; i < pages.count; i++) {
+        doc.switchToPage(pages.start + i);
+        doc
+          .fontSize(7.5)
+          .font("Helvetica")
+          .fillColor("#78716c")
+          // Sur la ligne de la mention de conformité, à l'opposé : celle-ci est
+          // centrée et s'arrête bien avant la marge, la place est libre.
+          .text(
+            `${i + 1}/${pages.count}`,
+            PAGE_MARGIN,
+            doc.page.height - PAGE_MARGIN - FOOTER_HEIGHT + 44,
+            { width: contentWidth, align: "right" }
+          );
+      }
     }
 
     doc.end();
