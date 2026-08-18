@@ -15,7 +15,8 @@
     "invitations": "ts-node -P tsconfig.scripts.json scripts/inviter-directions.ts",
     "collecte-emails": "ts-node -P tsconfig.scripts.json scripts/collecter-emails.ts",
     "po": "ts-node -P tsconfig.scripts.json scripts/pouvoirs-organisateurs.ts",
-    "export-prospection": "ts-node -P tsconfig.scripts.json scripts/exporter-prospection.ts"
+    "export-prospection": "ts-node -P tsconfig.scripts.json scripts/exporter-prospection.ts",
+    "purger-test": "ts-node -P tsconfig.scripts.json scripts/purger-comptes-test.ts"
   },
   "ts-node": {
     "compilerOptions": {

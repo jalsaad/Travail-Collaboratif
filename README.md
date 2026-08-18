@@ -83,6 +83,7 @@ Tout est optionnel hors `DATABASE_URL` et `AUTH_SECRET` : chaque bloc absent dé
 | `npm run collecte-emails` | Collecte des adresses des directions sur les sites d'école |
 | `npm run po` | Liste des pouvoirs organisateurs des écoles de prospection |
 | `npm run export-prospection` | Classeur XLSX de toute la prospection (Sheets/Excel) |
+| `npm run purger-test` | Vide la base de ses comptes de test (simulation par défaut) |
 
 ## Inviter les directions d'école
 
@@ -194,6 +195,28 @@ pm2 save
 ```
 
 Nginx doit transmettre `Host` et `X-Forwarded-Proto`, sans quoi les liens absolus des emails partent avec le mauvais hôte ou protocole.
+
+### Repartir d'une base propre
+
+`npm run purger-test` supprime les comptes de démonstration et tout ce qui en dépend —
+périodes, rattachements, tickets, annonces, journal — puis les écoles restées sans membre.
+
+```bash
+npm run purger-test                          # simulation : compte, ne supprime rien
+npm run purger-test -- --confirmer           # exécute
+npm run purger-test -- --sauf=vous@ecole.be  # préserve en plus ces adresses
+npm run purger-test -- --garder-ecoles       # ne touche qu'aux comptes
+```
+
+Les administrateurs de la plateforme sont préservés sans avoir à être nommés : c'est le
+drapeau `isSuperAdmin` en base qui fait foi. Le script refuse de s'exécuter s'il ne
+resterait personne. Sont conservées aussi les données de référence — années scolaires,
+disciplines, interrupteurs de fonctionnalité — sans lesquelles la base ne permettrait
+plus de déclarer quoi que ce soit.
+
+Rien ne part sans `--confirmer`, et en terminal interactif il faut encore taper
+`SUPPRIMER` : la commande peut être collée sur le mauvais serveur, et il n'y a pas de
+retour en arrière. Prenez une sauvegarde avant (`pg_dump`).
 
 ## Structure
 
