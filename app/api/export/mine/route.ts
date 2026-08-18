@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
-import { computePeriodStatus } from "@/lib/period-status";
 import { periodTypeLabel } from "@/lib/period-labels";
 import { formatPeriodes, formatTimeRange } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
@@ -65,7 +64,6 @@ export async function GET(request: Request) {
     description: p.description,
     objectifsPilotage: p.objectifsPilotage ?? "—",
     dureePeriodes: formatPeriodes(p.dureePeriodes.toString()),
-    status: computePeriodStatus(p.participants),
     participants: [
       ...p.participants.map((part) => `${part.user.firstName} ${part.user.lastName}`),
       ...p.externalParticipants.map(formatExternalParticipant),

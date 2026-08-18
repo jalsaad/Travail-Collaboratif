@@ -131,7 +131,6 @@ function toPdfRows(periods: ArchivedPeriod[], schoolId: string): ExportPeriodRow
       description: p.description,
       objectifsPilotage: p.objectifsPilotage ?? "—",
       dureePeriodes: formatPeriodes(p.dureePeriodes.toString()),
-      status: computePeriodStatus(own),
       participants: [
         ...own.map((part) => `${part.user.firstName} ${part.user.lastName}`),
         ...p.externalParticipants.map(formatExternalParticipant),

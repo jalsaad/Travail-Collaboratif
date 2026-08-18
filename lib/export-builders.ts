@@ -14,7 +14,6 @@ export type ExportPeriodRow = {
   /// Objectifs du plan de pilotage (4e colonne du formulaire officiel), ou "—".
   objectifsPilotage: string;
   dureePeriodes: string;
-  status: "validee" | "attente";
   participants: string;
 };
 
@@ -42,15 +41,17 @@ export type ExportHeaderLogos = {
   platform: LoadedLogo | null;
 };
 
-const statusLabel = (status: ExportPeriodRow["status"]) =>
-  status === "validee" ? "Validée" : "En attente";
-
 // Le relevé reprend les colonnes du formulaire officiel de recensement annexé
 // à la circulaire 7167 (type de tâche/production, durée, avec qui, objectifs du
-// plan de pilotage). À neuf colonnes, l'A4 portrait ne suffit plus : le
+// plan de pilotage). À huit colonnes, l'A4 portrait ne suffit toujours pas : le
 // document est produit en paysage, d'où une largeur utile de 842 - 2 * 40.
 // Somme des largeurs = 762 pt.
-const COLUMN_WIDTHS = [58, 66, 82, 105, 145, 105, 38, 50, 113];
+//
+// Pas de colonne « Statut » : la validation par les pairs est un mécanisme
+// interne à la plateforme, absent du formulaire officiel. Les 50 points qu'elle
+// occupait reviennent à la description et aux participants, les deux colonnes
+// qui manquaient de place.
+const COLUMN_WIDTHS = [58, 66, 82, 105, 170, 105, 38, 138];
 const COLUMN_LABELS = [
   "Date",
   "Horaire",
@@ -59,17 +60,39 @@ const COLUMN_LABELS = [
   "Description",
   "Objectifs du plan de pilotage",
   "Durée",
-  "Statut",
   "Participants",
 ];
 const PAGE_MARGIN = 40;
-/// Boîte du logo de l'école, centrée en tête du document. `fit` y inscrit
-/// l'image en conservant son rapport d'aspect : elle est réduite pour tenir,
-/// jamais rognée, quelles que soient ses proportions d'origine.
+/// Boîte du logo de l'école, en haut à gauche. `fit` y inscrit l'image en
+/// conservant son rapport d'aspect : elle est réduite pour tenir, jamais
+/// rognée, quelles que soient ses proportions d'origine.
 const HEADER_LOGO_BOX = 62;
+const HEADER_LOGO_WIDTH = 260;
+/// Bloc d'identité, en vis-à-vis du logo : colonne des intitulés puis colonne
+/// des valeurs, toutes deux alignées à droite — les valeurs viennent ainsi
+/// mourir sur la marge, et les intitulés sur une verticale commune.
+const IDENTITY_LABEL_WIDTH = 108;
+const IDENTITY_VALUE_WIDTH = 232;
 /// Hauteur réservée au pied de page, au-dessus de la marge basse. Les lignes
 /// du tableau s'arrêtent avant, sinon elles passeraient sous le logo.
 const FOOTER_HEIGHT = 62;
+
+/// Une ligne de l'en-tête individuel. Le décompte est resserré par rapport à
+/// l'ancien encadré pleine largeur : la colonne de droite fait 232 points, une
+/// phrase y passerait à la ligne trois fois.
+function identityLines(identity: ExportIdentity): [string, string][] {
+  return [
+    ["Enseignant·e", identity.fullName],
+    ["Matricule", identity.matricule],
+    ["Enseignement", identity.teaching],
+    [
+      "Travail collaboratif",
+      identity.otherSchools
+        ? `${identity.done} / ${identity.objective} périodes · ${identity.otherSchools} dans un autre établissement · ${identity.total} au total`
+        : `${identity.done} / ${identity.objective} périodes`,
+    ],
+  ];
+}
 
 export function buildPeriodsPdf(
   rows: ExportPeriodRow[],
@@ -141,55 +164,44 @@ export function buildPeriodsPdf(
     let headerBottom = PAGE_MARGIN;
     if (logos?.school) {
       doc.image(logos.school.buffer, PAGE_MARGIN, PAGE_MARGIN, {
-        fit: [contentWidth, HEADER_LOGO_BOX],
-        align: "center",
-        valign: "center",
+        fit: [HEADER_LOGO_WIDTH, HEADER_LOGO_BOX],
       });
       headerBottom = PAGE_MARGIN + HEADER_LOGO_BOX;
     }
 
-    doc.y = headerBottom + 14;
+    // Le relevé individuel se lit comme un en-tête de courrier : de qui il
+    // s'agit à droite, sous quelle bannière à gauche. Les exports collectifs
+    // n'ont pas d'identité unique, la bande reste alors au seul logo.
+    if (identity) {
+      const labelX = doc.page.width - PAGE_MARGIN - IDENTITY_VALUE_WIDTH - IDENTITY_LABEL_WIDTH - 6;
+      const valueX = doc.page.width - PAGE_MARGIN - IDENTITY_VALUE_WIDTH;
+      let y = PAGE_MARGIN;
+
+      doc.fontSize(8);
+      for (const [label, valeur] of identityLines(identity)) {
+        doc
+          .font("Helvetica-Bold")
+          .fillColor("#78716c")
+          .text(label, labelX, y, { width: IDENTITY_LABEL_WIDTH, align: "right" });
+        const apresLabel = doc.y;
+        doc
+          .font("Helvetica")
+          .fillColor("black")
+          .text(valeur, valueX, y, { width: IDENTITY_VALUE_WIDTH, align: "right" });
+        // La valeur peut passer à la ligne (enseignement multi-niveaux), pas
+        // l'intitulé : c'est la plus haute des deux qui commande la suivante.
+        y = Math.max(apresLabel, doc.y) + 2;
+      }
+      headerBottom = Math.max(headerBottom, y);
+    }
+
+    doc.y = headerBottom + 16;
     doc
       .fillColor("black")
       .fontSize(16)
       .font("Helvetica-Bold")
       .text(title, PAGE_MARGIN, doc.y, { width: contentWidth, align: "center" });
     doc.moveDown(0.8);
-
-    if (identity) {
-      const lignes: [string, string][] = [
-        ["Enseignant·e", identity.fullName],
-        ["Matricule", identity.matricule],
-        ["Enseignement", identity.teaching],
-        [
-          "Travail collaboratif",
-          identity.otherSchools
-            ? `${identity.done} période(s) dans cette école · ${identity.otherSchools} dans un autre établissement · ${identity.total} au total, pour un objectif de ${identity.objective}`
-            : `${identity.done} période(s) sur un objectif de ${identity.objective}`,
-        ],
-      ];
-
-      const blocTop = doc.y;
-      doc.fontSize(9);
-      for (const [label, valeur] of lignes) {
-        const y = doc.y;
-        doc.font("Helvetica-Bold").fillColor("#57534e").text(label, PAGE_MARGIN + 10, y, { width: 110 });
-        doc
-          .font("Helvetica")
-          .fillColor("black")
-          .text(valeur, PAGE_MARGIN + 125, y, { width: contentWidth - 135 });
-        doc.y = Math.max(doc.y, y) + 2;
-      }
-      // Encadré tracé après coup : sa hauteur dépend du retour à la ligne des
-      // valeurs longues (enseignement multi-niveaux, notamment).
-      doc
-        .roundedRect(PAGE_MARGIN, blocTop - 6, contentWidth, doc.y - blocTop + 10, 6)
-        .lineWidth(0.8)
-        .strokeColor("#e7e5e4")
-        .stroke();
-      doc.y += 14;
-      doc.fillColor("black");
-    }
 
     const drawHeader = () => {
       let x = PAGE_MARGIN;
@@ -220,7 +232,6 @@ export function buildPeriodsPdf(
         row.description,
         row.objectifsPilotage,
         row.dureePeriodes,
-        statusLabel(row.status),
         row.participants,
       ];
 
