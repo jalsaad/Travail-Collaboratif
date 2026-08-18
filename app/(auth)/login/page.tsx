@@ -16,7 +16,11 @@ export default function LoginGatewayPage() {
       <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-brand-teal/20 blur-3xl animate-drift-b" />
       <div className="pointer-events-none absolute left-1/2 top-1/3 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-brand-200/25 to-teal-200/25 blur-3xl animate-drift-c" />
 
-      <div className="relative mx-auto max-w-3xl px-4 py-16 sm:py-20">
+      {/* Marge haute calée sur le bouton de thème (fixe à `top-4`, soit 16px) :
+          le sommet visible du logo doit arriver à sa hauteur. Le fichier porte
+          7,7% de transparence au-dessus du dessin — 5px à la taille rendue —
+          d'où 10px de padding et non 16. */}
+      <div className="relative mx-auto max-w-3xl px-4 pb-16 pt-2.5 sm:pb-20">
         <Reveal className="text-center">
           <Image
             src="/LogoTCvertical.png"
