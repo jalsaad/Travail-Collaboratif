@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useActionState } from "react";
-import { createSchool, type CreateSchoolState } from "@/app/(auth)/creer-ecole/actions";
+import {
+  createSchool,
+  lookupFwbSchool,
+  type CreateSchoolState,
+  type FwbLookup,
+} from "@/app/(auth)/creer-ecole/actions";
 import { RESEAU_OPTIONS, isReseauEtranger } from "@/lib/reseau-options";
 import { REGION_OPTIONS } from "@/lib/region-options";
 import { SchoolRegionField } from "@/components/school-region-field";
@@ -23,47 +28,143 @@ export function CreateSchoolForm() {
   const etranger = isReseauEtranger(reseau);
   const [fonction, setFonction] = useState<string>("Direction");
 
+  // Champs préremplis depuis l'annuaire de la FWB. Contrôlés — et non laissés
+  // à leur valeur par défaut — parce qu'ils changent APRÈS le premier rendu,
+  // au retour de la recherche par numéro FASE.
+  const [numeroFase, setNumeroFase] = useState("");
+  const [name, setName] = useState("");
+  const [niveaux, setNiveaux] = useState<string[]>([]);
+  const [types, setTypes] = useState<string[]>([]);
+  // Région et adresse vivent dans des composants partagés qui lisent leurs
+  // props une seule fois : les remonter via une clé est plus sûr que de les
+  // convertir en champs contrôlés à trois endroits.
+  const [prefill, setPrefill] = useState<{ region: string; address: string; postalCode: string; locality: string }>(
+    { region: "", address: "", postalCode: "", locality: "" }
+  );
+  const [cle, setCle] = useState(0);
+  const [resultat, setResultat] = useState<FwbLookup | null>(null);
+  const [recherche, demarrerRecherche] = useTransition();
+
+  const bascule = (liste: string[], valeur: string) =>
+    liste.includes(valeur) ? liste.filter((v) => v !== valeur) : [...liste, valeur];
+
+  function chercher() {
+    const saisi = numeroFase.trim();
+    if (saisi === "") return;
+    demarrerRecherche(async () => {
+      const trouve = await lookupFwbSchool(saisi);
+      setResultat(trouve);
+      if (!trouve.found) return;
+      setName(trouve.name);
+      // Un réseau sans équivalent dans la liste de la plateforme laisse le
+      // menu vide plutôt que d'imposer une valeur fausse.
+      if (trouve.reseau) setReseau(trouve.reseau);
+      setNiveaux(trouve.niveaux);
+      setTypes(trouve.typesEnseignement);
+      setPrefill({
+        region: trouve.region ?? "",
+        address: trouve.address ?? "",
+        postalCode: trouve.postalCode ?? "",
+        locality: trouve.locality ?? "",
+      });
+      setCle((c) => c + 1);
+    });
+  }
+
   return (
     <form action={formAction} className="space-y-4" encType="multipart/form-data">
+      {/* En tête du formulaire : un numéro suffit à remplir tout le reste.
+          Le saisir plus bas aurait laissé la direction retaper des données
+          que la Fédération publie déjà. */}
+      <div className="rounded-lg border border-brand-100 bg-brand-50/60 p-4 dark:border-brand-900 dark:bg-brand-950/40">
+        <label htmlFor="numeroFase" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+          Numéro FASE
+        </label>
+        <div className="mt-1.5 flex gap-2">
+          <input
+            id="numeroFase"
+            name="numeroFase"
+            required
+            inputMode="numeric"
+            value={numeroFase}
+            onChange={(e) => setNumeroFase(e.target.value)}
+            onBlur={chercher}
+            placeholder="ex: 1006"
+            className="input-field flex-1"
+          />
+          <button
+            type="button"
+            onClick={chercher}
+            disabled={recherche || numeroFase.trim() === ""}
+            className="shrink-0 rounded-lg border border-brand-300 px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-100 disabled:opacity-50 dark:border-brand-700 dark:text-brand-300 dark:hover:bg-brand-900"
+          >
+            {recherche ? "Recherche…" : "Rechercher"}
+          </button>
+        </div>
+
+        {resultat?.found && !resultat.dejaInscrite && (
+          <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">
+            <strong>{resultat.name}</strong> trouvée dans l&apos;annuaire de la Fédération
+            {resultat.implantationCount > 1 && ` (${resultat.implantationCount} implantations)`}. Les
+            champs ci-dessous ont été préremplis : vérifiez-les et corrigez si nécessaire.
+            {resultat.reseauIncertain &&
+              " L'annuaire ne précise pas la confession : vérifiez le réseau proposé."}
+          </p>
+        )}
+        {resultat?.found && resultat.dejaInscrite && (
+          <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+            <strong>{resultat.name}</strong> est déjà inscrite sur la plateforme. Demandez son code de
+            rattachement à sa direction plutôt que de créer un second espace.
+          </p>
+        )}
+        {resultat && !resultat.found && (
+          <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+            Ce numéro ne figure pas dans l&apos;annuaire de la Fédération. Ce n&apos;est pas bloquant :
+            complétez les champs ci-dessous à la main.
+          </p>
+        )}
+      </div>
+
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
           Nom de l&apos;école
         </label>
-        <input id="name" name="name" required className="input-field mt-1.5" />
+        <input
+          id="name"
+          name="name"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="input-field mt-1.5"
+        />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label htmlFor="reseau" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-            Réseau ou PO
-          </label>
-          <select
-            id="reseau"
-            name="reseau"
-            required
-            value={reseau}
-            onChange={(e) => setReseau(e.target.value)}
-            className="input-field mt-1.5"
-          >
-            <option value="" disabled>
-              — Sélectionner —
+      <div>
+        <label htmlFor="reseau" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+          Réseau ou PO
+        </label>
+        <select
+          id="reseau"
+          name="reseau"
+          required
+          value={reseau}
+          onChange={(e) => setReseau(e.target.value)}
+          className="input-field mt-1.5"
+        >
+          <option value="" disabled>
+            — Sélectionner —
+          </option>
+          {RESEAU_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
             </option>
-            {RESEAU_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="numeroFase" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-            Numéro FASE
-          </label>
-          <input id="numeroFase" name="numeroFase" required className="input-field mt-1.5" />
-        </div>
+          ))}
+        </select>
       </div>
 
       <SchoolRegionField
+        key={`region-${cle}`}
+        region={prefill.region}
         etranger={etranger}
         options={REGION_OPTIONS}
         required
@@ -80,6 +181,8 @@ export function CreateSchoolForm() {
                   type="checkbox"
                   name="niveaux"
                   value={option.value}
+                  checked={niveaux.includes(option.value)}
+                  onChange={() => setNiveaux((l) => bascule(l, option.value))}
                   className="h-4 w-4 rounded border-stone-300 dark:border-stone-700"
                 />
                 {option.label}
@@ -98,6 +201,8 @@ export function CreateSchoolForm() {
                   type="checkbox"
                   name="typesEnseignement"
                   value={option.value}
+                  checked={types.includes(option.value)}
+                  onChange={() => setTypes((l) => bascule(l, option.value))}
                   className="h-4 w-4 rounded border-stone-300 dark:border-stone-700"
                 />
                 {option.label}
@@ -107,7 +212,14 @@ export function CreateSchoolForm() {
         </div>
       </div>
 
-      <AddressFields required foreign={etranger} />
+      <AddressFields
+        key={`adresse-${cle}`}
+        address={prefill.address}
+        postalCode={prefill.postalCode}
+        locality={prefill.locality}
+        required
+        foreign={etranger}
+      />
 
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-stone-700 dark:text-stone-300">

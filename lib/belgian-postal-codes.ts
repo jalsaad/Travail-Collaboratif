@@ -1169,3 +1169,21 @@ export function localitiesForPostalCode(code: string): readonly string[] {
 export function isKnownPostalCode(code: string): boolean {
   return code.trim() in POSTAL_CODES;
 }
+
+/// Rapproche une localité écrite autrement — l'annuaire de la FWB la met en
+/// capitales et sans accents (« CHATELET », « LA LOUVIERE ») — de son
+/// orthographe de référence pour ce code postal. Sans ce rapprochement, le
+/// menu déroulant des localités ne reconnaîtrait pas la valeur et retomberait
+/// silencieusement sur la première du code, qui n'est pas forcément la bonne :
+/// 7100 en dessert cinq.
+export function canonicalLocality(code: string, locality: string | null): string | null {
+  if (!locality) return null;
+  const pliee = (v: string) =>
+    v
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/gi, "")
+      .toLowerCase();
+  const cible = pliee(locality);
+  return localitiesForPostalCode(code).find((l) => pliee(l) === cible) ?? locality;
+}

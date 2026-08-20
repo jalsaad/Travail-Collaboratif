@@ -11,7 +11,10 @@
 
 export type LigneCsv = Record<string, string>;
 
-export function lireCsv(contenu: string): LigneCsv[] {
+/// Le séparateur est paramétrable : les fichiers produits ici utilisent le
+/// point-virgule (qu'Excel francophone ouvre sans dialogue), mais l'annuaire
+/// officiel de la FWB est livré en virgules.
+export function lireCsv(contenu: string, separateur: "," | ";" = ";"): LigneCsv[] {
   const lignes: string[][] = [];
   let champ = "";
   let ligne: string[] = [];
@@ -34,7 +37,7 @@ export function lireCsv(contenu: string): LigneCsv[] {
       }
     } else if (c === '"') {
       dansGuillemets = true;
-    } else if (c === ";") {
+    } else if (c === separateur) {
       ligne.push(champ);
       champ = "";
     } else if (c === "\n") {

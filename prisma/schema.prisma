@@ -757,3 +757,83 @@ model ExternalParticipant {
   @@index([periodId])
   @@map("external_participants")
 }
+
+// ---------------------------------------------------------------------------
+// ANNUAIRE DES ÉCOLES DE LA FÉDÉRATION WALLONIE-BRUXELLES
+// ---------------------------------------------------------------------------
+
+/// Avancement d'une démarche auprès d'une école pas encore inscrite. Vide de
+/// sens pour une école déjà sur la plateforme — le rapprochement se fait par
+/// le numéro FASE, pas par ce statut.
+enum ProspectionStatus {
+  A_CONTACTER
+  CONTACTEE
+  RELANCEE
+  REFUS
+}
+
+/// Une école de l'annuaire officiel de la FWB, inscrite sur la plateforme ou
+/// non. Délibérément séparée de School, qui ne contient que les écoles
+/// réellement inscrites : y verser 2 972 établissements fantômes — sans membre,
+/// sans code de rattachement, sans logo — obligerait à les exclure de chaque
+/// requête existante, de la validation des inscriptions aux exports.
+///
+/// Le rapprochement des deux tables se fait sur le numéro FASE, seul
+/// identifiant commun (School.numeroFase est unique). Une école inscrite sans
+/// FASE — celles à programme belge à l'étranger, absentes de l'annuaire —
+/// n'apparaît donc pas dans la cartographie, ce qui est correct : elle ne
+/// relève pas de ce référentiel.
+model FwbSchool {
+  /// Clé naturelle : l'annuaire l'écrit en décimal ("10.0"), on le normalise
+  /// à l'import pour qu'il se compare à School.numeroFase.
+  numeroFase        String          @id
+  name              String
+  numeroBce         String?
+  /// Agrégés sur toutes les implantations : deux établissements sur trois
+  /// couvrent plusieurs types d'enseignement (maternel + primaire, ou les
+  /// trois niveaux du spécialisé).
+  typesEnseignement String[]
+  niveaux           SchoolLevel[]   @default([])
+  genres            EducationType[] @default([])
+  /// Réseau tel que l'annuaire le nomme — sept valeurs, qui ne recoupent pas
+  /// celles de la plateforme (cf. lib/fwb-directory.ts).
+  reseau            String
+  address           String?
+  postalCode        String?
+  locality          String?
+  commune           String?
+  bassin            String?
+  arrondissement    String?
+  /// Coordonnées de l'implantation principale, pour placer l'école sur une
+  /// carte. Absentes de trois lignes de l'annuaire.
+  latitude          Float?
+  longitude         Float?
+  implantationCount Int             @default(1)
+
+  /// Pouvoir organisateur — l'employeur juridique (cf. scripts/pouvoirs-organisateurs.ts).
+  poFase       String?
+  poName       String?
+  poBce        String?
+  poAddress    String?
+  poPostalCode String?
+  poLocality   String?
+
+  /// Colonnes de relance, vides à l'import : l'annuaire de la FWB ne publie
+  /// aucun moyen de contact. Elles se remplissent à la main ou par
+  /// scripts/collecter-emails.ts, et l'import ne les écrase jamais.
+  emailDirection    String?
+  poEmail           String?
+  phone             String?
+  website           String?
+  prospectionStatus ProspectionStatus @default(A_CONTACTER)
+  lastContactedAt   DateTime?
+  notes             String?
+
+  importedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([reseau])
+  @@index([bassin])
+  @@index([prospectionStatus])
+  @@map("fwb_schools")
+}

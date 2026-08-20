@@ -84,6 +84,7 @@ Tout est optionnel hors `DATABASE_URL` et `AUTH_SECRET` : chaque bloc absent dé
 | `npm run po` | Liste des pouvoirs organisateurs des écoles de prospection |
 | `npm run export-prospection` | Classeur XLSX de toute la prospection (Sheets/Excel) |
 | `npm run purger-test` | Vide la base de ses comptes de test (simulation par défaut) |
+| `npm run cartographie` | Importe l'annuaire officiel des écoles de la FWB (simulation par défaut) |
 
 ## Inviter les directions d'école
 
@@ -204,6 +205,35 @@ Le redémarrage ne se fait qu'après un build **terminé** : `next start` sur un
 incomplet échoue en boucle, et PM2 affiche « online » pendant que Nginx répond 502.
 
 Nginx doit transmettre `Host` et `X-Forwarded-Proto`, sans quoi les liens absolus des emails partent avec le mauvais hôte ou protocole.
+
+### Cartographier les écoles de la Fédération
+
+`npm run cartographie` charge `data/Cartographie-Ecoles-FWB.csv` — l'annuaire officiel, publié
+en données ouvertes — dans la table `fwb_schools`, que l'espace plateforme affiche sous
+**Cartographie** : qui a rejoint la plateforme, qui reste à convaincre.
+
+```bash
+npm run cartographie                 # simulation : compte, n'écrit rien
+npm run cartographie -- --confirmer  # écrit en base
+```
+
+Le fichier donne une ligne par **implantation** : 8 052 lignes pour 2 972 établissements,
+jusqu'à trente pour un seul. L'import regroupe par numéro FASE d'établissement et agrège les
+types d'enseignement, que deux établissements sur trois cumulent. Les numéros y sont écrits en
+décimal (`10.0`), séquelle d'un export tableur, et sont ramenés à leur forme entière — la seule
+qui se compare à `School.numeroFase`.
+
+Réexécutable sans dommage : les colonnes officielles sont réécrites depuis le fichier, les
+colonnes de relance (email, téléphone, statut, notes) ne le sont jamais. Une réédition annuelle
+de l'annuaire se rejoue donc par-dessus le travail de prospection déjà accompli.
+
+L'annuaire alimente aussi le formulaire public de création d'école : la direction saisit son
+numéro FASE en tête de formulaire, et le nom, le réseau, la zone, l'adresse et les niveaux se
+remplissent seuls. Un numéro absent de l'annuaire n'est pas bloquant — les écoles à programme
+belge à l'étranger n'y figurent pas —, la saisie reste manuelle. Deux correspondances ne sont
+pas des équivalences et méritent d'être connues : l'annuaire dit « Libre confessionnel » sans
+préciser la confession (le SeGEC est proposé, à corriger au besoin), et ni COCOF ni « organisme
+public autre » n'ont d'équivalent dans la liste de la plateforme.
 
 ### Repartir d'une base propre
 

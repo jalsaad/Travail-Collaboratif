@@ -12,6 +12,7 @@ const tabs: AdminNavTab[] = [
   { href: "/admin", label: "Tableau de bord" },
   { href: "/admin/ecoles", label: "Écoles" },
   { href: "/admin/utilisateurs", label: "Utilisateurs" },
+  { href: "/admin/cartographie", label: "Cartographie" },
   { href: "/admin/annonces", label: "Annonces" },
   { href: "/admin/assistance", label: "Assistance" },
   { href: "/admin/dons", label: "Dons" },

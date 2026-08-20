@@ -12,6 +12,13 @@ import { isReseauEtranger } from "@/lib/reseau-options";
 import { notifyPlatformOfNewSchool } from "@/lib/school-notifications";
 import { computeMatricule, MATRICULE_MANUAL_PATTERN } from "@/lib/matricule";
 import { saveSchoolLogo, validateLogoFile, InvalidLogoError } from "@/lib/school-logo";
+import {
+  normaliserFase,
+  regionPlateforme,
+  reseauIncertain,
+  reseauPlateforme,
+} from "@/lib/fwb-directory";
+import { canonicalLocality } from "@/lib/belgian-postal-codes";
 
 export type CreateSchoolState = { error?: string };
 
@@ -257,4 +264,64 @@ export async function createSchool(
     }
     throw error; // laisse passer la redirection interne de signIn en cas de succès
   }
+}
+
+export type FwbLookup =
+  | { found: false }
+  | {
+      found: true;
+      name: string;
+      /// Réseau de la plateforme correspondant, ou null quand l'annuaire n'en
+      /// désigne pas d'équivalent (COCOF, organisme public autre).
+      reseau: string | null;
+      /// Vrai quand ce réseau est une supposition : l'annuaire dit « Libre
+      /// confessionnel » sans préciser la confession.
+      reseauIncertain: boolean;
+      region: string | null;
+      address: string | null;
+      postalCode: string | null;
+      locality: string | null;
+      niveaux: string[];
+      typesEnseignement: string[];
+      implantationCount: number;
+      /// Déjà inscrite sur la plateforme : la création échouerait de toute
+      /// façon (School.numeroFase est unique), autant le dire tout de suite.
+      dejaInscrite: boolean;
+    };
+
+/// Recherche une école dans l'annuaire officiel de la FWB (table fwb_schools,
+/// alimentée par scripts/importer-cartographie.ts) pour préremplir le
+/// formulaire de création.
+///
+/// Volontairement accessible sans être connecté — c'est la page publique de
+/// création d'école qui l'appelle — et sans risque : ces données sont celles
+/// d'un fichier ouvert publié par la Fédération. Rien de ce qui touche à la
+/// plateforme n'y transite, hormis le fait qu'une école soit déjà inscrite,
+/// que le formulaire révélerait de toute façon en refusant le doublon.
+export async function lookupFwbSchool(numeroFaseSaisi: string): Promise<FwbLookup> {
+  const numeroFase = normaliserFase(numeroFaseSaisi);
+  if (!numeroFase || numeroFase.length > 8) return { found: false };
+
+  const [ecole, dejaInscrite] = await Promise.all([
+    prisma.fwbSchool.findUnique({ where: { numeroFase } }),
+    prisma.school.findUnique({ where: { numeroFase }, select: { id: true } }),
+  ]);
+  if (!ecole) return { found: false };
+
+  return {
+    found: true,
+    name: ecole.name,
+    reseau: reseauPlateforme(ecole.reseau),
+    reseauIncertain: reseauIncertain(ecole.reseau),
+    region: regionPlateforme(ecole.bassin),
+    address: ecole.address,
+    postalCode: ecole.postalCode,
+    // Réorthographiée d'après le référentiel des codes postaux : l'annuaire
+    // écrit « CHATELET », le menu du formulaire propose « Châtelet ».
+    locality: canonicalLocality(ecole.postalCode ?? "", ecole.locality),
+    niveaux: ecole.niveaux,
+    typesEnseignement: ecole.genres,
+    implantationCount: ecole.implantationCount,
+    dejaInscrite: dejaInscrite !== null,
+  };
 }
