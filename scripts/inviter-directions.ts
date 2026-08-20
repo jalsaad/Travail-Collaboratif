@@ -24,6 +24,7 @@ import {
   type InvitedSchool,
 } from "../lib/invitation-directions";
 import { echapperCsv, lireCsv } from "../lib/prospection-csv";
+import { escapeHtml } from "../lib/email-template";
 import { chargerEnvLocal } from "../lib/env-local";
 
 const RACINE = path.resolve(__dirname, "..");
@@ -237,7 +238,29 @@ async function main() {
       process.exit(1);
     }
     const contenu = profil.contenu(modele, options.baseUrl, options.contactEmail);
-    fs.writeFileSync(options.apercu, contenu.html, "utf8");
+    // Le corps de l'email est un fragment — pas de <html>, pas de <head> : dans
+    // un message, l'encodage est porté par l'en-tête MIME, que nodemailer fixe
+    // à utf-8. Ouvert comme un simple fichier, ce fragment ne dit rien de son
+    // encodage et le navigateur devine, généralement en latin-1 : les accents
+    // partent alors en « Ã© ». L'aperçu, et lui seul, est donc enveloppé dans un
+    // document minimal qui le déclare.
+    const page = [
+      "<!doctype html>",
+      '<html lang="fr">',
+      "<head>",
+      '<meta charset="utf-8">',
+      '<meta name="viewport" content="width=device-width, initial-scale=1">',
+      `<title>Aperçu — ${escapeHtml(contenu.subject)}</title>`,
+      "</head>",
+      "<body style=\"margin:0;background:#fafaf9;\">",
+      `<p style="margin:0;padding:12px;font:13px/1.5 system-ui,sans-serif;color:#78716c;">`,
+      `Objet : <strong style="color:#1c1917;">${escapeHtml(contenu.subject)}</strong>`,
+      "</p>",
+      contenu.html,
+      "</body>",
+      "</html>",
+    ].join("\n");
+    fs.writeFileSync(options.apercu, page, "utf8");
     console.log(`\nAperçu écrit     : ${path.relative(RACINE, options.apercu)}`);
     console.log(`Objet            : ${contenu.subject}`);
   }
