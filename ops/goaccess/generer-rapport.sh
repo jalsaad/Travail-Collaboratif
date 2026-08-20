@@ -18,6 +18,12 @@ JOURNAUX=${JOURNAUX:-/var/log/nginx/access.log}
 SORTIE=${SORTIE:-/var/lib/goaccess/rapport.html}
 TITRE=${TITRE:-Travail Collaboratif — fréquentation}
 
+# GoAccess refuse tout fichier de sortie dont l'extension n'est ni .html, ni
+# .json, ni .csv — un « rapport.html.tmp » le fait échouer avant même de lire
+# le journal. Le fichier de travail garde donc l'extension, et c'est son nom
+# qui le distingue.
+TRAVAIL="${SORTIE%.html}.en-cours.html"
+
 # Les requêtes d'assets noieraient les pages réellement consultées : sur une
 # application Next.js, un affichage de page tire des dizaines de fichiers
 # /_next/. On les écarte avant l'analyse plutôt que de les trier après.
@@ -30,7 +36,7 @@ zcat -f ${JOURNAUX}* 2>/dev/null \
   | grep -Ev "$FILTRE" \
   | goaccess - \
       --log-format=COMBINED \
-      --output="$SORTIE.tmp" \
+      --output="$TRAVAIL" \
       --html-report-title="$TITRE" \
       --anonymize-ip \
       --ignore-crawlers \
@@ -40,5 +46,5 @@ zcat -f ${JOURNAUX}* 2>/dev/null \
 
 # Renommé en dernier : une consultation pendant la régénération lit l'ancien
 # rapport, jamais un fichier à moitié écrit.
-mv "$SORTIE.tmp" "$SORTIE"
+mv "$TRAVAIL" "$SORTIE"
 chmod 640 "$SORTIE"
