@@ -76,6 +76,10 @@ const HEADER_LOGO_WIDTH = 260;
 const TITLE_SIZE = 15;
 const TITLE_PERIOD_SIZE = 11;
 const IDENTITY_LABEL_SIZE = 6.5;
+/// Interlettrage des intitulés. Constante et non littéral : il doit entrer
+/// dans la MESURE comme dans le tracé, sans quoi la colonne est taillée trop
+/// étroite et l'intitulé passe à la ligne.
+const IDENTITY_LABEL_SPACING = 0.4;
 const IDENTITY_VALUE_SIZE = 9;
 /// Gouttière entre deux colonnes du bandeau.
 const IDENTITY_GAP = 16;
@@ -268,8 +272,15 @@ export function buildPeriodsPdf(
         // douze caractères, un décompte de périodes en soixante. Répartir à
         // parts égales aurait fait passer le second à la ligne pendant que le
         // premier laissait la moitié de sa colonne vide.
+        // Mesuré tel qu'il sera écrit — en capitales et interlettré. Mesurer
+        // `label` en minuscules sous-estimait sa largeur d'un bon dixième :
+        // « TRAVAIL COLLABORATIF » passait alors à la ligne dans une colonne
+        // taillée pour « Travail collaboratif ».
         doc.fontSize(IDENTITY_LABEL_SIZE).font("Helvetica-Bold");
-        const largeursIntitules = lignes.map(([label]) => doc.widthOfString(label));
+        const intitules = lignes.map(([label]) => label.toUpperCase());
+        const largeursIntitules = intitules.map((label) =>
+          doc.widthOfString(label, { characterSpacing: IDENTITY_LABEL_SPACING })
+        );
         doc.fontSize(IDENTITY_VALUE_SIZE).font("Helvetica");
         const largeursValeurs = lignes.map(([, valeur]) => doc.widthOfString(valeur));
 
@@ -277,34 +288,62 @@ export function buildPeriodsPdf(
         const somme = naturelles.reduce((a, b) => a + b, 0);
         const disponible =
           contentWidth - IDENTITY_PAD_X * 2 - IDENTITY_GAP * (lignes.length - 1);
-        const surplus = disponible - somme;
 
-        // Deux régimes, parce qu'une répartition proportionnelle unique coupait
-        // « 17506210538 » en deux dès qu'une autre colonne était longue :
+        // Chaque colonne voudrait sa largeur naturelle — celle qui tient son
+        // intitulé ET sa valeur sur une ligne. Son plancher est la largeur de
+        // son seul intitulé : en dessous, c'est le libellé qui se replie, et
+        // « TRAVAIL COLLABORATIF » sur deux lignes écrasait sa valeur.
         //
-        // — s'il reste de la place, chacune garde au moins sa largeur naturelle
-        //   et se partage le surplus : rien ne passe à la ligne ;
-        // — s'il en manque, les colonnes courtes — un matricule, un décompte —
-        //   sont préservées telles quelles et seules les longues absorbent le
-        //   manque, une phrase se coupant sans dommage là où un nombre non.
-        const COURTE = 90;
+        // S'il reste de la place, chacune la reçoit au prorata de ce qu'elle
+        // occupe. S'il en manque, le déficit est prélevé sur la MARGE de
+        // chacune au-dessus de son plancher : « Enseignement », qui peut
+        // aligner trois disciplines, en a beaucoup ; « Matricule », douze
+        // chiffres immuables, n'en a presque pas. Le premier se replie donc,
+        // le second reste entier.
+        const planchers = largeursIntitules.map((w) => Math.min(w, disponible / lignes.length));
+        const marges = naturelles.map((n, i) => Math.max(0, n - planchers[i]));
+
         let largeurs: number[];
-        if (surplus >= 0) {
+        if (somme <= disponible) {
+          const surplus = disponible - somme;
           largeurs = naturelles.map((n) => n + surplus * (n / somme));
         } else {
-          const fixe = naturelles.filter((n) => n <= COURTE).reduce((a, b) => a + b, 0);
-          const sommeLongues = naturelles.filter((n) => n > COURTE).reduce((a, b) => a + b, 0);
-          const restant = Math.max(disponible - fixe, 1);
-          largeurs = naturelles.map((n) => (n <= COURTE ? n : (n / sommeLongues) * restant));
+          // Prélevé en cascade, de la colonne la plus large vers la plus
+          // étroite, et non au prorata : « Enseignement » peut réclamer 690
+          // points quand le bandeau n'en offre que 686, et un prorata ôtait
+          // alors cinq pour cent à tout le monde — assez pour couper un
+          // matricule en deux. Ici cette seule colonne absorbe le manque, les
+          // autres gardent leur largeur naturelle.
+          largeurs = [...naturelles];
+          let deficit = somme - disponible;
+          const ordre = marges.map((_, i) => i).sort((a, b) => marges[b] - marges[a]);
+          for (const i of ordre) {
+            if (deficit <= 0) break;
+            const retirable = Math.min(marges[i], deficit);
+            largeurs[i] -= retirable;
+            deficit -= retirable;
+          }
         }
 
         // Le fond est peint avant le texte, donc sa hauteur doit être connue
-        // d'avance : on mesure ce que chaque valeur occupera dans sa colonne.
-        doc.fontSize(IDENTITY_VALUE_SIZE).font("Helvetica");
-        const hauteurValeurs = Math.max(
-          ...lignes.map(([, valeur], i) => doc.heightOfString(valeur, { width: largeurs[i] }))
+        // d'avance : on mesure ce que chaque colonne occupera réellement.
+        // L'intitulé est mesuré lui aussi plutôt que supposé d'une ligne —
+        // c'est ce qui faisait écrire la valeur par-dessus quand il en prenait
+        // deux.
+        doc.fontSize(IDENTITY_LABEL_SIZE).font("Helvetica-Bold");
+        const hauteursIntitules = intitules.map((label, i) =>
+          doc.heightOfString(label, {
+            width: largeurs[i] + 1,
+            characterSpacing: IDENTITY_LABEL_SPACING,
+          })
         );
-        const hauteurBande = IDENTITY_LABEL_SIZE + 3 + hauteurValeurs;
+        doc.fontSize(IDENTITY_VALUE_SIZE).font("Helvetica");
+        const hauteursValeurs = lignes.map(([, valeur], i) =>
+          doc.heightOfString(valeur, { width: largeurs[i] })
+        );
+        const hauteurBande = Math.max(
+          ...lignes.map((_, i) => hauteursIntitules[i] + 3 + hauteursValeurs[i])
+        );
 
         const bandeY = headerBottom + 14;
         const fond = doc.linearGradient(PAGE_MARGIN, 0, doc.page.width - PAGE_MARGIN, 0);
@@ -316,21 +355,24 @@ export function buildPeriodsPdf(
         const y = bandeY + IDENTITY_PAD_Y;
         let x = PAGE_MARGIN + IDENTITY_PAD_X;
 
-        lignes.forEach(([label, valeur], i) => {
+        lignes.forEach(([, valeur], i) => {
           doc
             .fontSize(IDENTITY_LABEL_SIZE)
             .font("Helvetica-Bold")
             .fillColor(IDENTITY_LABEL_COLOR)
-            .text(label.toUpperCase(), x, y, {
-              width: largeurs[i],
-              characterSpacing: 0.4,
-              lineBreak: false,
+            .text(intitules[i], x, y, {
+              // +1 point : à largeur strictement égale à celle mesurée, un
+              // arrondi suffit à renvoyer le dernier mot à la ligne.
+              width: largeurs[i] + 1,
+              characterSpacing: IDENTITY_LABEL_SPACING,
             });
           doc
             .fontSize(IDENTITY_VALUE_SIZE)
             .font("Helvetica")
             .fillColor("#ffffff")
-            .text(valeur, x, y + IDENTITY_LABEL_SIZE + 3, { width: largeurs[i] });
+            // Posée sous SON intitulé, dont la hauteur est mesurée : un
+            // décalage fixe supposait que tous tiennent sur une ligne.
+            .text(valeur, x, y + hauteursIntitules[i] + 3, { width: largeurs[i] });
           x += largeurs[i] + IDENTITY_GAP;
         });
 
