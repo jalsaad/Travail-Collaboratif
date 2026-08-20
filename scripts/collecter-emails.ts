@@ -125,6 +125,18 @@ const ROLES_EXCLUS = /(^|[._-])(dpo|rgpd|gdpr|privacy|juridique|legal)([._-]|$)/
 const ADRESSES_FICTIVES =
   /^(john|jane)\.?(doe)?@|^(prenom|nom)\.(nom|prenom)@|^(votre|your)[-_.]?(e?mail|nom)@|^(exemple|example|test|demo|sample|user|name|email|mail|adresse|address|contact)@(exemple|example|test|demo|domain|domaine|mail|email|site|monsite|votresite)\./i;
 
+/// Le domaine suffit à trancher, quelle que soit la partie locale : aucune
+/// école n'écrit depuis « domaine.com ». La règle ci-dessus exigeait que les
+/// DEUX moitiés soient reconnues, et « utilisateur@domaine.com » — la
+/// traduction française de « user@ », absente de la liste — est passée jusqu'à
+/// l'envoi.
+const DOMAINES_FICTIFS =
+  /@(exemple|example|domaine|domain|mondomaine|votredomaine|monsite|votresite|site|test|demo|localhost)\./i;
+
+function estFictive(email: string): boolean {
+  return ADRESSES_FICTIVES.test(email) || DOMAINES_FICTIFS.test(email);
+}
+
 /// Beaucoup de sites d'école encodent l'arobase (&#64;, &commat;, %40) pour
 /// échapper aux robots collecteurs. On décode avant d'extraire, sinon les
 /// pages les plus soigneuses sont justement celles qu'on rate.
@@ -257,7 +269,7 @@ function normaliserEmails(html: string): string[] {
     if (FAUX_POSITIFS.test(e)) return false;
     if (LOCALES_EXCLUES.test(locale) || ROLES_EXCLUS.test(locale)) return false;
     if (DOMAINES_EXCLUS.some((d) => domaine === d || domaine.endsWith(`.${d}`))) return false;
-    if (ADRESSES_FICTIVES.test(e)) return false;
+    if (estFictive(e)) return false;
     // Identifiant technique plutôt qu'adresse : un agenda partagé, une clé
     // d'API. Aucune boîte réelle n'a un libellé de quarante caractères.
     if (locale.length > 40 || /[0-9a-f]{24,}/i.test(locale)) return false;

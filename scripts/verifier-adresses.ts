@@ -8,7 +8,7 @@
 //   npm run verifier-adresses -- --ecrire     # inscrit la colonne « verification »
 //   npm run verifier-adresses -- --profil=po
 //
-// Trois signaux, tirés de ce qu'on a observé sur les premières collectes :
+// Quatre signaux, tirés de ce qu'on a observé sur les premières collectes :
 //
 //   — une même adresse attribuée à plusieurs écoles de noms différents. Cinq
 //     écoles pointaient sur apfl@provincedeliege.be, trois sur ifec@segec.be :
@@ -19,6 +19,8 @@
 //   — un domaine de fédération, de province ou d'organisme public. Ceux-là
 //     relèvent de la campagne « pouvoirs organisateurs », dont le message
 //     s'adresse à un échevin et non à un directeur ;
+//   — une adresse d'exemple laissée par le gabarit d'un site
+//     (« utilisateur@domaine.com ») ;
 //   — une adresse issue d'un site trouvé par recherche. Le site retenu est le
 //     premier résultat plausible d'un moteur, pas une adresse déclarée par
 //     l'école : on en a vu aboutir sur un journal d'annonces régional.
@@ -58,6 +60,19 @@ const DOMAINES_TUTELLE = [
   "provinceluxembourg.be",
   "one.be",
 ];
+
+/// Adresses d'exemple laissées par un gabarit de site : « utilisateur@domaine.com »
+/// est passé jusqu'à l'envoi, le collecteur ne reconnaissant que « user@ » et
+/// pas sa traduction française. Le domaine seul suffit à trancher — aucune
+/// école n'écrit depuis « domaine.com » —, la partie locale sert de filet.
+const FACTICE_DOMAINE =
+  /@(exemple|example|domaine|domain|mondomaine|votredomaine|monsite|votresite|site|test|demo|localhost)\./i;
+const FACTICE_LOCAL =
+  /^(utilisateur|user|username|votre|vous|nom|prenom|exemple|example|test|demo|sample|email|mail|adresse|address)[-_.@]/i;
+
+function adresseFactice(email: string): boolean {
+  return FACTICE_DOMAINE.test(email) || FACTICE_LOCAL.test(email);
+}
 
 const args = process.argv.slice(2);
 const ecrire = args.includes("--ecrire");
@@ -133,7 +148,9 @@ function main() {
     const autres = partagees.filter((x) => !memeEtablissement(x[profil.nom], l[profil.nom]));
 
     let motif = "";
-    if (tutelle) {
+    if (adresseFactice(email)) {
+      motif = "adresse d'exemple";
+    } else if (tutelle) {
       motif = `domaine de tutelle (${tutelle})`;
     } else if (autres.length > 0) {
       motif = `partagée avec ${autres.length} autre(s) école(s)`;
@@ -147,7 +164,9 @@ function main() {
     l.verification = motif;
     if (motif) {
       marquees++;
-      const cle = tutelle
+      const cle = adresseFactice(email)
+        ? "adresse d'exemple"
+        : tutelle
         ? `domaine de tutelle (${tutelle})`
         : autres.length > 0
           ? "adresse partagée"
