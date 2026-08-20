@@ -79,10 +79,21 @@ const IDENTITY_LABEL_SIZE = 6.5;
 const IDENTITY_VALUE_SIZE = 9;
 /// Gouttière entre deux colonnes du bandeau.
 const IDENTITY_GAP = 16;
-/// Le bandeau est peint en gris foncé : il détache l'identité du tableau, que
-/// rien d'autre ne séparait — les deux étaient en petites capitales grises sur
-/// toute la largeur. Intitulés en gris clair, valeurs en blanc.
-const IDENTITY_BG = "#44403c";
+/// Le bandeau est peint aux couleurs de la plateforme : il détache l'identité
+/// du tableau, que rien d'autre ne séparait — les deux étaient en petites
+/// capitales grises sur toute la largeur.
+///
+/// Le sarcelle de la charte (#14b8a6) est écarté au profit de sa déclinaison
+/// sombre : blanc sur #14b8a6 ne donne que 2,5 de contraste, sous le seuil de
+/// 4,5 exigé pour du petit texte, et il vire au gris moyen (133/255) à
+/// l'impression noir et blanc. Les deux bornes retenues tiennent 5,1 et 5,5 en
+/// couleur, et descendent à 97 et 86 sur 255 en niveaux de gris — le blanc y
+/// reste franc sur une imprimante de salle des profs.
+const IDENTITY_BG_FROM = "#1f6fc4";
+const IDENTITY_BG_TO = "#0f766e";
+/// Les intitulés cèdent leur gris pour un blanc cassé : 4,7 de contraste sur
+/// le bleu, contre 2,0 pour l'ancien #a8a29e devenu illisible sur ce fond.
+const IDENTITY_LABEL_COLOR = "#f5f5f4";
 const IDENTITY_PAD_X = 14;
 const IDENTITY_PAD_Y = 8;
 /// Hauteur réservée au pied de page, au-dessus de la marge basse. Les lignes
@@ -195,11 +206,22 @@ export function buildPeriodsPdf(
         headerBottom = PAGE_MARGIN + HEADER_LOGO_BOX;
       }
 
-      // Posé à droite du logo et aligné à gauche : les deux lignes partagent
-      // ainsi la même marge de départ, ce qu'un alignement à droite aurait
-      // rompu dès que leurs longueurs diffèrent — et elles diffèrent toujours.
-      const titreX = PAGE_MARGIN + largeurLogo + 24;
-      const largeurTitre = doc.page.width - PAGE_MARGIN - titreX;
+      // Centré sur la page, les deux lignes partageant le même axe. La zone
+      // libre commence après le logo : si un titre long y déborderait, il se
+      // recentre dans ce qu'il reste plutôt que de passer sur la bannière.
+      const zoneGauche = PAGE_MARGIN + largeurLogo + 24;
+      const zoneDroite = doc.page.width - PAGE_MARGIN;
+
+      doc.fontSize(TITLE_SIZE).font("Helvetica-Bold");
+      const largeurMain = doc.widthOfString(title.main);
+      doc.fontSize(TITLE_PERIOD_SIZE).font("Helvetica");
+      const largeurPeriode = title.periode ? doc.widthOfString(title.periode) : 0;
+
+      const largeurTitre = Math.min(
+        Math.max(largeurMain, largeurPeriode),
+        zoneDroite - zoneGauche
+      );
+      const titreX = Math.max((doc.page.width - largeurTitre) / 2, zoneGauche);
 
       doc.fontSize(TITLE_SIZE).font("Helvetica-Bold");
       const hautMain = doc.heightOfString(title.main, { width: largeurTitre });
@@ -219,13 +241,16 @@ export function buildPeriodsPdf(
         .fillColor("#1c1917")
         .fontSize(TITLE_SIZE)
         .font("Helvetica-Bold")
-        .text(title.main, titreX, titreY, { width: largeurTitre });
+        .text(title.main, titreX, titreY, { width: largeurTitre, align: "center" });
       if (title.periode) {
         doc
           .fillColor("#57534e")
           .fontSize(TITLE_PERIOD_SIZE)
           .font("Helvetica")
-          .text(title.periode, titreX, titreY + hautMain + 3, { width: largeurTitre });
+          .text(title.periode, titreX, titreY + hautMain + 3, {
+            width: largeurTitre,
+            align: "center",
+          });
       }
       headerBottom = Math.max(headerBottom, doc.y);
 
@@ -282,9 +307,11 @@ export function buildPeriodsPdf(
         const hauteurBande = IDENTITY_LABEL_SIZE + 3 + hauteurValeurs;
 
         const bandeY = headerBottom + 14;
+        const fond = doc.linearGradient(PAGE_MARGIN, 0, doc.page.width - PAGE_MARGIN, 0);
+        fond.stop(0, IDENTITY_BG_FROM).stop(1, IDENTITY_BG_TO);
         doc
           .roundedRect(PAGE_MARGIN, bandeY, contentWidth, hauteurBande + IDENTITY_PAD_Y * 2, 4)
-          .fill(IDENTITY_BG);
+          .fill(fond);
 
         const y = bandeY + IDENTITY_PAD_Y;
         let x = PAGE_MARGIN + IDENTITY_PAD_X;
@@ -293,7 +320,7 @@ export function buildPeriodsPdf(
           doc
             .fontSize(IDENTITY_LABEL_SIZE)
             .font("Helvetica-Bold")
-            .fillColor("#a8a29e")
+            .fillColor(IDENTITY_LABEL_COLOR)
             .text(label.toUpperCase(), x, y, {
               width: largeurs[i],
               characterSpacing: 0.4,
