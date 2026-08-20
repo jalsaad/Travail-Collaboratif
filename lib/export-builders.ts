@@ -71,6 +71,10 @@ const HEADER_LOGO_WIDTH = 260;
 /// Bandeau d'identité : les quatre informations côte à côte sur toute la
 /// largeur, chacune sous son intitulé, plutôt qu'empilées dans une colonne.
 /// L'intitulé est en petites capitales grises, la valeur en dessous.
+/// Titre du document, et période couverte juste en dessous — plus discrète,
+/// c'est une précision et non l'objet du document.
+const TITLE_SIZE = 15;
+const TITLE_PERIOD_SIZE = 11;
 const IDENTITY_LABEL_SIZE = 6.5;
 const IDENTITY_VALUE_SIZE = 9;
 /// Gouttière entre deux colonnes du bandeau.
@@ -96,9 +100,20 @@ function identityLines(identity: ExportIdentity): [string, string][] {
   ];
 }
 
+/// Le titre d'un relevé : ce dont il s'agit, puis la période qu'il couvre.
+/// Deux lignes plutôt qu'une phrase à rallonge — la seconde est la seule qui
+/// change d'un export à l'autre, et c'est celle qu'on cherche des yeux sur un
+/// exemplaire classé.
+export type ExportTitle = {
+  /// « Relevé individuel de travail collaboratif ».
+  main: string;
+  /// « du 01/09/2025 au 30/06/2026 », ou null si aucune borne n'est connue.
+  periode: string | null;
+};
+
 export function buildPeriodsPdf(
   rows: ExportPeriodRow[],
-  title: string,
+  title: ExportTitle,
   logos?: ExportHeaderLogos,
   identity?: ExportIdentity
 ): Promise<Buffer> {
@@ -174,20 +189,38 @@ export function buildPeriodsPdf(
         headerBottom = PAGE_MARGIN + HEADER_LOGO_BOX;
       }
 
-      // Aligné à droite en vis-à-vis du logo, et non centré sur la page : entre
-      // les deux, un titre centré chevaucherait la bannière dès qu'elle est
-      // large. La largeur restante lui suffit, et il passe à la ligne au besoin.
+      // Posé à droite du logo et aligné à gauche : les deux lignes partagent
+      // ainsi la même marge de départ, ce qu'un alignement à droite aurait
+      // rompu dès que leurs longueurs diffèrent — et elles diffèrent toujours.
       const titreX = PAGE_MARGIN + largeurLogo + 24;
       const largeurTitre = doc.page.width - PAGE_MARGIN - titreX;
-      doc.fillColor("black").fontSize(18).font("Helvetica-Bold");
-      // Centré verticalement sur la hauteur du logo : mesuré d'abord, car un
-      // titre long passe à la ligne et ne se cale pas comme un titre court.
-      // Sans logo, il n'y a pas de bande sur laquelle se centrer.
-      const hauteurTitre = doc.heightOfString(title, { width: largeurTitre, align: "right" });
+
+      doc.fontSize(TITLE_SIZE).font("Helvetica-Bold");
+      const hautMain = doc.heightOfString(title.main, { width: largeurTitre });
+      doc.fontSize(TITLE_PERIOD_SIZE).font("Helvetica");
+      const hautPeriode = title.periode
+        ? doc.heightOfString(title.periode, { width: largeurTitre }) + 3
+        : 0;
+
+      // Le couple est centré verticalement sur la hauteur du logo — mesuré
+      // d'abord, un titre qui passe à la ligne ne se calant pas comme un titre
+      // court. Sans logo, il n'y a pas de bande sur laquelle se centrer.
       const titreY = logos?.school
-        ? PAGE_MARGIN + Math.max(0, (HEADER_LOGO_BOX - hauteurTitre) / 2)
+        ? PAGE_MARGIN + Math.max(0, (HEADER_LOGO_BOX - (hautMain + hautPeriode)) / 2)
         : PAGE_MARGIN;
-      doc.text(title, titreX, titreY, { width: largeurTitre, align: "right" });
+
+      doc
+        .fillColor("#1c1917")
+        .fontSize(TITLE_SIZE)
+        .font("Helvetica-Bold")
+        .text(title.main, titreX, titreY, { width: largeurTitre });
+      if (title.periode) {
+        doc
+          .fillColor("#57534e")
+          .fontSize(TITLE_PERIOD_SIZE)
+          .font("Helvetica")
+          .text(title.periode, titreX, titreY + hautMain + 3, { width: largeurTitre });
+      }
       headerBottom = Math.max(headerBottom, doc.y);
 
       // Les exports collectifs ou par lot n'ont pas d'identité unique : le

@@ -114,19 +114,19 @@ export async function GET(request: Request) {
     ].join(", "),
   }));
 
-  // L'année et les bornes figurent dans le titre : un exemplaire imprimé et
-  // classé serait sinon impossible à dater. Le nom de l'école n'y est plus,
-  // son logo le porte en tête ; en revanche le relevé d'un lot ou d'une
-  // équipe garde de qui il parle, aucun bloc d'identité ne le disant.
-  const annee = schoolYear ? ` ${schoolYear.label}` : "";
-  const periode = formatExportRange(range.start, range.end, schoolYear);
-  const bornes = periode ? ` — ${periode}` : "";
-  const title =
-    scope === "INDIVIDUAL"
-      ? `Relevé individuel${annee}${bornes}`
-      : scope === "BATCH"
-        ? `Relevé${annee} — ${targetMembers.length} personnes${bornes}`
-        : `Relevé collectif${annee}${bornes}`;
+  // Les bornes figurent sous le titre : un exemplaire imprimé et classé serait
+  // sinon impossible à dater. Le nom de l'école n'y est pas, son logo le porte
+  // en tête ; en revanche un relevé par lot garde le nombre de personnes qu'il
+  // couvre, aucun bloc d'identité ne le disant à sa place.
+  const title = {
+    main:
+      scope === "INDIVIDUAL"
+        ? "Relevé individuel de travail collaboratif"
+        : scope === "BATCH"
+          ? `Relevé de travail collaboratif — ${targetMembers.length} personnes`
+          : "Relevé collectif de travail collaboratif",
+    periode: formatExportRange(range.start, range.end, schoolYear),
+  };
 
   const logos = await loadExportHeaderLogos(active.schoolLogoUrl);
   // Bloc d'identité réservé au relevé d'UNE personne : un lot ou un relevé

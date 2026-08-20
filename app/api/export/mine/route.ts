@@ -74,12 +74,14 @@ export async function GET(request: Request) {
     ].join(", "),
   }));
 
-  // La période couverte remplace le nom de l'école, que le logo et le bloc
-  // d'identité annoncent déjà. Ce qu'un exemplaire classé ne dit pas de
-  // lui-même, ce sont ses bornes.
-  const periode = formatExportRange(range.start, range.end, schoolYear);
-  const title =
-    `Relevé individuel${schoolYear ? ` ${schoolYear.label}` : ""}` + (periode ? ` — ${periode}` : "");
+  // Ni le nom de l'école ni l'année scolaire dans le titre : le logo annonce
+  // la première, et les bornes disent la seconde plus précisément qu'un
+  // libellé « 2025-2026 ». Ce qu'un exemplaire classé ne dit pas de lui-même,
+  // ce sont ses dates.
+  const title = {
+    main: "Relevé individuel de travail collaboratif",
+    periode: formatExportRange(range.start, range.end, schoolYear),
+  };
   const logos = await loadExportHeaderLogos(active.schoolLogoUrl);
   const identity = await buildExportIdentity(active.membershipId, schoolYear?.id ?? null);
   const buffer = await buildPeriodsPdf(rows, title, logos, identity);

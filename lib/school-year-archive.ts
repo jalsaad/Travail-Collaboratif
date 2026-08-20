@@ -9,6 +9,7 @@ import { schoolYearDates } from "@/lib/school-year-dates";
 import { loadExportHeaderLogos } from "@/lib/export-logos";
 import { buildPeriodsPdf, type ExportPeriodRow } from "@/lib/export-builders";
 import { formatExternalParticipant } from "@/lib/external-participants";
+import { formatExportRange } from "@/lib/export-range";
 
 // Archivage de fin d'année scolaire.
 //
@@ -247,7 +248,10 @@ export async function writeSchoolYearArchive(schoolYear: {
       fileName: `${slugify(school.name)}-${school.id.slice(-6)}.pdf`,
       buffer: await buildPeriodsPdf(
         toPdfRows(periods, school.id),
-        `Relevé collectif ${schoolYear.label} — ${school.name}`,
+        {
+          main: "Relevé collectif de travail collaboratif",
+          periode: formatExportRange(null, null, schoolYear),
+        },
         await loadExportHeaderLogos(school.logoUrl)
       ),
     }))
