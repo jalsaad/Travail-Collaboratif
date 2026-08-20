@@ -235,6 +235,22 @@ pas des équivalences et méritent d'être connues : l'annuaire dit « Libre con
 préciser la confession (le SeGEC est proposé, à corriger au besoin), et ni COCOF ni « organisme
 public autre » n'ont d'équivalent dans la liste de la plateforme.
 
+### Suivre la fréquentation
+
+Les journaux Nginx sont analysés par GoAccess, sans traceur ni cookie : rien n'est ajouté
+aux pages et aucune donnée ne part chez un tiers. Le rapport est régénéré toutes les
+quinze minutes par un timer systemd et servi sur `/statistiques`, derrière un mot de
+passe — jamais dans un dossier public, contrairement à la recette courante.
+
+```bash
+sudo bash ops/goaccess/installer.sh
+```
+
+Les liens des invitations portent `?src=invitation`, ce qui rend les visites d'une
+campagne identifiables dans le rapport là où un référent d'email fait défaut. Voir
+[`ops/goaccess/README.md`](ops/goaccess/README.md) pour l'installation détaillée, la
+profondeur d'historique et le dépannage.
+
 ### Repartir d'une base propre
 
 `npm run purger-test` supprime les comptes de démonstration et tout ce qui en dépend —

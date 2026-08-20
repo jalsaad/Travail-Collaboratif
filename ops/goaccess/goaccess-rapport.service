@@ -1,0 +1,17 @@
+[Unit]
+Description=Rapport de fréquentation GoAccess (Travail Collaboratif)
+Documentation=file:///var/www/Travail-Collaboratif/ops/goaccess/README.md
+After=nginx.service
+
+[Service]
+Type=oneshot
+ExecStart=/var/www/Travail-Collaboratif/ops/goaccess/generer-rapport.sh
+# Lecture des journaux Nginx, écriture dans /var/lib/goaccess : rien d'autre.
+User=root
+Nice=10
+# Durcissement : le service ne fait que lire des journaux et écrire un fichier.
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/goaccess
+NoNewPrivileges=yes

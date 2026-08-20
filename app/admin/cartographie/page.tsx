@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Reveal } from "@/components/reveal";
 import { CartographieRow } from "@/components/cartographie-row";
+import { BelgiumSchoolsMap, type BassinNode } from "@/components/belgium-schools-map";
 import { PROSPECTION_STATUSES } from "@/lib/prospection-labels";
 import type { Prisma, ProspectionStatus } from "@prisma/client";
 
@@ -54,7 +55,7 @@ export default async function AdminCartographiePage({
     ...(inscription === "absentes" ? { numeroFase: { notIn: fasesInscrites } } : {}),
   };
 
-  const [total, totalFiltre, ecoles, parReseau, parBassin, parSuivi] = await Promise.all([
+  const [total, totalFiltre, ecoles, parReseau, parBassin, parSuivi, carteEcoles] = await Promise.all([
     prisma.fwbSchool.count(),
     prisma.fwbSchool.count({ where }),
     prisma.fwbSchool.findMany({
@@ -66,6 +67,15 @@ export default async function AdminCartographiePage({
     prisma.fwbSchool.groupBy({ by: ["reseau"], _count: true, orderBy: { reseau: "asc" } }),
     prisma.fwbSchool.groupBy({ by: ["bassin"], _count: true, orderBy: { bassin: "asc" } }),
     prisma.fwbSchool.groupBy({ by: ["prospectionStatus"], _count: true }),
+    // Carte : jeu global (non filtré par le formulaire ci-dessous), comme les
+    // tuiles de stats — un résumé stable, la table reste seule à varier avec
+    // les filtres. Les écoles individuelles servent de troisième niveau de
+    // zoom (bassin → commune → école) ; leur nombre (quelques milliers, peu
+    // de colonnes) rend un agrégat SQL inutile, on le fait ici en mémoire.
+    prisma.fwbSchool.findMany({
+      where: { bassin: { not: null }, commune: { not: null }, latitude: { not: null }, longitude: { not: null } },
+      select: { numeroFase: true, name: true, bassin: true, commune: true, latitude: true, longitude: true },
+    }),
   ]);
 
   // Le nombre d'écoles inscrites qui figurent réellement dans l'annuaire : une
@@ -74,6 +84,57 @@ export default async function AdminCartographiePage({
   const inscritesConnues = await prisma.fwbSchool.count({ where: { numeroFase: { in: fasesInscrites } } });
   const couverture = total > 0 ? (inscritesConnues / total) * 100 : 0;
   const pages = Math.max(1, Math.ceil(totalFiltre / PAR_PAGE));
+
+  // Assemblage de la carte : bassin → commune → école, un seul passage sur
+  // les écoles chargées ci-dessus. « Hors zones » n'est pas un bassin
+  // géographique réel (cf. lib/fwb-directory.ts ZONES, qui ne lui trouve
+  // aucun équivalent numéroté) : son centroïde n'a pas de sens sur une carte
+  // et tombe par coïncidence en plein centre du pays, on l'exclut donc ici.
+  const fasesInscritesSet = new Set(fasesInscrites);
+  type Accumulateur = { sumLat: number; sumLng: number; recensees: number; inscrites: number };
+  const bassinsAcc = new Map<string, Accumulateur & { communes: Map<string, Accumulateur & { schools: typeof carteEcoles }> }>();
+  for (const ecole of carteEcoles) {
+    const bassin = ecole.bassin!;
+    if (bassin === "Hors zones") continue;
+    const commune = ecole.commune!;
+    const inscrite = fasesInscritesSet.has(ecole.numeroFase) ? 1 : 0;
+
+    if (!bassinsAcc.has(bassin)) bassinsAcc.set(bassin, { sumLat: 0, sumLng: 0, recensees: 0, inscrites: 0, communes: new Map() });
+    const b = bassinsAcc.get(bassin)!;
+    b.sumLat += ecole.latitude!;
+    b.sumLng += ecole.longitude!;
+    b.recensees += 1;
+    b.inscrites += inscrite;
+
+    if (!b.communes.has(commune)) b.communes.set(commune, { sumLat: 0, sumLng: 0, recensees: 0, inscrites: 0, schools: [] });
+    const c = b.communes.get(commune)!;
+    c.sumLat += ecole.latitude!;
+    c.sumLng += ecole.longitude!;
+    c.recensees += 1;
+    c.inscrites += inscrite;
+    c.schools.push(ecole);
+  }
+  const carteBassins: BassinNode[] = [...bassinsAcc.entries()].map(([bassin, b]) => ({
+    bassin,
+    lat: b.sumLat / b.recensees,
+    lng: b.sumLng / b.recensees,
+    recensees: b.recensees,
+    inscrites: b.inscrites,
+    communes: [...b.communes.entries()].map(([commune, c]) => ({
+      commune,
+      lat: c.sumLat / c.recensees,
+      lng: c.sumLng / c.recensees,
+      recensees: c.recensees,
+      inscrites: c.inscrites,
+      schools: c.schools.map((ecole) => ({
+        numeroFase: ecole.numeroFase,
+        name: ecole.name,
+        lat: ecole.latitude!,
+        lng: ecole.longitude!,
+        inscrite: fasesInscritesSet.has(ecole.numeroFase),
+      })),
+    })),
+  }));
 
   const lien = (modifs: Record<string, string>) => {
     const p = new URLSearchParams();
@@ -94,7 +155,38 @@ export default async function AdminCartographiePage({
         </p>
       </div>
 
-      <Reveal className="card grid grid-cols-2 gap-3 p-5 sm:grid-cols-4">
+      {/* Repliée par défaut : la table ci-dessous reste l'entrée principale
+          de la page, la carte est une vue complémentaire qu'on déploie au
+          besoin plutôt qu'un bloc imposé en haut de chaque visite. */}
+      <details className="group">
+        <summary className="flex list-none cursor-pointer items-center gap-2 text-base font-semibold tracking-tight text-stone-900 [&::-webkit-details-marker]:hidden dark:text-stone-100">
+          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-brand-600 to-brand-teal text-white">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-3.5 w-3.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
+              />
+            </svg>
+          </span>
+          Carte des écoles
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            className="h-4 w-4 shrink-0 text-stone-400 transition-transform group-open:rotate-180 dark:text-stone-500"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </summary>
+        <Reveal delay={0} className="mt-3">
+          <BelgiumSchoolsMap bassins={carteBassins} />
+        </Reveal>
+      </details>
+
+      <Reveal delay={80} className="card grid grid-cols-2 gap-3 p-5 sm:grid-cols-4">
         <div>
           <p className="text-2xl font-semibold tracking-tight text-stone-900 dark:text-stone-100">
             {total.toLocaleString("fr-BE")}
@@ -121,7 +213,7 @@ export default async function AdminCartographiePage({
         </div>
       </Reveal>
 
-      <Reveal delay={80} className="card p-5">
+      <Reveal delay={160} className="card p-5">
         {/* Filtres en GET : l'état de la recherche vit dans l'URL, donc une
             vue filtrée se met en signet et se partage. */}
         <form method="get" className="flex flex-wrap items-end gap-3">
@@ -192,7 +284,7 @@ export default async function AdminCartographiePage({
         </form>
       </Reveal>
 
-      <Reveal delay={160} className="card overflow-x-auto">
+      <Reveal delay={240} className="card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-stone-100 bg-stone-50/70 text-left text-xs font-semibold uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:bg-stone-800/50 dark:text-stone-500">

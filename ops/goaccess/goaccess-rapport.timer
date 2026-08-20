@@ -1,0 +1,12 @@
+[Unit]
+Description=Régénère le rapport de fréquentation toutes les quinze minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+# Évite que plusieurs serveurs frappent à la même seconde si l'un s'ajoute.
+RandomizedDelaySec=60
+Persistent=true
+
+[Install]
+WantedBy=timers.target

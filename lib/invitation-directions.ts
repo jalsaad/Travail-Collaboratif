@@ -64,6 +64,22 @@ export type InvitationContent = {
 
 const SUBJECT = "Le travail collaboratif de votre équipe, sans tableur";
 
+/// Deux campagnes, deux marques : on veut savoir laquelle amène du monde.
+const SRC_DIRECTION = "invitation";
+const SRC_PO = "invitation-po";
+
+/// Marque un lien de campagne, pour que les visites qu'il amène soient
+/// reconnaissables dans le journal du serveur — c'est la seule façon de mesurer
+/// ce qu'une vague d'invitations produit vraiment. Un référent d'email est
+/// inexploitable : la plupart des clients n'en envoient pas.
+///
+/// `src` plutôt que les `utm_*` de Google Analytics : la plateforme n'utilise
+/// aucun traceur, l'analyse se fait sur les journaux Nginx (cf. ops/goaccess),
+/// et un paramètre court reste lisible dans une barre d'adresse.
+function marquer(url: string, source: string): string {
+  return `${url}${url.includes("?") ? "&" : "?"}src=${source}`;
+}
+
 /// Deux liens de découverte, offerts à qui ne veut pas s'inscrire d'emblée :
 /// le site pour se faire une idée, le guide pour voir à quoi ressemble
 /// l'espace direction avant de créer quoi que ce soit. Le bouton principal
@@ -72,9 +88,9 @@ const SUBJECT = "Le travail collaboratif de votre équipe, sans tableur";
 /// Construits sur `baseUrl` plutôt qu'écrits en dur : l'adresse de la
 /// plateforme se règle par APP_ORIGIN, et un lien qui la contredirait
 /// enverrait les destinataires sur un autre hôte que le bouton.
-function liensDecouverte(baseUrl: string) {
-  const site = baseUrl;
-  const guide = `${baseUrl}/guides/guide-direction.html`;
+function liensDecouverte(baseUrl: string, source: string) {
+  const site = marquer(baseUrl, source);
+  const guide = marquer(`${baseUrl}/guides/guide-direction.html`, source);
   return {
     site,
     guide,
@@ -92,7 +108,7 @@ function liensDecouverte(baseUrl: string) {
 export function buildDirectionInvitation(options: InvitationOptions): InvitationContent {
   const { school, baseUrl, contactEmail } = options;
   const localite = [school.codePostal, school.ville].filter(Boolean).join(" ");
-  const inscriptionUrl = `${baseUrl}/creer-ecole`;
+  const inscriptionUrl = marquer(`${baseUrl}/creer-ecole`, SRC_DIRECTION);
 
   const circulaires = paragrapheCirculaires(
     "votre espace direction donne à tout moment l'avancement de l'équipe — avec les exports " +
@@ -110,7 +126,7 @@ export function buildDirectionInvitation(options: InvitationOptions): Invitation
       "cette année, l'essai ne coûte rien.",
   ];
 
-  const liens = liensDecouverte(baseUrl);
+  const liens = liensDecouverte(baseUrl, SRC_DIRECTION);
 
   const text = [
     ...paragraphes,
@@ -193,7 +209,7 @@ export function buildPoInvitation(options: {
   contactEmail: string;
 }): InvitationContent {
   const { po, baseUrl, contactEmail } = options;
-  const inscriptionUrl = `${baseUrl}/creer-ecole`;
+  const inscriptionUrl = marquer(`${baseUrl}/creer-ecole`, SRC_PO);
   const ecolesLabel = `${po.nbEcoles} école${po.nbEcoles > 1 ? "s" : ""}`;
 
   const circulaires = paragrapheCirculaires(
@@ -214,7 +230,7 @@ export function buildPoInvitation(options: {
       "quand nous pouvons vous le présenter.",
   ];
 
-  const liens = liensDecouverte(baseUrl);
+  const liens = liensDecouverte(baseUrl, SRC_PO);
 
   const text = [
     ...paragraphes,
