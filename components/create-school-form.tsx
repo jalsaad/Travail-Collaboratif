@@ -229,6 +229,24 @@ export function CreateSchoolForm() {
       </div>
 
       <div>
+        <label htmlFor="website" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+          Site web <span className="font-normal text-stone-400">(si l&apos;école en dispose)</span>
+        </label>
+        <input
+          id="website"
+          name="website"
+          // Volontairement pas `type="url"` : la validation native du
+          // navigateur exigerait un schéma explicite et rejetterait
+          // « www.mon-ecole.be », la forme la plus couramment saisie. Le
+          // serveur le complète (cf. lib/website-url.ts).
+          type="text"
+          inputMode="url"
+          placeholder="ex : www.mon-ecole.be"
+          className="input-field mt-1.5"
+        />
+      </div>
+
+      <div>
         <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">Logo de l&apos;école</span>
         <input
           id="logoFile"

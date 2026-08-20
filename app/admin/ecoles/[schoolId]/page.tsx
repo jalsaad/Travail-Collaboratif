@@ -58,6 +58,7 @@ export default async function AdminSchoolDetailPage({
         locality={school.locality ?? ""}
         country={school.country ?? ""}
         phone={school.phone ?? ""}
+        website={school.website ?? ""}
         numeroFase={school.numeroFase ?? ""}
         logoUrl={school.logoUrl ?? ""}
       />

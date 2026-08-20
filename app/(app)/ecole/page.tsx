@@ -5,6 +5,7 @@ import { resolveActiveMembership } from "@/lib/active-school";
 import { computePeriodStatus } from "@/lib/period-status";
 import { roleLabel } from "@/lib/role-labels";
 import { formatSchoolAddress } from "@/lib/school-address";
+import { websiteLabel } from "@/lib/website-url";
 import { getSchoolTeachersProgress } from "@/lib/collaboration-progress";
 import { formatPeriodes } from "@/lib/period-duration";
 import { SchoolPeriodList } from "@/components/school-period-list";
@@ -139,7 +140,24 @@ export default async function EcolePage() {
               {school.reseau ?? "Réseau non renseigné"} ·{" "}
               {formatSchoolAddress(school) ?? "Adresse non renseignée"}
             </p>
-            <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Numéro FASE : {school.numeroFase ?? "—"}</p>
+            <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
+              Numéro FASE : {school.numeroFase ?? "—"}
+              {school.website && (
+                <>
+                  {" · "}
+                  {/* noreferrer : l'adresse est saisie par la direction, rien
+                      n'oblige le site visé à être digne de confiance. */}
+                  <a
+                    href={school.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline transition hover:text-brand-700 dark:hover:text-brand-400"
+                  >
+                    {websiteLabel(school.website)}
+                  </a>
+                </>
+              )}
+            </p>
             {/* Les compteurs ci-dessous ne portent que sur l'année courante. */}
             <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
               Année scolaire :{" "}

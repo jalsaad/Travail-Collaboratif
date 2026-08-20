@@ -11,6 +11,7 @@ import { ForbiddenError } from "@/lib/school-authorization";
 import { logAudit, AuditAction } from "@/lib/audit-log";
 import { saveSchoolLogo, InvalidLogoError } from "@/lib/school-logo";
 import { computeMatricule, MATRICULE_MANUAL_PATTERN } from "@/lib/matricule";
+import { normalizeWebsite, InvalidWebsiteError } from "@/lib/website-url";
 
 export type AdminActionState = { error?: string; success?: string };
 
@@ -39,6 +40,20 @@ const schoolInfoSchema = z.object({
   locality: z.string().optional(),
   country: z.string().optional(),
   phone: z.string().optional(),
+  website: z
+    .string()
+    .transform((v, ctx) => {
+      try {
+        return normalizeWebsite(v);
+      } catch (error) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: error instanceof InvalidWebsiteError ? error.message : "Adresse du site invalide.",
+        });
+        return z.NEVER;
+      }
+    })
+    .nullable(),
   numeroFase: z.string().optional(),
 });
 
@@ -61,6 +76,7 @@ export async function updateSchoolAsAdmin(
     locality: formData.get("locality") || undefined,
     country: formData.get("country") || undefined,
     phone: formData.get("phone") || undefined,
+    website: formData.get("website") ?? "",
     numeroFase: formData.get("numeroFase") || undefined,
   });
   if (!parsed.success) {
@@ -101,6 +117,7 @@ export async function updateSchoolAsAdmin(
         locality: parsed.data.locality || null,
         country: parsed.data.country || null,
         phone: parsed.data.phone || null,
+        website: parsed.data.website,
         numeroFase: parsed.data.numeroFase || null,
         ...(logoUrl !== undefined ? { logoUrl } : {}),
       },

@@ -19,6 +19,7 @@ import {
   reseauPlateforme,
 } from "@/lib/fwb-directory";
 import { canonicalLocality } from "@/lib/belgian-postal-codes";
+import { normalizeWebsite, InvalidWebsiteError } from "@/lib/website-url";
 
 export type CreateSchoolState = { error?: string };
 
@@ -30,6 +31,23 @@ const schoolSchema = z.object({
   postalCode: z.string().min(1, "Code postal requis"),
   locality: z.string().min(1, "Localité requise"),
   phone: z.string().min(1, "Téléphone requis"),
+  /// Facultatif : beaucoup d'écoles n'ont pas de site. `normalizeWebsite`
+  /// complète le schéma manquant — « www.ecole.be » saisi tel quel serait
+  /// pris pour un chemin relatif par un navigateur.
+  website: z
+    .string()
+    .transform((v, ctx) => {
+      try {
+        return normalizeWebsite(v);
+      } catch (error) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: error instanceof InvalidWebsiteError ? error.message : "Adresse du site invalide.",
+        });
+        return z.NEVER;
+      }
+    })
+    .nullable(),
   numeroFase: z.string().min(1, "Numéro FASE requis"),
   // Exigé uniquement pour les écoles à programme belge à l'étranger, où le
   // code postal ne suffit pas à localiser l'établissement.
@@ -86,6 +104,7 @@ export async function createSchool(
     postalCode: formData.get("postalCode"),
     locality: formData.get("locality"),
     phone: formData.get("phone"),
+    website: formData.get("website") ?? "",
     numeroFase: formData.get("numeroFase"),
     country: formData.get("country") ?? "",
   });
@@ -194,6 +213,7 @@ export async function createSchool(
           locality: parsedSchool.data.locality,
           country: parsedSchool.data.country,
           phone: parsedSchool.data.phone,
+          website: parsedSchool.data.website,
           numeroFase: parsedSchool.data.numeroFase,
           // Toute école créée via ce flux public attend une validation par
           // la plateforme (app/admin/ecoles) avant de devenir opérationnelle

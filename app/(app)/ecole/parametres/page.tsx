@@ -36,6 +36,7 @@ export default async function ParametresPage() {
           locality={school.locality ?? ""}
           country={school.country ?? ""}
           phone={school.phone ?? ""}
+        website={school.website ?? ""}
           logoUrl={school.logoUrl ?? ""}
           numeroFase={school.numeroFase ?? ""}
         />
