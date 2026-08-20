@@ -39,6 +39,31 @@ export type InvitationContent = {
 
 const SUBJECT = "Le travail collaboratif de votre équipe, sans tableur";
 
+/// Deux liens de découverte, offerts à qui ne veut pas s'inscrire d'emblée :
+/// le site pour se faire une idée, le guide pour voir à quoi ressemble
+/// l'espace direction avant de créer quoi que ce soit. Le bouton principal
+/// mène à l'inscription ; ces liens-ci sont la porte basse.
+///
+/// Construits sur `baseUrl` plutôt qu'écrits en dur : l'adresse de la
+/// plateforme se règle par APP_ORIGIN, et un lien qui la contredirait
+/// enverrait les destinataires sur un autre hôte que le bouton.
+function liensDecouverte(baseUrl: string) {
+  const site = baseUrl;
+  const guide = `${baseUrl}/guides/guide-direction.html`;
+  return {
+    site,
+    guide,
+    /// Sans le schéma : c'est l'usage dans un corps de texte, et cela raccourcit
+    /// une ligne déjà longue.
+    siteLabel: site.replace(/^https?:\/\//, ""),
+    texte: [`Découvrir la plateforme : ${site}`, `Guide de prise en main pour les directions : ${guide}`],
+    html:
+      `<p style="margin:0 0 12px;">Pour vous faire une idée avant de vous décider : ` +
+      `<a href="${site}" style="color:${BRAND_600};">${escapeHtml(site.replace(/^https?:\/\//, ""))}</a>, ` +
+      `et le <a href="${guide}" style="color:${BRAND_600};">guide de prise en main destiné aux directions</a>.</p>`,
+  };
+}
+
 export function buildDirectionInvitation(options: InvitationOptions): InvitationContent {
   const { school, baseUrl, contactEmail } = options;
   const localite = [school.codePostal, school.ville].filter(Boolean).join(" ");
@@ -60,11 +85,14 @@ export function buildDirectionInvitation(options: InvitationOptions): Invitation
       "cette année, l'essai ne coûte rien.",
   ];
 
+  const liens = liensDecouverte(baseUrl);
+
   const text = [
     ...paragraphes,
     "",
     `École : ${school.nom}${localite ? ` — ${localite}` : ""}`,
     `Créer l'espace de votre école : ${inscriptionUrl}`,
+    ...liens.texte,
     "",
     `Une question ? ${contactEmail}`,
     `Vous recevez ce message parce que votre établissement figure à l'annuaire public des`,
@@ -75,9 +103,10 @@ export function buildDirectionInvitation(options: InvitationOptions): Invitation
   const html = renderBrandedEmail({
     eyebrow: "Invitation aux directions",
     title: "Le travail collaboratif de votre équipe, suivi sans tableur.",
-    bodyHtml: paragraphes
-      .map((p) => `<p style="margin:0 0 12px;">${escapeHtml(p)}</p>`)
-      .join("\n        "),
+    bodyHtml:
+      paragraphes.map((p) => `<p style="margin:0 0 12px;">${escapeHtml(p)}</p>`).join("\n        ") +
+      "\n        " +
+      liens.html,
     rows: [
       { label: "École", value: school.nom },
       ...(localite ? [{ label: "Localité", value: localite }] : []),
@@ -151,12 +180,15 @@ export function buildPoInvitation(options: {
       "quand nous pouvons vous le présenter.",
   ];
 
+  const liens = liensDecouverte(baseUrl);
+
   const text = [
     ...paragraphes,
     "",
     `Pouvoir organisateur : ${po.nom}${po.localite ? ` — ${po.localite}` : ""}`,
     `Écoles concernées : ${ecolesLabel}`,
     `Créer l'espace d'une école : ${inscriptionUrl}`,
+    ...liens.texte,
     "",
     `Une question ou une présentation ? ${contactEmail}`,
     "Vous recevez ce message parce que votre institution est le pouvoir organisateur",
@@ -167,9 +199,10 @@ export function buildPoInvitation(options: {
   const html = renderBrandedEmail({
     eyebrow: "Invitation aux pouvoirs organisateurs",
     title: `Le travail collaboratif de vos ${ecolesLabel}, suivi sans tableur.`,
-    bodyHtml: paragraphes
-      .map((p) => `<p style="margin:0 0 12px;">${escapeHtml(p)}</p>`)
-      .join("\n        "),
+    bodyHtml:
+      paragraphes.map((p) => `<p style="margin:0 0 12px;">${escapeHtml(p)}</p>`).join("\n        ") +
+      "\n        " +
+      liens.html,
     rows: [
       { label: "Pouvoir organisateur", value: po.nom },
       ...(po.localite ? [{ label: "Localité", value: po.localite }] : []),
