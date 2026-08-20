@@ -7,6 +7,7 @@
 //   npm run invitations                      # simulation, rien n'est envoyé
 //   npm run invitations -- --apercu          # écrit un aperçu HTML de l'email
 //   npm run invitations -- --envoyer --limite=25
+//   npm run invitations -- --inclure-a-verifier   # y compris les adresses douteuses
 //
 // Rien ne part sans --envoyer. Chaque envoi est journalisé au fil de l'eau
 // dans data/prospection-journal.csv : relancer la commande reprend là où elle
@@ -124,6 +125,8 @@ type Options = {
   fichier: string;
   journal: string;
   envoyer: boolean;
+  /// Inclure malgré tout les adresses marquées par verifier-adresses.
+  inclureAVerifier: boolean;
   apercu: string | null;
   limite: number | null;
   delaiMs: number;
@@ -153,6 +156,7 @@ function lireOptions(argv: string[]): Options {
     fichier: valeur("fichier") ?? profil.fichier,
     journal: valeur("journal") ?? profil.journal,
     envoyer: present("envoyer"),
+    inclureAVerifier: present("inclure-a-verifier"),
     apercu: present("apercu") ? valeur("apercu") ?? APERCU_DEFAUT : null,
     limite: valeur("limite") ? Number(valeur("limite")) : null,
     // Un envoi lent passe mieux les filtres anti-spam qu'une rafale, et laisse
@@ -194,9 +198,19 @@ async function main() {
   // Une même adresse peut couvrir plusieurs implantations : on n'écrit qu'une
   // fois, en gardant la première école rencontrée comme référence.
   const vues = new Set<string>();
+  // Écartées d'office : les adresses que scripts/verifier-adresses.ts a
+  // marquées comme n'étant vraisemblablement pas celles d'une direction —
+  // service provincial, fédération de réseau, adresse partagée par des écoles
+  // sans lien. Le message est écrit pour un directeur ; l'envoyer ailleurs
+  // brûle une adresse sans convaincre personne. `--inclure-a-verifier` passe
+  // outre, une fois la colonne relue.
+  const aVerifier = ecoles.filter(
+    (r) => EMAIL_VALIDE.test(r[profil.email] ?? "") && (r.verification ?? "").trim() !== ""
+  );
   const destinataires = ecoles.filter((r) => {
     const email = (r[profil.email] ?? "").toLowerCase();
     if (!EMAIL_VALIDE.test(email) || vues.has(email) || dejaServis.has(email)) return false;
+    if (!options.inclureAVerifier && (r.verification ?? "").trim() !== "") return false;
     vues.add(email);
     return true;
   });
@@ -207,6 +221,11 @@ async function main() {
   console.log(`Destinataires    : ${ecoles.length}${options.niveau ? ` (niveau ${options.niveau})` : ""}`);
   console.log(`Sans adresse     : ${sansEmail.length}`);
   console.log(`Déjà invitées    : ${dejaServis.size}`);
+  if (aVerifier.length > 0) {
+    console.log(
+      `À vérifier       : ${aVerifier.length}${options.inclureAVerifier ? " (incluses)" : " (écartées)"}`
+    );
+  }
   console.log(`À inviter        : ${destinataires.length}${aTraiter.length !== destinataires.length ? ` (limité à ${aTraiter.length})` : ""}`);
   console.log(`Lien d'inscription : ${options.baseUrl}/creer-ecole`);
 

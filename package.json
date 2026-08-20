@@ -17,7 +17,8 @@
     "po": "ts-node -P tsconfig.scripts.json scripts/pouvoirs-organisateurs.ts",
     "export-prospection": "ts-node -P tsconfig.scripts.json scripts/exporter-prospection.ts",
     "purger-test": "ts-node -P tsconfig.scripts.json scripts/purger-comptes-test.ts",
-    "cartographie": "ts-node -P tsconfig.scripts.json scripts/importer-cartographie.ts"
+    "cartographie": "ts-node -P tsconfig.scripts.json scripts/importer-cartographie.ts",
+    "verifier-adresses": "ts-node -P tsconfig.scripts.json scripts/verifier-adresses.ts"
   },
   "ts-node": {
     "compilerOptions": {
