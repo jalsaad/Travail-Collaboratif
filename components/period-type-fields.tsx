@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { PeriodType } from "@prisma/client";
 import { activitiesForForm, COLLABORATIVE_ACTIVITIES } from "@/lib/collaborative-activities";
 import { periodTypeLabel } from "@/lib/period-labels";
+import { CirculaireLink } from "@/components/circulaire-link";
 
 // Deux niveaux de qualification, partagés par les trois formulaires :
 //  - la forme légale (PeriodType), seule à avoir valeur normative et dont la
@@ -49,9 +50,9 @@ export function PeriodTypeFields({
           <option value="REUNION_EQUIPE">{periodTypeLabel.REUNION_EQUIPE}</option>
         </select>
         <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-          Les deux seules formes prévues par les circulaires 7167 et 8894 : réunions d&apos;équipe à
-          l&apos;initiative de la direction, collaboration pédagogique à l&apos;initiative des
-          enseignant·es.
+          Les deux seules formes prévues par les circulaires <CirculaireLink numero="7167" /> et{" "}
+          <CirculaireLink numero="8894" /> : réunions d&apos;équipe à l&apos;initiative de la
+          direction, collaboration pédagogique à l&apos;initiative des enseignant·es.
         </p>
       </div>
 
@@ -80,8 +81,13 @@ export function PeriodTypeFields({
           ))}
         </select>
         <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-          {hint ??
-            "Pistes suggérées par le vade-mecum des circulaires 7167 et 8894 ; la liste n'est pas imposée, choisissez « Autre » au besoin."}
+          {hint ?? (
+            <>
+              Pistes suggérées par le vade-mecum des circulaires <CirculaireLink numero="7167" /> et{" "}
+              <CirculaireLink numero="8894" /> ; la liste n&apos;est pas imposée, choisissez «
+              Autre » au besoin.
+            </>
+          )}
         </p>
       </div>
     </div>

@@ -15,3 +15,9 @@ export const CIRCULAIRES = "circulaires 7167 et 8894";
 /// Mention affichée sur la page d'accueil et en pied des relevés exportés.
 export const CONFORMITY_MENTION =
   "Déclaration de travail collaboratif en conformité avec les circulaires 7167 et 8894 de la Fédération Wallonie-Bruxelles";
+
+/// Textes officiels publiés sur Gallilex (portail juridique de la Fédération
+/// Wallonie-Bruxelles) — cf. components/circulaire-link.tsx pour les rendre
+/// cliquables partout où elles sont citées à l'écran.
+export const CIRCULAIRE_7167_URL = "https://gallilex.cfwb.be/sites/default/files/imports/46417_000.pdf";
+export const CIRCULAIRE_8894_URL = "https://gallilex.cfwb.be/sites/default/files/imports/50674_000.pdf";

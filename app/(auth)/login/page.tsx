@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Reveal } from "@/components/reveal";
-import { CONFORMITY_MENTION } from "@/lib/regulatory-reference";
+import { CirculaireLink } from "@/components/circulaire-link";
 import { AboutUsSection } from "@/components/about-us-section";
 import { ReseauxEnseignementSection } from "@/components/reseaux-enseignement-section";
 
@@ -39,8 +39,14 @@ export default function LoginGatewayPage() {
             Bienvenue dans votre espace de création et de partage de tâches collaboratives
           </h1>
 
+          {/* Reprend le libellé de lib/regulatory-reference.ts::CONFORMITY_MENTION
+              (gardé identique pour les PDF/affiches générés côté serveur, où
+              un lien n'a pas de sens) — ici en JSX pour rendre 7167 et 8894
+              cliquables vers leur texte officiel (Gallilex). */}
           <p className="mx-auto mt-4 max-w-xl text-sm text-stone-600 dark:text-stone-300">
-            {CONFORMITY_MENTION}.
+            Déclaration de travail collaboratif en conformité avec les circulaires{" "}
+            <CirculaireLink numero="7167" /> et <CirculaireLink numero="8894" /> de la Fédération
+            Wallonie-Bruxelles.
           </p>
 
 

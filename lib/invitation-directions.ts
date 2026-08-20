@@ -7,6 +7,31 @@
 // ---------------------------------------------------------------------------
 
 import { BRAND_600, escapeHtml, renderBrandedEmail } from "./email-template";
+import { CIRCULAIRE_7167_URL, CIRCULAIRE_8894_URL } from "./regulatory-reference";
+
+/// Le seul paragraphe citant les deux circulaires diffère juste par sa fin
+/// (direction vs pouvoir organisateur) — construit ici en deux variantes
+/// (texte brut / HTML avec liens vers leur texte officiel sur Gallilex)
+/// plutôt que confié à `paragraphes.map(escapeHtml)` comme les autres, même
+/// principe que `liensDecouverte` ci-dessous pour les liens de découverte.
+function paragrapheCirculaires(finDePhrase: string) {
+  const debut =
+    "Les circulaires 7167 et 8894 imposent à chaque enseignant·e 60 périodes annuelles de travail " +
+    "collaboratif, à recenser sur le formulaire annexé. Travail Collaboratif est une " +
+    "plateforme web qui prend ce recensement en charge : les enseignant·es déclarent " +
+    "leurs périodes, les collègues concernés confirment leur participation, et ";
+  return {
+    texte: `${debut}${finDePhrase}`,
+    html:
+      `<p style="margin:0 0 12px;">Les circulaires ` +
+      `<a href="${CIRCULAIRE_7167_URL}" style="color:${BRAND_600};">7167</a> et ` +
+      `<a href="${CIRCULAIRE_8894_URL}" style="color:${BRAND_600};">8894</a> imposent à chaque ` +
+      `enseignant·e 60 périodes annuelles de travail collaboratif, à recenser sur le formulaire ` +
+      `annexé. Travail Collaboratif est une plateforme web qui prend ce recensement en charge : ` +
+      `les enseignant·es déclarent leurs périodes, les collègues concernés confirment leur ` +
+      `participation, et ${escapeHtml(finDePhrase)}</p>`,
+  };
+}
 
 /// Une ligne du fichier de prospection, réduite à ce dont l'email a besoin.
 export type InvitedSchool = {
@@ -69,14 +94,14 @@ export function buildDirectionInvitation(options: InvitationOptions): Invitation
   const localite = [school.codePostal, school.ville].filter(Boolean).join(" ");
   const inscriptionUrl = `${baseUrl}/creer-ecole`;
 
+  const circulaires = paragrapheCirculaires(
+    "votre espace direction donne à tout moment l'avancement de l'équipe — avec les exports " +
+      "PDF et Excel prêts à joindre au dossier."
+  );
+
   const paragraphes = [
     "Madame la Directrice, Monsieur le Directeur,",
-    "Les circulaires 7167 et 8894 imposent à chaque enseignant·e 60 périodes annuelles de travail " +
-      "collaboratif, à recenser sur le formulaire annexé. Travail Collaboratif est une " +
-      "plateforme web qui prend ce recensement en charge : les enseignant·es déclarent " +
-      "leurs périodes, les collègues concernés confirment leur participation, et votre " +
-      "espace direction donne à tout moment l'avancement de l'équipe — avec les exports " +
-      "PDF et Excel prêts à joindre au dossier.",
+    circulaires.texte,
     "La mise en route tient en trois étapes : vous créez l'espace de votre école, la " +
       "plateforme génère une affiche A4 avec QR code à mettre en salle des profs, vos " +
       "enseignant·es s'y rattachent avec le code de l'établissement. Rien à installer.",
@@ -100,13 +125,22 @@ export function buildDirectionInvitation(options: InvitationOptions): Invitation
     `email avec la mention DESINSCRIPTION.`,
   ].join("\n");
 
+  // Toutes les phrases via escapeHtml, sauf celle qui cite les circulaires
+  // (paragraphes[1]) : c'est là qu'on veut des liens, cf. paragrapheCirculaires.
+  const bodyHtml =
+    [
+      `<p style="margin:0 0 12px;">${escapeHtml(paragraphes[0])}</p>`,
+      circulaires.html,
+      `<p style="margin:0 0 12px;">${escapeHtml(paragraphes[2])}</p>`,
+      `<p style="margin:0 0 12px;">${escapeHtml(paragraphes[3])}</p>`,
+    ].join("\n        ") +
+    "\n        " +
+    liens.html;
+
   const html = renderBrandedEmail({
     eyebrow: "Invitation aux directions",
     title: "Le travail collaboratif de votre équipe, suivi sans tableur.",
-    bodyHtml:
-      paragraphes.map((p) => `<p style="margin:0 0 12px;">${escapeHtml(p)}</p>`).join("\n        ") +
-      "\n        " +
-      liens.html,
+    bodyHtml,
     rows: [
       { label: "École", value: school.nom },
       ...(localite ? [{ label: "Localité", value: localite }] : []),
@@ -162,17 +196,17 @@ export function buildPoInvitation(options: {
   const inscriptionUrl = `${baseUrl}/creer-ecole`;
   const ecolesLabel = `${po.nbEcoles} école${po.nbEcoles > 1 ? "s" : ""}`;
 
+  const circulaires = paragrapheCirculaires(
+    "chaque direction suit l'avancement de son équipe, exports PDF et Excel compris."
+  );
+
   const paragraphes = [
     po.estCommune
       ? "Madame l'Échevine, Monsieur l'Échevin de l'Enseignement,"
       : "Madame, Monsieur,",
     `Nous nous adressons à vous en votre qualité de pouvoir organisateur, dont relèvent ` +
       `${ecolesLabel} de notre relevé.`,
-    "Les circulaires 7167 et 8894 imposent à chaque enseignant·e 60 périodes annuelles de travail " +
-      "collaboratif, à recenser sur le formulaire annexé. Travail Collaboratif est une " +
-      "plateforme web qui prend ce recensement en charge : les enseignant·es déclarent " +
-      "leurs périodes, les collègues concernés confirment leur participation, et chaque " +
-      "direction suit l'avancement de son équipe, exports PDF et Excel compris.",
+    circulaires.texte,
     "Chaque école dispose de son propre espace, cloisonné des autres : l'outil se déploie " +
       "école par école, sans projet informatique ni marché à passer. Il est gratuit et sans " +
       "limite de comptes, conçu par des enseignant·es.",
@@ -196,13 +230,23 @@ export function buildPoInvitation(options: {
     "plus en recevoir, répondez à cet email avec la mention DESINSCRIPTION.",
   ].join("\n");
 
+  // Toutes les phrases via escapeHtml, sauf celle qui cite les circulaires
+  // (paragraphes[2]) : c'est là qu'on veut des liens, cf. paragrapheCirculaires.
+  const bodyHtml =
+    [
+      `<p style="margin:0 0 12px;">${escapeHtml(paragraphes[0])}</p>`,
+      `<p style="margin:0 0 12px;">${escapeHtml(paragraphes[1])}</p>`,
+      circulaires.html,
+      `<p style="margin:0 0 12px;">${escapeHtml(paragraphes[3])}</p>`,
+      `<p style="margin:0 0 12px;">${escapeHtml(paragraphes[4])}</p>`,
+    ].join("\n        ") +
+    "\n        " +
+    liens.html;
+
   const html = renderBrandedEmail({
     eyebrow: "Invitation aux pouvoirs organisateurs",
     title: `Le travail collaboratif de vos ${ecolesLabel}, suivi sans tableur.`,
-    bodyHtml:
-      paragraphes.map((p) => `<p style="margin:0 0 12px;">${escapeHtml(p)}</p>`).join("\n        ") +
-      "\n        " +
-      liens.html,
+    bodyHtml,
     rows: [
       { label: "Pouvoir organisateur", value: po.nom },
       ...(po.localite ? [{ label: "Localité", value: po.localite }] : []),
