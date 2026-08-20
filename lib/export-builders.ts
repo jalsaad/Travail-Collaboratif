@@ -68,15 +68,13 @@ const PAGE_MARGIN = 40;
 /// rognée, quelles que soient ses proportions d'origine.
 const HEADER_LOGO_BOX = 62;
 const HEADER_LOGO_WIDTH = 260;
-/// Bloc d'identité, en vis-à-vis du logo : deux colonnes alignées à gauche,
-/// l'ensemble calé sur la marge droite. Aligner les valeurs à droite les
-/// éloignait de leur intitulé à proportion de leur brièveté — « Leandro
-/// Anzaldi » laissait cent-soixante-dix points de vide. Ici l'écart ne dépend
-/// plus de ce qu'on écrit, et les deux colonnes tombent chacune sur sa
-/// verticale.
-const IDENTITY_VALUE_WIDTH = 250;
-/// Blanc entre la colonne des intitulés et celle des valeurs.
-const IDENTITY_GAP = 10;
+/// Bandeau d'identité : les quatre informations côte à côte sur toute la
+/// largeur, chacune sous son intitulé, plutôt qu'empilées dans une colonne.
+/// L'intitulé est en petites capitales grises, la valeur en dessous.
+const IDENTITY_LABEL_SIZE = 6.5;
+const IDENTITY_VALUE_SIZE = 9;
+/// Gouttière entre deux colonnes du bandeau.
+const IDENTITY_GAP = 16;
 /// Hauteur réservée au pied de page, au-dessus de la marge basse. Les lignes
 /// du tableau s'arrêtent avant, sinon elles passeraient sous le logo.
 const FOOTER_HEIGHT = 62;
@@ -197,43 +195,77 @@ export function buildPeriodsPdf(
       if (identity) {
         const lignes = identityLines(identity);
 
-        // Colonnes taillées sur leur contenu, mesuré dans la police où il sera
-        // écrit — `widthOfString` rapporte la largeur pour la fonte et le corps
-        // courants. Des largeurs en dur se dérégleraient au premier intitulé
-        // ajouté, et fausseraient le centrage du bloc.
-        doc.fontSize(8).font("Helvetica-Bold");
-        const largeurIntitules = Math.max(...lignes.map(([label]) => doc.widthOfString(label)));
-        doc.font("Helvetica");
-        // Plafond de retour à la ligne, non largeur imposée : une valeur plus
-        // courte n'occupe que ce qu'elle vaut, le bloc étant aligné à gauche.
-        const largeurValeurs = Math.min(
-          Math.max(...lignes.map(([, valeur]) => doc.widthOfString(valeur))),
-          IDENTITY_VALUE_WIDTH
-        );
+        // Quatre colonnes en bandeau plutôt que quatre lignes empilées :
+        // l'identité tenait sur un quart de la largeur en occupant le tiers
+        // de la hauteur utile, sur une page qui en fait 762 points de large.
+        //
+        // Chaque colonne reçoit une part de la largeur proportionnelle à ce
+        // qu'elle a à dire — mesuré, et non deviné : un matricule tient en
+        // douze caractères, un décompte de périodes en soixante. Répartir à
+        // parts égales aurait fait passer le second à la ligne pendant que le
+        // premier laissait la moitié de sa colonne vide.
+        doc.fontSize(IDENTITY_LABEL_SIZE).font("Helvetica-Bold");
+        const largeursIntitules = lignes.map(([label]) => doc.widthOfString(label));
+        doc.fontSize(IDENTITY_VALUE_SIZE).font("Helvetica");
+        const largeursValeurs = lignes.map(([, valeur]) => doc.widthOfString(valeur));
 
-        // Calé sur la marge gauche, à l'aplomb du logo et de la première
-        // colonne du tableau : le regard n'a qu'une verticale à suivre.
-        const labelX = PAGE_MARGIN;
-        const valueX = labelX + largeurIntitules + IDENTITY_GAP;
-        let y = headerBottom + 14;
+        const naturelles = lignes.map((_, i) => Math.max(largeursIntitules[i], largeursValeurs[i]));
+        const somme = naturelles.reduce((a, b) => a + b, 0);
+        const disponible = contentWidth - IDENTITY_GAP * (lignes.length - 1);
+        const surplus = disponible - somme;
 
-        for (const [label, valeur] of lignes) {
-          doc
-            .font("Helvetica-Bold")
-            .fillColor("#78716c")
-            // +1 point : sans lui, un arrondi de mesure suffit à renvoyer le
-            // dernier caractère de l'intitulé le plus long à la ligne suivante.
-            .text(label, labelX, y, { width: largeurIntitules + 1, lineBreak: false });
-          const apresLabel = doc.y;
-          doc
-            .font("Helvetica")
-            .fillColor("black")
-            .text(valeur, valueX, y, { width: largeurValeurs });
-          // La valeur peut passer à la ligne (enseignement multi-niveaux), pas
-          // l'intitulé : c'est la plus haute des deux qui commande la suivante.
-          y = Math.max(apresLabel, doc.y) + 2;
+        // Deux régimes, parce qu'une répartition proportionnelle unique coupait
+        // « 17506210538 » en deux dès qu'une autre colonne était longue :
+        //
+        // — s'il reste de la place, chacune garde au moins sa largeur naturelle
+        //   et se partage le surplus : rien ne passe à la ligne ;
+        // — s'il en manque, les colonnes courtes — un matricule, un décompte —
+        //   sont préservées telles quelles et seules les longues absorbent le
+        //   manque, une phrase se coupant sans dommage là où un nombre non.
+        const COURTE = 90;
+        let largeurs: number[];
+        if (surplus >= 0) {
+          largeurs = naturelles.map((n) => n + surplus * (n / somme));
+        } else {
+          const fixe = naturelles.filter((n) => n <= COURTE).reduce((a, b) => a + b, 0);
+          const sommeLongues = naturelles.filter((n) => n > COURTE).reduce((a, b) => a + b, 0);
+          const restant = Math.max(disponible - fixe, 1);
+          largeurs = naturelles.map((n) => (n <= COURTE ? n : (n / sommeLongues) * restant));
         }
-        headerBottom = y;
+
+        const y = headerBottom + 16;
+        let x = PAGE_MARGIN;
+        let bas = y;
+
+        lignes.forEach(([label, valeur], i) => {
+          doc
+            .fontSize(IDENTITY_LABEL_SIZE)
+            .font("Helvetica-Bold")
+            .fillColor("#a8a29e")
+            .text(label.toUpperCase(), x, y, {
+              width: largeurs[i],
+              characterSpacing: 0.4,
+              lineBreak: false,
+            });
+          doc
+            .fontSize(IDENTITY_VALUE_SIZE)
+            .font("Helvetica")
+            .fillColor("#1c1917")
+            .text(valeur, x, y + IDENTITY_LABEL_SIZE + 3, { width: largeurs[i] });
+          bas = Math.max(bas, doc.y);
+          x += largeurs[i] + IDENTITY_GAP;
+        });
+
+        // Filet de séparation : sans lui, le bandeau et les intitulés de
+        // colonnes du tableau se confondent, l'un et l'autre étant en petites
+        // capitales grises sur toute la largeur.
+        headerBottom = bas + 8;
+        doc
+          .moveTo(PAGE_MARGIN, headerBottom)
+          .lineTo(doc.page.width - PAGE_MARGIN, headerBottom)
+          .lineWidth(0.8)
+          .strokeColor("#e7e5e4")
+          .stroke();
       }
 
       doc.fillColor("black");
