@@ -79,6 +79,12 @@ const IDENTITY_LABEL_SIZE = 6.5;
 const IDENTITY_VALUE_SIZE = 9;
 /// Gouttière entre deux colonnes du bandeau.
 const IDENTITY_GAP = 16;
+/// Le bandeau est peint en gris foncé : il détache l'identité du tableau, que
+/// rien d'autre ne séparait — les deux étaient en petites capitales grises sur
+/// toute la largeur. Intitulés en gris clair, valeurs en blanc.
+const IDENTITY_BG = "#44403c";
+const IDENTITY_PAD_X = 14;
+const IDENTITY_PAD_Y = 8;
 /// Hauteur réservée au pied de page, au-dessus de la marge basse. Les lignes
 /// du tableau s'arrêtent avant, sinon elles passeraient sous le logo.
 const FOOTER_HEIGHT = 62;
@@ -244,7 +250,8 @@ export function buildPeriodsPdf(
 
         const naturelles = lignes.map((_, i) => Math.max(largeursIntitules[i], largeursValeurs[i]));
         const somme = naturelles.reduce((a, b) => a + b, 0);
-        const disponible = contentWidth - IDENTITY_GAP * (lignes.length - 1);
+        const disponible =
+          contentWidth - IDENTITY_PAD_X * 2 - IDENTITY_GAP * (lignes.length - 1);
         const surplus = disponible - somme;
 
         // Deux régimes, parce qu'une répartition proportionnelle unique coupait
@@ -266,9 +273,21 @@ export function buildPeriodsPdf(
           largeurs = naturelles.map((n) => (n <= COURTE ? n : (n / sommeLongues) * restant));
         }
 
-        const y = headerBottom + 16;
-        let x = PAGE_MARGIN;
-        let bas = y;
+        // Le fond est peint avant le texte, donc sa hauteur doit être connue
+        // d'avance : on mesure ce que chaque valeur occupera dans sa colonne.
+        doc.fontSize(IDENTITY_VALUE_SIZE).font("Helvetica");
+        const hauteurValeurs = Math.max(
+          ...lignes.map(([, valeur], i) => doc.heightOfString(valeur, { width: largeurs[i] }))
+        );
+        const hauteurBande = IDENTITY_LABEL_SIZE + 3 + hauteurValeurs;
+
+        const bandeY = headerBottom + 14;
+        doc
+          .roundedRect(PAGE_MARGIN, bandeY, contentWidth, hauteurBande + IDENTITY_PAD_Y * 2, 4)
+          .fill(IDENTITY_BG);
+
+        const y = bandeY + IDENTITY_PAD_Y;
+        let x = PAGE_MARGIN + IDENTITY_PAD_X;
 
         lignes.forEach(([label, valeur], i) => {
           doc
@@ -283,22 +302,12 @@ export function buildPeriodsPdf(
           doc
             .fontSize(IDENTITY_VALUE_SIZE)
             .font("Helvetica")
-            .fillColor("#1c1917")
+            .fillColor("#ffffff")
             .text(valeur, x, y + IDENTITY_LABEL_SIZE + 3, { width: largeurs[i] });
-          bas = Math.max(bas, doc.y);
           x += largeurs[i] + IDENTITY_GAP;
         });
 
-        // Filet de séparation : sans lui, le bandeau et les intitulés de
-        // colonnes du tableau se confondent, l'un et l'autre étant en petites
-        // capitales grises sur toute la largeur.
-        headerBottom = bas + 8;
-        doc
-          .moveTo(PAGE_MARGIN, headerBottom)
-          .lineTo(doc.page.width - PAGE_MARGIN, headerBottom)
-          .lineWidth(0.8)
-          .strokeColor("#e7e5e4")
-          .stroke();
+        headerBottom = bandeY + hauteurBande + IDENTITY_PAD_Y * 2;
       }
 
       doc.fillColor("black");
@@ -329,15 +338,27 @@ export function buildPeriodsPdf(
     const drawTableHeader = () => {
       let x = PAGE_MARGIN;
       const y = doc.y;
-      doc.fontSize(9).font("Helvetica-Bold");
+      doc.fontSize(9).font("Helvetica-Bold").fillColor("black");
+
+      // Le filet se cale sur l'intitulé le PLUS HAUT, pas sur le dernier
+      // écrit : « Objectifs du plan de pilotage » tient sur deux lignes dans sa
+      // colonne, et `doc.y` laissé à la fin de la boucle valait la hauteur de
+      // « Participants », d'une seule ligne — le mot « pilotage » passait alors
+      // par-dessus le trait.
+      const hauteur = Math.max(
+        ...COLUMN_LABELS.map((label, i) => doc.heightOfString(label, { width: COLUMN_WIDTHS[i] }))
+      );
       COLUMN_LABELS.forEach((label, i) => {
         doc.text(label, x, y, { width: COLUMN_WIDTHS[i] });
         x += COLUMN_WIDTHS[i];
       });
-      doc.moveDown(0.6);
+
+      doc.y = y + hauteur;
+      doc.moveDown(0.4);
       doc
         .moveTo(PAGE_MARGIN, doc.y)
         .lineTo(PAGE_MARGIN + COLUMN_WIDTHS.reduce((a, b) => a + b, 0), doc.y)
+        .lineWidth(0.8)
         .strokeColor("#cccccc")
         .stroke();
       doc.moveDown(0.3);
