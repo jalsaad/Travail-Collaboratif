@@ -106,6 +106,12 @@ Un **500** avec « rapport.htmlindex.html is not a directory » dans le journal
 d'erreurs signale un emplacement terminé par une barre oblique : un `alias`
 vers un fichier exige `location = /statistiques`, sans barre finale.
 
+Un rapport qui reste sur son indicateur d'attente, avec « No authentication
+provided », signale que quelque chose empêche son JavaScript d'aboutir — une
+politique `Content-Security-Policy` trop stricte, par exemple : le rapport
+émet des `fetch()` à son initialisation. Le message lui-même est normal pour
+un rapport statique, il n'indique pas un refus d'accès.
+
 Un **404** vient presque toujours de l'`include` posé dans
 le mauvais bloc `server` — celui du port 80, qui ne fait que rediriger. Un
 **403** signale que le fichier n'appartient pas au groupe `www-data` :
