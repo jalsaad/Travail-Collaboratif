@@ -101,3 +101,12 @@ sudo systemctl start goaccess-rapport.service # régénérer tout de suite
 Un rapport vide signale généralement un format de journal différent de
 `COMBINED` : vérifiez `log_format` dans `/etc/nginx/nginx.conf` et ajustez
 `--log-format` dans `generer-rapport.sh`.
+
+Un **404** sur `/statistiques/` vient presque toujours de l'`include` posé dans
+le mauvais bloc `server` — celui du port 80, qui ne fait que rediriger. Un
+**403** signale que le fichier n'appartient pas au groupe `www-data` :
+
+```bash
+sudo ls -l /var/lib/goaccess/rapport.html   # attendu : root www-data, 640
+sudo tail -5 /var/log/nginx/error.log
+```

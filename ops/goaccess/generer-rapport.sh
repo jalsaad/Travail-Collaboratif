@@ -47,4 +47,7 @@ zcat -f ${JOURNAUX}* 2>/dev/null \
 # Renommé en dernier : une consultation pendant la régénération lit l'ancien
 # rapport, jamais un fichier à moitié écrit.
 mv "$TRAVAIL" "$SORTIE"
+# Le fichier naît root:root — Nginx, qui tourne en www-data, ne pourrait pas le
+# lire. Le dossier est déjà au bon groupe, mais un fichier n'en hérite pas.
+chown root:www-data "$SORTIE"
 chmod 640 "$SORTIE"
