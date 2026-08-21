@@ -77,6 +77,46 @@ Pour compter à la main :
 sudo zcat -f /var/log/nginx/access.log* | grep -c 'src=invitation '
 ```
 
+## Écarter son propre trafic
+
+Sur un serveur d'administration, une part importante des requêtes vient de
+l'équipe elle-même — ici un cinquième au premier relevé. Le script accepte une
+liste d'adresses à ne pas compter, à poser dans un supplément systemd, qui
+survivra aux mises à jour du dépôt :
+
+```bash
+sudo systemctl edit goaccess-rapport.service
+```
+
+Ajoutez :
+
+```ini
+[Service]
+Environment="EXCLUSIONS_IP=169.155.241.0-169.155.241.255"
+```
+
+Puis `sudo systemctl daemon-reload` et `sudo systemctl start goaccess-rapport.service`.
+
+**Vérifiez d'abord que le réseau est bien le vôtre** : exclure celui d'un tiers
+reviendrait à effacer de vrais visiteurs. Une adresse seule ou un intervalle
+sont acceptés, séparés par des virgules.
+
+## Lire les chiffres sans se tromper
+
+Un serveur exposé est balayé en permanence par des robots qui cherchent des
+failles — `/.env`, `/wp-admin`, `/phpmyadmin`. Au premier relevé, **35 % des
+requêtes répondaient 404**, presque toutes de cette nature. Elles sont
+délibérément conservées : le panneau « Not Found URLs » sert à repérer aussi
+bien un scan qu'un vrai lien cassé.
+
+Le total de requêtes est donc toujours supérieur à la fréquentation réelle.
+Les nombres à regarder sont ceux des pages qui existent, et la marque
+`src=invitation` pour ce qui vient d'une campagne.
+
+Les filtres de messagerie ouvrent par ailleurs les liens des emails avant de
+les délivrer : quelques visites suivent chaque envoi sans qu'aucun humain
+n'ait cliqué.
+
 ## Profondeur d'historique
 
 Le rapport est reconstruit à chaque passage depuis **tous les journaux encore

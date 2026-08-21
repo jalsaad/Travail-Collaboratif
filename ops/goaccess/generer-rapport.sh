@@ -24,10 +24,24 @@ TITRE=${TITRE:-Travail Collaboratif — fréquentation}
 # qui le distingue.
 TRAVAIL="${SORTIE%.html}.en-cours.html"
 
-# Les requêtes d'assets noieraient les pages réellement consultées : sur une
-# application Next.js, un affichage de page tire des dizaines de fichiers
-# /_next/. On les écarte avant l'analyse plutôt que de les trier après.
-FILTRE='"[A-Z]+ /(_next/|favicon|icon|apple-icon|robots\.txt|sitemap)'
+# Les requêtes d'assets noieraient les pages réellement consultées : un
+# affichage de page tire des dizaines de fichiers. Trois familles sont
+# écartées avant l'analyse plutôt que triées après.
+#
+#   — les chemins techniques : /_next/, favicon, icônes, robots.txt ;
+#   — TOUT fichier reconnaissable à son extension, où qu'il soit servi. Les
+#     logos de réseaux vivent à la racine (/segec-logo-cropped.png…) et
+#     comptaient pour un millier de « pages vues » ;
+#   — les requêtes ?_rsc=…, préchargements internes de Next.js : le navigateur
+#     les émet sans que personne n'ait rien consulté.
+FILTRE='"[A-Z]+ /(_next/|favicon|icon|apple-icon|robots\.txt|sitemap)|"[A-Z]+ [^" ]+\.(png|jpe?g|svg|gif|webp|ico|css|js|mjs|map|woff2?|ttf|eot)([?" ]|$)|[?&]_rsc='
+
+# Adresses à ne pas compter, séparées par des virgules — la vôtre en premier
+# lieu. Sur ce serveur, un cinquième des requêtes venait du réseau depuis
+# lequel la plateforme est administrée : à ce compte-là, on mesure surtout son
+# propre travail. GoAccess accepte une IP seule ou un intervalle
+# (192.168.0.1-192.168.0.255).
+EXCLUSIONS_IP=${EXCLUSIONS_IP:-}
 
 # --no-global-config ignore /etc/goaccess/goaccess.conf : le paquet de la
 # distribution y pose ses propres réglages, hors de notre contrôle et
@@ -42,6 +56,7 @@ zcat -f ${JOURNAUX}* 2>/dev/null \
   | grep -Ev "$FILTRE" \
   | goaccess - \
       --no-global-config \
+      ${EXCLUSIONS_IP:+--exclude-ip="$EXCLUSIONS_IP"} \
       --log-format=COMBINED \
       --output="$TRAVAIL" \
       --html-report-title="$TITRE" \
