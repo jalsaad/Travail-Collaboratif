@@ -102,7 +102,11 @@ Un rapport vide signale généralement un format de journal différent de
 `COMBINED` : vérifiez `log_format` dans `/etc/nginx/nginx.conf` et ajustez
 `--log-format` dans `generer-rapport.sh`.
 
-Un **404** sur `/statistiques/` vient presque toujours de l'`include` posé dans
+Un **500** avec « rapport.htmlindex.html is not a directory » dans le journal
+d'erreurs signale un emplacement terminé par une barre oblique : un `alias`
+vers un fichier exige `location = /statistiques`, sans barre finale.
+
+Un **404** vient presque toujours de l'`include` posé dans
 le mauvais bloc `server` — celui du port 80, qui ne fait que rediriger. Un
 **403** signale que le fichier n'appartient pas au groupe `www-data` :
 
