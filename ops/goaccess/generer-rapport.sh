@@ -29,12 +29,19 @@ TRAVAIL="${SORTIE%.html}.en-cours.html"
 # /_next/. On les écarte avant l'analyse plutôt que de les trier après.
 FILTRE='"[A-Z]+ /(_next/|favicon|icon|apple-icon|robots\.txt|sitemap)'
 
+# --no-global-config ignore /etc/goaccess/goaccess.conf : le paquet de la
+# distribution y pose ses propres réglages, hors de notre contrôle et
+# susceptibles de changer à une mise à jour. Un rapport statique qui hérite du
+# mode temps réel affiche un message d'attente de connexion à la place des
+# données. Seules les options ci-dessous s'appliquent désormais.
+#
 # zcat -f lit indifféremment les journaux courants et les archives .gz, ce qui
 # donne autant d'historique que logrotate en conserve.
 # shellcheck disable=SC2086
 zcat -f ${JOURNAUX}* 2>/dev/null \
   | grep -Ev "$FILTRE" \
   | goaccess - \
+      --no-global-config \
       --log-format=COMBINED \
       --output="$TRAVAIL" \
       --html-report-title="$TITRE" \
