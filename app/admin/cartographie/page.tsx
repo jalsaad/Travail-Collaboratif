@@ -2,11 +2,13 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Reveal } from "@/components/reveal";
 import { CartographieRow } from "@/components/cartographie-row";
-import { BelgiumSchoolsMap, type BassinNode } from "@/components/belgium-schools-map";
+import { BelgiumSchoolsMapLoader } from "@/components/belgium-schools-map-loader";
+import type { SchoolPoint } from "@/components/belgium-schools-map";
 import { PROSPECTION_STATUSES } from "@/lib/prospection-labels";
 import type { Prisma, ProspectionStatus } from "@prisma/client";
 
 const PAR_PAGE = 50;
+
 
 // Cartographie des écoles de la Fédération : lesquelles ont rejoint la
 // plateforme, lesquelles restent à convaincre.
@@ -67,14 +69,12 @@ export default async function AdminCartographiePage({
     prisma.fwbSchool.groupBy({ by: ["reseau"], _count: true, orderBy: { reseau: "asc" } }),
     prisma.fwbSchool.groupBy({ by: ["bassin"], _count: true, orderBy: { bassin: "asc" } }),
     prisma.fwbSchool.groupBy({ by: ["prospectionStatus"], _count: true }),
-    // Carte : jeu global (non filtré par le formulaire ci-dessous), comme les
-    // tuiles de stats — un résumé stable, la table reste seule à varier avec
-    // les filtres. Les écoles individuelles servent de troisième niveau de
-    // zoom (bassin → commune → école) ; leur nombre (quelques milliers, peu
-    // de colonnes) rend un agrégat SQL inutile, on le fait ici en mémoire.
+    // Carte : jeu global, non filtré par le formulaire ci-dessous — un résumé
+    // stable, la table reste seule à varier avec les filtres. Le regroupement
+    // des points est l'affaire de la carte, pas d'un agrégat SQL.
     prisma.fwbSchool.findMany({
-      where: { bassin: { not: null }, commune: { not: null }, latitude: { not: null }, longitude: { not: null } },
-      select: { numeroFase: true, name: true, bassin: true, commune: true, latitude: true, longitude: true },
+      where: { latitude: { not: null }, longitude: { not: null } },
+      select: { numeroFase: true, name: true, latitude: true, longitude: true },
     }),
   ]);
 
@@ -85,55 +85,17 @@ export default async function AdminCartographiePage({
   const couverture = total > 0 ? (inscritesConnues / total) * 100 : 0;
   const pages = Math.max(1, Math.ceil(totalFiltre / PAR_PAGE));
 
-  // Assemblage de la carte : bassin → commune → école, un seul passage sur
-  // les écoles chargées ci-dessus. « Hors zones » n'est pas un bassin
-  // géographique réel (cf. lib/fwb-directory.ts ZONES, qui ne lui trouve
-  // aucun équivalent numéroté) : son centroïde n'a pas de sens sur une carte
-  // et tombe par coïncidence en plein centre du pays, on l'exclut donc ici.
+  // Le regroupement par zoom est l'affaire de la carte : on lui passe les
+  // écoles telles quelles. L'agrégation à la main par bassin puis par commune,
+  // qu'imposait le dessin fixe précédent, n'a plus lieu d'être — et elle
+  // figeait des paliers que le zoom continu rend arbitraires.
   const fasesInscritesSet = new Set(fasesInscrites);
-  type Accumulateur = { sumLat: number; sumLng: number; recensees: number; inscrites: number };
-  const bassinsAcc = new Map<string, Accumulateur & { communes: Map<string, Accumulateur & { schools: typeof carteEcoles }> }>();
-  for (const ecole of carteEcoles) {
-    const bassin = ecole.bassin!;
-    if (bassin === "Hors zones") continue;
-    const commune = ecole.commune!;
-    const inscrite = fasesInscritesSet.has(ecole.numeroFase) ? 1 : 0;
-
-    if (!bassinsAcc.has(bassin)) bassinsAcc.set(bassin, { sumLat: 0, sumLng: 0, recensees: 0, inscrites: 0, communes: new Map() });
-    const b = bassinsAcc.get(bassin)!;
-    b.sumLat += ecole.latitude!;
-    b.sumLng += ecole.longitude!;
-    b.recensees += 1;
-    b.inscrites += inscrite;
-
-    if (!b.communes.has(commune)) b.communes.set(commune, { sumLat: 0, sumLng: 0, recensees: 0, inscrites: 0, schools: [] });
-    const c = b.communes.get(commune)!;
-    c.sumLat += ecole.latitude!;
-    c.sumLng += ecole.longitude!;
-    c.recensees += 1;
-    c.inscrites += inscrite;
-    c.schools.push(ecole);
-  }
-  const carteBassins: BassinNode[] = [...bassinsAcc.entries()].map(([bassin, b]) => ({
-    bassin,
-    lat: b.sumLat / b.recensees,
-    lng: b.sumLng / b.recensees,
-    recensees: b.recensees,
-    inscrites: b.inscrites,
-    communes: [...b.communes.entries()].map(([commune, c]) => ({
-      commune,
-      lat: c.sumLat / c.recensees,
-      lng: c.sumLng / c.recensees,
-      recensees: c.recensees,
-      inscrites: c.inscrites,
-      schools: c.schools.map((ecole) => ({
-        numeroFase: ecole.numeroFase,
-        name: ecole.name,
-        lat: ecole.latitude!,
-        lng: ecole.longitude!,
-        inscrite: fasesInscritesSet.has(ecole.numeroFase),
-      })),
-    })),
+  const pointsCarte: SchoolPoint[] = carteEcoles.map((ecole) => ({
+    numeroFase: ecole.numeroFase,
+    name: ecole.name,
+    lat: ecole.latitude!,
+    lng: ecole.longitude!,
+    inscrite: fasesInscritesSet.has(ecole.numeroFase),
   }));
 
   const lien = (modifs: Record<string, string>) => {
@@ -182,7 +144,7 @@ export default async function AdminCartographiePage({
           </svg>
         </summary>
         <Reveal delay={0} className="mt-3">
-          <BelgiumSchoolsMap bassins={carteBassins} />
+          <BelgiumSchoolsMapLoader schools={pointsCarte} />
         </Reveal>
       </details>
 
