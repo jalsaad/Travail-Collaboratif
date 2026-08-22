@@ -840,3 +840,25 @@ model FwbSchool {
   @@index([prospectionStatus])
   @@map("fwb_schools")
 }
+
+/// Motif pour lequel un formulaire public a été refusé — jamais ce qui a été
+/// saisi. Une inscription abandonnée ne laisse aucune trace ailleurs : le
+/// serveur renvoie le formulaire avec un message, et l'affaire s'arrête là.
+/// Sans ce relevé, on ne peut pas distinguer une direction bloquée par une
+/// validation d'une direction qui a simplement renoncé.
+///
+/// Aucune donnée personnelle n'y figure : ni valeur, ni email, ni adresse IP.
+/// « Un compte existe déjà avec cet email » dit qu'un doublon a été rencontré,
+/// pas lequel.
+model FormRejection {
+  id        String   @id @default(cuid())
+  /// Formulaire concerné : "creer-ecole", "rejoindre-ecole"…
+  form      String
+  /// Champ mis en cause quand la validation le désigne, sinon null.
+  field     String?
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([form, createdAt])
+  @@map("form_rejections")
+}

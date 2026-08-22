@@ -19,9 +19,20 @@ import {
   reseauPlateforme,
 } from "@/lib/fwb-directory";
 import { canonicalLocality } from "@/lib/belgian-postal-codes";
+import { FORM_CREATE_SCHOOL, logFormRejection, logZodRejection } from "@/lib/form-rejections";
 import { normalizeWebsite, InvalidWebsiteError } from "@/lib/website-url";
 
 export type CreateSchoolState = { error?: string };
+
+/// Consigne le motif puis rend le message destiné à la personne. Les deux
+/// diffèrent parfois : le relevé se passe du « Connectez-vous plutôt » qui
+/// n'apprend rien à qui l'analyse.
+async function refus(message: string, champ?: string): Promise<string> {
+  await logFormRejection(FORM_CREATE_SCHOOL, message, champ);
+  return message === "Un compte existe déjà avec cet email."
+    ? "Un compte existe déjà avec cet email. Connectez-vous plutôt."
+    : message;
+}
 
 const schoolSchema = z.object({
   name: z.string().min(1, "Nom de l'école requis"),
@@ -109,13 +120,13 @@ export async function createSchool(
     country: formData.get("country") ?? "",
   });
   if (!parsedSchool.success) {
-    return { error: parsedSchool.error.issues[0]?.message ?? "Formulaire invalide." };
+    return { error: await logZodRejection(FORM_CREATE_SCHOOL, parsedSchool.error) };
   }
 
   const niveaux = niveauSchema.array().safeParse(formData.getAll("niveaux"));
   const typesEnseignement = typeEnseignementSchema.array().safeParse(formData.getAll("typesEnseignement"));
   if (!niveaux.success || !typesEnseignement.success) {
-    return { error: "Niveaux ou type d'enseignement invalide." };
+    return { error: await refus("Niveaux ou type d'enseignement invalide.", "niveaux") };
   }
 
   const parsedFounderRole = founderRoleSchema.safeParse({
@@ -123,7 +134,7 @@ export async function createSchool(
     fonctionAutre: formData.get("fonctionAutre") || undefined,
   });
   if (!parsedFounderRole.success) {
-    return { error: parsedFounderRole.error.issues[0]?.message ?? "Formulaire invalide." };
+    return { error: await logZodRejection(FORM_CREATE_SCHOOL, parsedFounderRole.error) };
   }
   const role = parsedFounderRole.data.fonction === "Autre" ? "REFERENT_NUMERIQUE" : "DIRECTION";
 
@@ -136,7 +147,7 @@ export async function createSchool(
     try {
       validateLogoFile(logoFile as File);
     } catch (error) {
-      if (error instanceof InvalidLogoError) return { error: error.message };
+      if (error instanceof InvalidLogoError) return { error: await refus(error.message, "logoFile") };
       throw error;
     }
   }
@@ -152,13 +163,13 @@ export async function createSchool(
     passwordConfirmation: formData.get("passwordConfirmation"),
   });
   if (!parsedFounder.success) {
-    return { error: parsedFounder.error.issues[0]?.message ?? "Formulaire invalide." };
+    return { error: await logZodRejection(FORM_CREATE_SCHOOL, parsedFounder.error) };
   }
 
   const email = parsedFounder.data.email.trim();
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    return { error: "Un compte existe déjà avec cet email. Connectez-vous plutôt." };
+    return { error: await refus("Un compte existe déjà avec cet email.", "email") };
   }
 
   const founderEmail = email;
@@ -191,9 +202,9 @@ export async function createSchool(
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const target = (error.meta?.target as string[] | undefined)?.join(",") ?? "";
       if (target.includes("matricule")) {
-        return { error: "Ce numéro de matricule est déjà utilisé par un autre compte." };
+        return { error: await refus("Ce numéro de matricule est déjà utilisé.", "matricule") };
       }
-      return { error: "Un compte existe déjà avec cet email. Connectez-vous plutôt." };
+      return { error: await refus("Un compte existe déjà avec cet email.", "email") };
     }
     throw error;
   }
@@ -243,7 +254,7 @@ export async function createSchool(
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return { error: "Ce numéro FASE est déjà utilisé par une autre école." };
+      return { error: await refus("Ce numéro FASE est déjà utilisé.", "numeroFase") };
     }
     throw error;
   }

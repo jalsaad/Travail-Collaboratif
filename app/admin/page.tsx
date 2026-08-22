@@ -3,6 +3,7 @@ import { computePeriodStatus } from "@/lib/period-status";
 import { roleLabel } from "@/lib/role-labels";
 import { Reveal } from "@/components/reveal";
 import { SatisfactionChart } from "@/components/satisfaction-chart";
+import { FormRejectionsPanel } from "@/components/form-rejections-panel";
 import { AdminStatTile } from "@/components/admin-stat-tile";
 import { AnimatedNumber } from "@/components/animated-number";
 import { AcademicCapIcon, UsersIcon, CalendarIcon, CheckBadgeIcon } from "@/components/admin-icons";
@@ -157,6 +158,8 @@ export default async function AdminDashboardPage() {
           </table>
         </Reveal>
       </div>
+
+      <FormRejectionsPanel />
     </div>
   );
 }

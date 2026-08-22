@@ -13,6 +13,14 @@ import { resolveOrCreateDiscipline } from "@/lib/discipline-form";
 import { recomputeUserQuotas } from "@/lib/quota-engine";
 import { notifySchoolDirectionOfNewMember } from "@/lib/school-notifications";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
+import { FORM_JOIN_SCHOOL, logFormRejection } from "@/lib/form-rejections";
+
+/// Consigne le motif du refus — jamais le code saisi ni l'identité — puis rend
+/// le message affiché à la personne (cf. lib/form-rejections.ts).
+async function consigner(message: string, champ: string | null): Promise<string> {
+  await logFormRejection(FORM_JOIN_SCHOOL, message, champ);
+  return message;
+}
 
 export type JoinSchoolState = { error?: string };
 
@@ -26,7 +34,7 @@ export async function joinSchoolWithCode(
   if (!session) throw new Error("Non authentifié.");
 
   const parsed = codeSchema.safeParse({ code: formData.get("code") });
-  if (!parsed.success) return { error: "Code requis." };
+  if (!parsed.success) return { error: await consigner("Code requis.", "code") };
 
   const parsedLevels = parseLevelHoursFromFormData(formData);
   if (!parsedLevels.ok) return { error: parsedLevels.error };
@@ -34,7 +42,7 @@ export async function joinSchoolWithCode(
   const normalizedCode = parsed.data.code.trim().toUpperCase();
   const joinCode = await prisma.joinCode.findUnique({ where: { code: normalizedCode } });
   if (!joinCode || !joinCode.active) {
-    return { error: "Code de rattachement invalide ou expiré." };
+    return { error: await consigner("Code de rattachement invalide ou expiré.", "code") };
   }
 
   // Contrainte @@unique([userId, schoolId]) : au plus UNE Membership pour ce
@@ -45,7 +53,7 @@ export async function joinSchoolWithCode(
   });
 
   if (existing?.status === "ACTIVE") {
-    return { error: "Vous êtes déjà membre de cette école." };
+    return { error: await consigner("Vous êtes déjà membre de cette école.", null) };
   }
 
   let membershipId: string;
