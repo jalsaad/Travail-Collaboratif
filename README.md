@@ -235,6 +235,27 @@ pas des équivalences et méritent d'être connues : l'annuaire dit « Libre con
 préciser la confession (le SeGEC est proposé, à corriger au besoin), et ni COCOF ni « organisme
 public autre » n'ont d'équivalent dans la liste de la plateforme.
 
+### Reporter la campagne dans la cartographie
+
+La campagne travaille sur des fichiers CSV, la cartographie sur la base : sans pont, une
+école contactée resterait indéfiniment « à contacter » à l'écran.
+
+```bash
+npm run synchro-prospection              # analyse, n'écrit rien
+npm run synchro-prospection -- --ecrire  # inscrit le FASE et reporte le suivi
+```
+
+Le fichier de prospection ne porte pas de numéro FASE, seul identifiant commun avec
+l'annuaire ; le script le retrouve par le nom et le code postal — 478 des 491 écoles sans
+ambiguïté — et l'inscrit dans une colonne `numero_fase`. Il reporte ensuite dans la base
+les écoles que **le journal des envois** atteste avoir été servies, avec leur date réelle
+de premier contact. Le fichier ne fait jamais foi : une école sans envoi journalisé n'est
+pas marquée.
+
+À exécuter une fois. Les campagnes suivantes reportent le suivi elles-mêmes, à chaque
+envoi réussi : « à contacter » devient « contactée », puis « relancée » au contact
+suivant. « Refus » est un jugement humain qu'un envoi automatique n'efface jamais.
+
 ### Suivre la fréquentation
 
 Les journaux Nginx sont analysés par GoAccess, sans traceur ni cookie : rien n'est ajouté

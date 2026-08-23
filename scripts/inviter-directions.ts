@@ -25,9 +25,21 @@ import {
 } from "../lib/invitation-directions";
 import { echapperCsv, lireCsv } from "../lib/prospection-csv";
 import { escapeHtml } from "../lib/email-template";
+import { marquerContactee } from "../lib/prospection-suivi";
 import { chargerEnvLocal } from "../lib/env-local";
 
 const RACINE = path.resolve(__dirname, "..");
+
+/// Client Prisma créé à la demande, jamais à l'import : une simulation ou un
+/// aperçu n'ont aucune raison d'ouvrir une connexion à la base.
+let prismaClient: import("@prisma/client").PrismaClient | null = null;
+function basse(): import("@prisma/client").PrismaClient {
+  if (!prismaClient) {
+    const { PrismaClient } = require("@prisma/client") as typeof import("@prisma/client");
+    prismaClient = new PrismaClient();
+  }
+  return prismaClient;
+}
 const APERCU_DEFAUT = path.join(RACINE, "data/apercu-invitation.html");
 
 /// Deux campagnes distinctes : les directions d'école, et les pouvoirs
@@ -324,7 +336,16 @@ async function main() {
         statut: "envoye",
         detail: "",
       });
-      console.log(`  ✓ ${email} — ${r[profil.nom]}`);
+
+      // La cartographie de l'espace plateforme suit les mêmes écoles : sans ce
+      // report, une école contactée y resterait indéfiniment « à contacter ».
+      // Le rapprochement passe par le numéro FASE, qu'inscrit dans le fichier
+      // scripts/synchroniser-prospection.ts — une ligne qui n'en a pas est
+      // simplement envoyée sans être suivie, jamais bloquée.
+      const numeroFase = (r.numero_fase ?? "").trim();
+      if (numeroFase) await marquerContactee(basse(), numeroFase, email);
+
+      console.log(`  ✓ ${email} — ${r[profil.nom]}${numeroFase ? "" : "  (hors annuaire)"}`);
     } catch (erreur) {
       echecs++;
       const detail = erreur instanceof Error ? erreur.message : String(erreur);
@@ -343,6 +364,7 @@ async function main() {
 
   transport.close();
   console.log(`\nTerminé : ${envoyes} envoyée(s), ${echecs} en échec.`);
+  await prismaClient?.$disconnect();
   console.log(`Journal : ${path.relative(RACINE, options.journal)}`);
 }
 

@@ -18,7 +18,8 @@
     "export-prospection": "ts-node -P tsconfig.scripts.json scripts/exporter-prospection.ts",
     "purger-test": "ts-node -P tsconfig.scripts.json scripts/purger-comptes-test.ts",
     "cartographie": "ts-node -P tsconfig.scripts.json scripts/importer-cartographie.ts",
-    "verifier-adresses": "ts-node -P tsconfig.scripts.json scripts/verifier-adresses.ts"
+    "verifier-adresses": "ts-node -P tsconfig.scripts.json scripts/verifier-adresses.ts",
+    "synchro-prospection": "ts-node -P tsconfig.scripts.json scripts/synchroniser-prospection.ts"
   },
   "ts-node": {
     "compilerOptions": {
