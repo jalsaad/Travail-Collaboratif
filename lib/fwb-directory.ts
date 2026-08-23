@@ -106,3 +106,31 @@ const ZONES: Record<string, string> = {
 export function regionPlateforme(bassin: string | null): string | null {
   return bassin ? (ZONES[bassin] ?? null) : null;
 }
+
+/// Ramène un texte à sa forme comparable : sans accents, en minuscules, la
+/// ponctuation réduite à des espaces.
+///
+/// L'annuaire mélange les orthographes — la commune s'écrit « Châtelet », la
+/// localité « CHATELET », et les noms d'écoles tantôt avec accents tantôt
+/// sans. Une recherche par `ILIKE` ne trouvait donc jamais l'ensemble :
+/// « athénée » rendait 33 écoles, « athenee » en rendait 112. Aucune des deux
+/// saisies n'était fausse.
+export function normaliserRecherche(valeur: string): string {
+  return valeur
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/// Clé de recherche d'une école : tout ce sur quoi on peut vouloir la trouver,
+/// normalisé et concaténé. Calculée à l'import et rangée en colonne — la
+/// recherche redevient une simple comparaison de sous-chaîne, sans extension
+/// PostgreSQL ni requête brute.
+export function cleRecherche(parties: (string | null | undefined)[]): string {
+  return parties
+    .filter((p): p is string => !!p && p.trim() !== "")
+    .map(normaliserRecherche)
+    .join(" ");
+}

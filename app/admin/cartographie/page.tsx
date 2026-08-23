@@ -5,6 +5,7 @@ import { CartographieRow } from "@/components/cartographie-row";
 import { BelgiumSchoolsMapLoader } from "@/components/belgium-schools-map-loader";
 import type { SchoolPoint } from "@/components/belgium-schools-map";
 import { PROSPECTION_STATUSES } from "@/lib/prospection-labels";
+import { normaliserRecherche } from "@/lib/fwb-directory";
 import type { Prisma, ProspectionStatus } from "@prisma/client";
 
 const PAR_PAGE = 50;
@@ -39,14 +40,15 @@ export default async function AdminCartographiePage({
   const fasesInscrites = [...inscritesParFase.keys()];
 
   const where: Prisma.FwbSchoolWhereInput = {
+    // La recherche porte sur la clé normalisée, pas sur les colonnes brutes :
+    // l'annuaire écrit « Châtelet », « CHATELET » et « ATHENEE » sans
+    // cohérence, et un ILIKE ne trouvait jamais l'ensemble — « athénée »
+    // rendait 33 écoles là où « athenee » en rendait 112.
     ...(recherche
       ? {
           OR: [
-            { name: { contains: recherche, mode: "insensitive" } },
-            { commune: { contains: recherche, mode: "insensitive" } },
-            { locality: { contains: recherche, mode: "insensitive" } },
-            { numeroFase: { startsWith: recherche } },
-            { postalCode: { startsWith: recherche } },
+            { searchKey: { contains: normaliserRecherche(recherche) } },
+            { numeroFase: { startsWith: recherche.trim() } },
           ],
         }
       : {}),

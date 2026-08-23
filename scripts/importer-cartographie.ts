@@ -23,7 +23,7 @@ import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { chargerEnvLocal } from "../lib/env-local";
 import { lireCsv } from "../lib/prospection-csv";
-import { decomposerTypes, normaliserFase } from "../lib/fwb-directory";
+import { cleRecherche, decomposerTypes, normaliserFase } from "../lib/fwb-directory";
 
 const RACINE = path.resolve(__dirname, "..");
 chargerEnvLocal(RACINE);
@@ -191,6 +191,9 @@ async function main() {
       latitude: e.latitude,
       longitude: e.longitude,
       implantationCount: e.implantationCount,
+      // Recalculée à chaque import : elle dérive des colonnes ci-dessus et ne
+      // doit jamais s'en écarter.
+      searchKey: cleRecherche([e.name, e.commune, e.locality, e.postalCode]),
       poFase: e.poFase,
       poName: e.poName,
       poBce: e.poBce,

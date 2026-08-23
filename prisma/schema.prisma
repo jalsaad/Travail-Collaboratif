@@ -812,6 +812,9 @@ model FwbSchool {
   latitude          Float?
   longitude         Float?
   implantationCount Int             @default(1)
+  /// Nom, commune, localité et code postal réunis, sans accents ni casse
+  /// (cf. lib/fwb-directory.ts::cleRecherche). Recalculée à chaque import.
+  searchKey         String          @default("")
 
   /// Pouvoir organisateur — l'employeur juridique (cf. scripts/pouvoirs-organisateurs.ts).
   poFase       String?
