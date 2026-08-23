@@ -6,6 +6,17 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 // dans le viewport au défilement — jamais avant, jamais après un premier
 // passage (l'observateur se déconnecte une fois déclenché, pas de
 // clignotement si l'utilisateur remonte/redescend la page).
+//
+// Le seuil est en pixels, pas en pourcentage, et c'est essentiel : un seuil de
+// 15 % rapporte la surface VISIBLE à la surface TOTALE de l'élément. Un
+// tableau plus haut que l'écran ne peut alors jamais l'atteindre — 15 % de
+// 4 000 pixels en font 600, davantage que ce qu'affiche un écran d'ordinateur
+// portable une fois retirées les barres du navigateur. Le contenu restait donc
+// invisible pour toujours, sans la moindre erreur : il était bien dans la page,
+// à `opacity: 0`.
+//
+// C'est ainsi qu'une liste de cinquante écoles disparaissait là où une liste de
+// onze s'affichait normalement.
 export function Reveal({
   children,
   delay = 0,
@@ -29,7 +40,10 @@ export function Reveal({
           observer.disconnect();
         }
       },
-      { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
+      // Seuil à zéro : le moindre pixel visible suffit. La marge négative en bas
+      // retarde le déclenchement de quarante pixels, de quoi éviter qu'un
+      // élément affleurant le bord ne s'anime avant d'être vraiment lu.
+      { threshold: 0, rootMargin: "0px 0px -40px 0px" }
     );
     observer.observe(el);
     return () => observer.disconnect();
