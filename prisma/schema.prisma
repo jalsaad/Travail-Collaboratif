@@ -269,6 +269,7 @@ model School {
   memberships         Membership[]
   invitations         Invitation[]
   joinCodes           JoinCode[]
+  peerReferrals       PeerReferral[]
   exportLogs          ExportLog[]
   auditLogs           AuditLog[]
   announcementTargets AnnouncementTarget[]
@@ -338,6 +339,7 @@ model Membership {
   authoredInvitation Invitation[]           @relation("InvitationAcceptedAs")
   periodParticipants PeriodParticipant[]
   levelHours         MembershipLevelHours[]
+  sentPeerReferrals  PeerReferral[]
 
   @@unique([userId, schoolId])
   @@map("memberships")
@@ -469,6 +471,41 @@ model Invitation {
   @@map("invitations")
 }
 
+/// Lien de parrainage : un enseignant déjà membre invite un·e collègue sans
+/// compte à rejoindre SON école, en un clic — chemin complémentaire au
+/// JoinCode (qui reste réservé à Admin/Direction pour une diffusion
+/// collective) quand l'inscription accompagne une collaboration réelle entre
+/// deux personnes, sans devoir passer par un code générique demandé à un
+/// tiers.
+///
+/// Même invariant que ParticipationToken/PasswordResetToken : seul le hash du
+/// jeton vit en base, le jeton brut n'existe que dans le lien/QR transmis en
+/// main propre et n'est jamais réaffichable après coup.
+///
+/// Quand periodId est renseigné, le lien est rattaché à UNE période précise :
+/// créer son compte via ce lien vaut confirmation immédiate de la
+/// participation à cette période (cf. joinViaPeerReferral), pas seulement
+/// rattachement à l'école.
+model PeerReferral {
+  id                     String               @id @default(cuid())
+  schoolId               String
+  school                 School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  referredByMembershipId String
+  referredByMembership   Membership           @relation(fields: [referredByMembershipId], references: [id], onDelete: Cascade)
+  periodId               String?
+  period                 CollaborativePeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  /// Mémo libre pour le parrain seul (ex: "Sophie D.") — jamais montré à la
+  /// personne qui utilise le lien, jamais utilisé pour valider quoi que ce soit.
+  invitedName            String?
+  tokenHash              String               @unique
+  expiresAt              DateTime
+  usedAt                 DateTime?
+  createdAt              DateTime             @default(now())
+
+  @@index([schoolId])
+  @@map("peer_referrals")
+}
+
 // ---------------------------------------------------------------------------
 // TRAVAIL COLLABORATIF
 // ---------------------------------------------------------------------------
@@ -505,8 +542,9 @@ model CollaborativePeriod {
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
-  participants PeriodParticipant[]
-  attachments  Attachment[]
+  participants  PeriodParticipant[]
+  attachments   Attachment[]
+  peerReferrals PeerReferral[]
 
   /// Personnes présentes qui ne relèvent pas du travail collaboratif
   /// enseignant — éducateur·rice, personnel ouvrier, direction, intervenant

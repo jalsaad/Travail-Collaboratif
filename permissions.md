@@ -14,6 +14,7 @@ Ces règles s'appliquent en couche service (jamais seulement côté UI), sur bas
 | Voir le détail des périodes d'un·e autre enseignant·e | ❌ | ✅ | ✅ |
 | Exporter le relevé collectif de l'école (personne, lot de personnes, ou totalité — filtrable par période chronologique) | ❌ | ✅ | ✅ |
 | Générer/régénérer le code de rattachement | ❌ | ✅ | ✅ |
+| Générer un lien/QR de parrainage pour un·e collègue | ✅ | ✅ | ✅ |
 | Inviter un membre, choisir son rôle | ❌ | ✅ | ✅ |
 | Promouvoir/rétrograder Enseignant ↔ Référent numérique | ❌ | ✅ | ✅ |
 | Retirer un membre (= « supprimer son compte » côté école) | ❌ | ✅ | ✅ |
@@ -112,6 +113,16 @@ async function assertCanRemoveMember(actorUserId: string, targetUserId: string, 
   // Application : status = "REMOVED", removedAt = now(), + AuditLog (action: "REMOVE_MEMBER")
 }
 ```
+
+## Parrainage entre pairs (`PeerReferral`)
+
+Chemin d'auto-inscription complémentaire au code de rattachement (`JoinCode`), ouvert à **n'importe quel membre actif** (pas seulement Admin/Direction) — `app/(app)/inviter/actions.ts::createPeerReferral` ne vérifie qu'une `Membership` `ACTIVE` sur l'école active, pas de rôle de gestion. Objectif : un enseignant qui a réellement collaboré avec un·e collègue sans compte peut l'inviter directement, sans dépendre d'un code générique demandé à un tiers.
+
+- Même invariant de sécurité que `ParticipationToken`/`PasswordResetToken` : seul `tokenHash` (SHA-256) vit en base, le jeton brut ne voyage que dans le lien/QR transmis en main propre par l'enseignant lui-même, jamais par email envoyé automatiquement par la plateforme. Conséquence : un lien non copié immédiatement après génération est perdu (pas de réaffichage possible depuis la base), il faut en régénérer un.
+- `periodId` optionnel : quand il est renseigné, créer son compte via ce lien (`app/(auth)/rejoindre/parrainage/[token]/actions.ts::joinViaPeerReferral`) crée aussi, dans la même transaction, le `PeriodParticipant` correspondant avec `status: "CONFIRMED"` — l'inscription vaut confirmation immédiate de la participation, pas une simple adhésion à l'école suivie d'une invitation à valider plus tard.
+- Le rôle attribué est toujours `ENSEIGNANT` — ni le parrainage ni le code de rattachement n'attribuent jamais `DIRECTION`/`REFERENT_NUMERIQUE` (cohérent avec `updateMemberRole`, qui l'exclut aussi en promotion).
+- `createPeerReferral` revérifie que l'auteur de la demande est réellement un `PeriodParticipant` de la période choisie à l'école active — défense contre un `periodId` d'une autre école ou d'une période qui ne le concerne pas.
+- Le `JoinCode` généré par Admin/Direction reste disponible en parallèle (diffusion collective, ex: affiche en salle des profs) — le parrainage ne le remplace pas, il ajoute un chemin individuel pour le cas d'une collaboration entre deux personnes précises.
 
 ## Personnalisation de l'espace école
 

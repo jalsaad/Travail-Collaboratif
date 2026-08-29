@@ -14,6 +14,7 @@ import { computeMatricule, MATRICULE_MANUAL_PATTERN } from "@/lib/matricule";
 import { saveSchoolLogo, validateLogoFile, InvalidLogoError } from "@/lib/school-logo";
 import {
   normaliserFase,
+  normaliserRecherche,
   regionPlateforme,
   reseauIncertain,
   reseauPlateforme,
@@ -355,4 +356,32 @@ export async function lookupFwbSchool(numeroFaseSaisi: string): Promise<FwbLooku
     implantationCount: ecole.implantationCount,
     dejaInscrite: dejaInscrite !== null,
   };
+}
+
+export type FwbSchoolSuggestion = {
+  numeroFase: string;
+  name: string;
+  locality: string | null;
+  postalCode: string | null;
+};
+
+/// Recherche par nom dans l'annuaire de la FWB — le numéro FASE n'est
+/// généralement pas connu des enseignants, contrairement au nom de leur
+/// école. Utilisée pour préremplir `numeroFase` via un choix dans une liste
+/// plutôt qu'une saisie à l'aveugle (cf. components/school-name-search.tsx),
+/// avant de retomber sur lookupFwbSchool pour le préremplissage complet.
+///
+/// Même table, même recherche par sous-chaîne sur `searchKey` déjà normalisée
+/// que app/admin/cartographie/page.tsx — pas de nouvelle extension Postgres.
+export async function searchFwbSchoolsByName(query: string): Promise<FwbSchoolSuggestion[]> {
+  const terme = normaliserRecherche(query);
+  if (terme.length < 2) return [];
+
+  const ecoles = await prisma.fwbSchool.findMany({
+    where: { searchKey: { contains: terme } },
+    select: { numeroFase: true, name: true, locality: true, postalCode: true },
+    orderBy: { name: "asc" },
+    take: 10,
+  });
+  return ecoles;
 }

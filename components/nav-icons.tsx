@@ -77,6 +77,16 @@ export function IconAssistance({ className }: IconProps) {
   );
 }
 
+export function IconInviter({ className }: IconProps) {
+  return (
+    <svg {...base(className)}>
+      <circle cx="9" cy="8.5" r="3" />
+      <path d="M3.5 20v-1.5c0-2.5 2.5-4 5.5-4s5.5 1.5 5.5 4V20" />
+      <path d="M17 8h4M19 6v4" />
+    </svg>
+  );
+}
+
 export function IconPlateforme({ className }: IconProps) {
   return (
     <svg {...base(className)}>

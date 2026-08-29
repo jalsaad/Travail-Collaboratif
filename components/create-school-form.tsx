@@ -14,6 +14,7 @@ import { SchoolRegionField } from "@/components/school-region-field";
 import { NIVEAU_OPTIONS, TYPE_ENSEIGNEMENT_OPTIONS } from "@/lib/school-classification-options";
 import { AddressFields } from "@/components/address-fields";
 import { PasswordInput } from "@/components/password-input";
+import { SchoolNameSearch } from "@/components/school-name-search";
 
 const initialState: CreateSchoolState = {};
 
@@ -48,8 +49,8 @@ export function CreateSchoolForm() {
   const bascule = (liste: string[], valeur: string) =>
     liste.includes(valeur) ? liste.filter((v) => v !== valeur) : [...liste, valeur];
 
-  function chercher() {
-    const saisi = numeroFase.trim();
+  function chercherParFase(fase: string) {
+    const saisi = fase.trim();
     if (saisi === "") return;
     demarrerRecherche(async () => {
       const trouve = await lookupFwbSchool(saisi);
@@ -71,36 +72,54 @@ export function CreateSchoolForm() {
     });
   }
 
+  function chercher() {
+    chercherParFase(numeroFase);
+  }
+
+  // Choix d'une suggestion de l'annuaire par son nom : le numéro FASE, que
+  // l'enseignant ne connaît généralement pas, est résolu à sa place plutôt
+  // que de le lui demander en premier.
+  function choisirEcole(numeroFaseChoisi: string) {
+    setNumeroFase(numeroFaseChoisi);
+    chercherParFase(numeroFaseChoisi);
+  }
+
   return (
     <form action={formAction} className="space-y-4" encType="multipart/form-data">
-      {/* En tête du formulaire : un numéro suffit à remplir tout le reste.
-          Le saisir plus bas aurait laissé la direction retaper des données
-          que la Fédération publie déjà. */}
+      {/* En tête du formulaire : trouver son école par son nom suffit à
+          remplir tout le reste. Le numéro FASE, que les enseignants ne
+          connaissent généralement pas par cœur, reste disponible en repli
+          pour qui le connaît déjà ou dont l'école ne ressort pas de la
+          recherche. */}
       <div className="rounded-lg border border-brand-100 bg-brand-50/60 p-4 dark:border-brand-900 dark:bg-brand-950/40">
-        <label htmlFor="numeroFase" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-          Numéro FASE
-        </label>
-        <div className="mt-1.5 flex gap-2">
-          <input
-            id="numeroFase"
-            name="numeroFase"
-            required
-            inputMode="numeric"
-            value={numeroFase}
-            onChange={(e) => setNumeroFase(e.target.value)}
-            onBlur={chercher}
-            placeholder="ex: 1006"
-            className="input-field flex-1"
-          />
-          <button
-            type="button"
-            onClick={chercher}
-            disabled={recherche || numeroFase.trim() === ""}
-            className="shrink-0 rounded-lg border border-brand-300 px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-100 disabled:opacity-50 dark:border-brand-700 dark:text-brand-300 dark:hover:bg-brand-900"
-          >
-            {recherche ? "Recherche…" : "Rechercher"}
-          </button>
-        </div>
+        <SchoolNameSearch onSelect={choisirEcole} />
+
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs font-medium text-brand-700 dark:text-brand-400">
+            Vous connaissez déjà le numéro FASE ?
+          </summary>
+          <div className="mt-2 flex gap-2">
+            <input
+              id="numeroFase"
+              name="numeroFase"
+              required
+              inputMode="numeric"
+              value={numeroFase}
+              onChange={(e) => setNumeroFase(e.target.value)}
+              onBlur={chercher}
+              placeholder="ex: 1006"
+              className="input-field flex-1"
+            />
+            <button
+              type="button"
+              onClick={chercher}
+              disabled={recherche || numeroFase.trim() === ""}
+              className="shrink-0 rounded-lg border border-brand-300 px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-100 disabled:opacity-50 dark:border-brand-700 dark:text-brand-300 dark:hover:bg-brand-900"
+            >
+              {recherche ? "Recherche…" : "Rechercher"}
+            </button>
+          </div>
+        </details>
 
         {resultat?.found && !resultat.dejaInscrite && (
           <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">
@@ -113,8 +132,9 @@ export function CreateSchoolForm() {
         )}
         {resultat?.found && resultat.dejaInscrite && (
           <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
-            <strong>{resultat.name}</strong> est déjà inscrite sur la plateforme. Demandez son code de
-            rattachement à sa direction plutôt que de créer un second espace.
+            <strong>{resultat.name}</strong> est déjà inscrite sur la plateforme. Demandez un lien de
+            parrainage ou le code de rattachement à un·e collègue déjà inscrit·e plutôt que de créer un
+            second espace.
           </p>
         )}
         {resultat && !resultat.found && (

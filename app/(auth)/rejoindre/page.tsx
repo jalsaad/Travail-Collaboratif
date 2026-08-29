@@ -38,8 +38,8 @@ export default async function RejoindrePage({
             </Link>
           </p>
           <p className="mt-2 text-center text-sm text-stone-500 dark:text-stone-400">
-            Pas de code ? Votre école n&apos;est peut-être pas encore inscrite, consultez votre
-            direction !
+            Pas de code ? Demandez plutôt un lien de parrainage à un·e collègue déjà inscrit·e, ou
+            consultez votre direction si votre école n&apos;est pas encore sur la plateforme.
           </p>
         </Reveal>
       </div>
