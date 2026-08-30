@@ -6,10 +6,12 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { logAudit, AuditAction } from "@/lib/audit-log";
-import { getBaseUrl } from "@/lib/mailer";
+import { getBaseUrl, sendPeerReferralEmail } from "@/lib/mailer";
+import { civilityAndLastName } from "@/lib/civility";
+import { periodTypeLabel } from "@/lib/period-labels";
 import { generatePeerReferralToken, PEER_REFERRAL_TTL_MS } from "@/lib/peer-referral";
 
-export type CreatePeerReferralState = { error?: string; link?: string; qrDataUrl?: string };
+export type CreatePeerReferralState = { error?: string; link?: string; qrDataUrl?: string; emailSentTo?: string };
 
 const schema = z.object({
   periodId: z.string().trim().transform((v) => v || null),
@@ -18,6 +20,15 @@ const schema = z.object({
     .trim()
     .max(80, "80 caractères maximum")
     .transform((v) => v || null),
+  // Facultatif : sans email, le lien/QR reste affiché pour une remise en main
+  // propre (cf. components/peer-referral-form.tsx).
+  inviteeEmail: z
+    .string()
+    .trim()
+    .transform((v) => v || null)
+    .refine((v) => v === null || z.string().email().safeParse(v).success, {
+      message: "Email invalide.",
+    }),
 });
 
 export async function createPeerReferral(
@@ -33,6 +44,7 @@ export async function createPeerReferral(
   const parsed = schema.safeParse({
     periodId: formData.get("periodId") ?? "",
     invitedName: formData.get("invitedName") ?? "",
+    inviteeEmail: formData.get("inviteeEmail") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
@@ -42,12 +54,23 @@ export async function createPeerReferral(
   // réellement partie prenante à l'école active — défense contre un
   // periodId d'une autre école ou d'une période qui ne le concerne pas.
   let periodId: string | null = null;
+  let periodForEmail: { dateLabel: string; typeLabel: string; description: string } | null = null;
   if (parsed.data.periodId) {
     const participation = await prisma.periodParticipant.findFirst({
       where: { periodId: parsed.data.periodId, userId: session.userId, membershipId: active.membershipId },
+      include: { period: { select: { date: true, type: true, description: true } } },
     });
     if (!participation) return { error: "Période introuvable pour votre compte." };
     periodId = parsed.data.periodId;
+    periodForEmail = {
+      dateLabel: participation.period.date.toLocaleDateString("fr-BE", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+      typeLabel: periodTypeLabel[participation.period.type],
+      description: participation.period.description,
+    };
   }
 
   const { rawToken, tokenHash } = generatePeerReferralToken();
@@ -76,6 +99,28 @@ export async function createPeerReferral(
   const baseUrl = await getBaseUrl();
   const link = `${baseUrl}/rejoindre/parrainage/${rawToken}`;
   const qrDataUrl = await QRCode.toDataURL(link, { errorCorrectionLevel: "M", margin: 1 });
+
+  if (parsed.data.inviteeEmail) {
+    const actor = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { firstName: true, lastName: true, sex: true },
+    });
+    // Best effort, comme les autres notifications de la plateforme : un SMTP
+    // injoignable ne doit pas faire perdre le lien déjà généré, toujours
+    // affiché ci-dessous pour une remise manuelle en repli.
+    try {
+      await sendPeerReferralEmail({
+        to: parsed.data.inviteeEmail,
+        inviterCivility: actor ? civilityAndLastName(actor) : "Un·e collègue",
+        schoolName: active.schoolName,
+        period: periodForEmail,
+        joinUrl: link,
+      });
+    } catch (error) {
+      console.error("[peer-referral] Échec d'envoi de l'invitation par email :", error);
+    }
+    return { link, qrDataUrl, emailSentTo: parsed.data.inviteeEmail };
+  }
 
   return { link, qrDataUrl };
 }

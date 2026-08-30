@@ -51,6 +51,23 @@ export function PeerReferralForm({ periods }: { periods: { id: string; label: st
           />
         </div>
 
+        <div>
+          <label htmlFor="inviteeEmail" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+            Email du·de la collègue <span className="font-normal text-stone-400">(facultatif)</span>
+          </label>
+          <input
+            id="inviteeEmail"
+            name="inviteeEmail"
+            type="email"
+            placeholder="ex: sophie.d@ecole.be"
+            className="input-field mt-1.5"
+          />
+          <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
+            Renseigné, l&apos;invitation part directement par email. Laissé vide, vous transmettez
+            vous-même le lien ou le QR ci-dessous (en main propre, par messagerie...).
+          </p>
+        </div>
+
         {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
 
         <button type="submit" disabled={pending} className="btn-primary w-full">
@@ -60,9 +77,15 @@ export function PeerReferralForm({ periods }: { periods: { id: string; label: st
 
       {state.link && state.qrDataUrl && (
         <div className="flex flex-col items-center gap-3 border-t border-stone-100 pt-4 text-center dark:border-stone-800">
-          <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
-            Copiez ce lien maintenant : il ne sera plus jamais réaffiché.
-          </p>
+          {state.emailSentTo ? (
+            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+              Invitation envoyée à {state.emailSentTo}. Vous pouvez aussi transmettre ce lien vous-même.
+            </p>
+          ) : (
+            <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+              Copiez ce lien maintenant : il ne sera plus jamais réaffiché.
+            </p>
+          )}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={state.qrDataUrl} alt="QR code du lien de parrainage" className="h-40 w-40" />
           <div className="flex w-full items-center gap-2">

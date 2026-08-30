@@ -200,6 +200,77 @@ export async function sendParticipationInvitationEmail(params: ParticipationInvi
 }
 
 // ---------------------------------------------------------------------------
+// Invitation par parrainage : rejoindre l'école (et valider une participation)
+// ---------------------------------------------------------------------------
+
+export type PeerReferralEmail = {
+  to: string;
+  /// « Madame Dubois » / « Monsieur Lefèvre » — cf. lib/civility.ts.
+  inviterCivility: string;
+  schoolName: string;
+  /// Renseigné seulement quand le lien est rattaché à une période précise —
+  /// cf. PeerReferral.periodId. Créer son compte via ce lien vaut alors
+  /// confirmation immédiate de cette participation (cf. joinViaPeerReferral).
+  period: { dateLabel: string; typeLabel: string; description: string } | null;
+  joinUrl: string;
+};
+
+export async function sendPeerReferralEmail(params: PeerReferralEmail) {
+  const { to, inviterCivility, schoolName, period, joinUrl } = params;
+
+  const subject = period
+    ? `${inviterCivility} vous invite à rejoindre ${schoolName} et valider votre participation`
+    : `${inviterCivility} vous invite à rejoindre ${schoolName} sur Travail Collaboratif`;
+
+  const text = [
+    `${inviterCivility} vous invite à rejoindre ${schoolName} sur Travail Collaboratif.`,
+    ...(period
+      ? [
+          ``,
+          `Créer votre compte via ce lien vaut confirmation de votre participation à :`,
+          `Date : ${period.dateLabel}`,
+          `Type : ${period.typeLabel}`,
+          `Objet : ${period.description}`,
+        ]
+      : []),
+    ``,
+    `Pour créer votre compte, ouvrez ce lien (valable 30 jours) :`,
+    joinUrl,
+  ].join("\n");
+
+  if (!SMTP_HOST) {
+    console.log(`[dev] Invitation par parrainage pour ${to} : ${joinUrl}`);
+    return;
+  }
+
+  const html = renderBrandedEmail({
+    eyebrow: "Invitation d'un·e collègue",
+    title: `${escapeHtml(inviterCivility)} vous invite à rejoindre ${escapeHtml(schoolName)} sur Travail Collaboratif.`,
+    rows: [
+      { label: "École", value: schoolName },
+      ...(period
+        ? [
+            { label: "Date", value: period.dateLabel },
+            { label: "Type", value: period.typeLabel },
+            { label: "Objet", value: period.description },
+          ]
+        : []),
+    ],
+    cta: {
+      label: "Créer mon compte",
+      url: joinUrl,
+      note: period
+        ? "Ce bouton crée votre compte et confirme aussitôt votre participation à cette période."
+        : undefined,
+    },
+    footerHtml: `Ce lien est personnel et valable 30 jours. Si vous ne connaissez pas
+          ${escapeHtml(inviterCivility)}, vous pouvez ignorer cet email sans risque.`,
+  });
+
+  await createTransport()!.sendMail({ from: SMTP_FROM, to, subject, text, html });
+}
+
+// ---------------------------------------------------------------------------
 // Notification à la direction : nouveau rattachement d'enseignant
 // ---------------------------------------------------------------------------
 
