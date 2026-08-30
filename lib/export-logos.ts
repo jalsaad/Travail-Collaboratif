@@ -42,14 +42,34 @@ function readImageSize(buffer: Buffer, extension: "png" | "jpeg"): { width: numb
   return { width: 1, height: 1 };
 }
 
-// pdfkit n'embarque que du PNG/JPEG — un logo école importé en GIF ou WEBP
-// (cf. lib/school-logo.ts ALLOWED_TYPES) est silencieusement omis de
-// l'en-tête plutôt que de faire échouer tout l'export.
+// pdfkit n'embarque que du PNG et du JPEG, qu'il lit tels quels.
 const EXTENSION_MAP: Record<string, "png" | "jpeg" | undefined> = {
   png: "png",
   jpg: "jpeg",
   jpeg: "jpeg",
 };
+
+// Les deux autres formats acceptés à l'import (cf. lib/school-logo.ts
+// ALLOWED_TYPES) sont convertis en PNG à la volée : ils étaient auparavant
+// écartés en silence, et l'école se retrouvait avec le logo de substitution
+// sur ses relevés sans jamais comprendre pourquoi.
+const CONVERTIBLE_EXTENSIONS = new Set(["webp", "gif"]);
+
+/// Conversion en PNG via sharp — module natif, chargé à la demande pour ne
+/// pas le tirer dans les exports qui n'en ont pas besoin (la grande majorité,
+/// les logos étant le plus souvent déjà en PNG). Un échec rend null : le logo
+/// de substitution prend alors le relais, comme avant.
+async function convertToPng(buffer: Buffer): Promise<Buffer | null> {
+  try {
+    const sharp = (await import("sharp")).default;
+    // Une image animée (GIF, WEBP animé) donne ici sa première image : un
+    // logo n'a pas à s'animer sur un relevé imprimé.
+    return await sharp(buffer).png().toBuffer();
+  } catch (error) {
+    console.error("[export-logos] Conversion du logo en PNG impossible :", error);
+    return null;
+  }
+}
 
 const SCHOOL_LOGO_PATTERN = /(?:^|\/)uploads\/schools\/[a-zA-Z0-9_-]+\.([a-z]+)$/;
 
@@ -78,10 +98,23 @@ function loadSubstituteLogo(): Promise<LoadedLogo | null> {
 async function loadUploadedSchoolLogo(logoUrl: string): Promise<LoadedLogo | null> {
   const match = logoUrl.split("?")[0].match(SCHOOL_LOGO_PATTERN);
   if (!match) return null; // jamais un chemin hors du format généré par saveSchoolLogo
-  const extension = EXTENSION_MAP[match[1].toLowerCase()];
-  if (!extension) return null;
+
+  const rawExtension = match[1].toLowerCase();
+  const directExtension = EXTENSION_MAP[rawExtension];
+  if (!directExtension && !CONVERTIBLE_EXTENSIONS.has(rawExtension)) return null;
+
   const buffer = await readStoredFile(storedUrlToKey(logoUrl));
-  return buffer ? { buffer, extension, ...readImageSize(buffer, extension) } : null;
+  if (!buffer) return null;
+
+  if (directExtension) {
+    return { buffer, extension: directExtension, ...readImageSize(buffer, directExtension) };
+  }
+
+  const png = await convertToPng(buffer);
+  // Dimensions relues sur le PNG produit, pas sur la source : la conversion
+  // peut les changer (une image animée y perd ses images suivantes, et sharp
+  // applique l'orientation EXIF quand il y en a une).
+  return png ? { buffer: png, extension: "png", ...readImageSize(png, "png") } : null;
 }
 
 // Les deux logos des documents PDF : celui de l'école (ou sa substitution),

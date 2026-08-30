@@ -31,7 +31,11 @@ const nextConfig = {
   // l'exécution — le bundling webpack de Next casse cette résolution. On
   // l'exclut du bundle pour qu'il soit simplement require() depuis
   // node_modules à l'exécution, où ses chemins relatifs restent valides.
-  serverExternalPackages: ["pdfkit"],
+  //
+  // sharp est un module natif (binaires .node par plateforme) : il ne peut
+  // pas davantage être bundlé. Il sert à convertir en PNG les logos WEBP/GIF
+  // que pdfkit ne sait pas embarquer (cf. lib/export-logos.ts).
+  serverExternalPackages: ["pdfkit", "sharp"],
 };
 
 export default nextConfig;
