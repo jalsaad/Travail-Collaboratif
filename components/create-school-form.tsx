@@ -18,7 +18,12 @@ import { SchoolNameSearch } from "@/components/school-name-search";
 
 const initialState: CreateSchoolState = {};
 
-const FONCTION_OPTIONS = ["Direction", "Direction adjointe", "Autre"] as const;
+// "Enseignant·e" en tête : n'importe quel membre de l'équipe peut fonder
+// l'espace sans attendre que la direction s'en charge — elle garde les mêmes
+// droits de gestion (rôle Admin) que si elle avait fondé l'école elle-même,
+// et pourra la rejoindre ensuite comme n'importe quel autre membre (cf.
+// permissions.md, DIRECTION reste réservé au fondateur).
+const FONCTION_OPTIONS = ["Enseignant·e", "Direction", "Direction adjointe", "Autre"] as const;
 
 export function CreateSchoolForm() {
   const [state, formAction, pending] = useActionState(createSchool, initialState);
@@ -59,7 +64,7 @@ export function CreateSchoolForm() {
   // l'étranger n'a ni code postal belge, ni zone FWB, et doit préciser son pays.
   const [reseau, setReseau] = useState("");
   const etranger = isReseauEtranger(reseau);
-  const [fonction, setFonction] = useState<string>("Direction");
+  const [fonction, setFonction] = useState<string>("Enseignant·e");
 
   // Champs préremplis depuis l'annuaire de la FWB. Contrôlés — et non laissés
   // à leur valeur par défaut — parce qu'ils changent APRÈS le premier rendu,
@@ -343,6 +348,13 @@ export function CreateSchoolForm() {
             </option>
           ))}
         </select>
+        {fonction === "Enseignant·e" && (
+          <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
+            Vous obtenez le rôle Admin (mêmes droits de gestion que Direction) sur cet espace. Votre
+            direction pourra le rejoindre ensuite, comme n&apos;importe quel autre membre — inutile de
+            l&apos;attendre pour commencer.
+          </p>
+        )}
       </div>
 
       {fonction === "Autre" && (

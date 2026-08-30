@@ -75,10 +75,17 @@ const typeEnseignementSchema = z.enum(["ORDINAIRE", "SPECIALISE"]);
 // Fonction déclarative choisie par le fondateur — distincte du Role qui
 // pilote les permissions réelles (cf. commentaire sur Membership.fonction
 // dans prisma/schema.prisma). Direction/Direction adjointe donnent le rôle
-// DIRECTION (plein pouvoir sur l'école) ; Autre donne REFERENT_NUMERIQUE.
+// DIRECTION (plein pouvoir sur l'école) ; Enseignant·e/Autre donnent
+// REFERENT_NUMERIQUE (libellé « Admin ») — mêmes droits de gestion, cf.
+// permissions.md, mais DIRECTION reste réservé au fondateur : une direction
+// qui rejoint ensuite une école déjà fondée par un·e enseignant·e ne peut
+// plus jamais obtenir ce rôle (updateMemberRole l'exclut aussi en
+// promotion), seulement Admin comme n'importe quel autre membre.
 const founderRoleSchema = z
   .object({
-    fonction: z.enum(["Direction", "Direction adjointe", "Autre"], { message: "Fonction requise" }),
+    fonction: z.enum(["Direction", "Direction adjointe", "Enseignant·e", "Autre"], {
+      message: "Fonction requise",
+    }),
     fonctionAutre: z.string().optional(),
   })
   .refine((data) => data.fonction !== "Autre" || !!data.fonctionAutre?.trim(), {
@@ -137,7 +144,10 @@ export async function createSchool(
   if (!parsedFounderRole.success) {
     return { error: await logZodRejection(FORM_CREATE_SCHOOL, parsedFounderRole.error) };
   }
-  const role = parsedFounderRole.data.fonction === "Autre" ? "REFERENT_NUMERIQUE" : "DIRECTION";
+  const role =
+    parsedFounderRole.data.fonction === "Autre" || parsedFounderRole.data.fonction === "Enseignant·e"
+      ? "REFERENT_NUMERIQUE"
+      : "DIRECTION";
 
   // Validé avant la transaction : un logo invalide ne doit pas laisser un
   // compte/école à moitié créés (cf. saveSchoolLogo, appelé après coup une
