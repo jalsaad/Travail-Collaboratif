@@ -38,6 +38,7 @@ export default async function AdminCartographiePage({
   });
   const inscritesParFase = new Map(inscrites.map((e) => [e.numeroFase!, e]));
   const fasesInscrites = [...inscritesParFase.keys()];
+  const fasesPartielles = inscrites.filter((e) => e.status === "PARTIAL").map((e) => e.numeroFase!);
 
   const where: Prisma.FwbSchoolWhereInput = {
     // La recherche porte sur la clé normalisée, pas sur les colonnes brutes :
@@ -56,6 +57,7 @@ export default async function AdminCartographiePage({
     ...(bassin ? { bassin } : {}),
     ...(suivi ? { prospectionStatus: suivi as ProspectionStatus } : {}),
     ...(inscription === "inscrites" ? { numeroFase: { in: fasesInscrites } } : {}),
+    ...(inscription === "partielles" ? { numeroFase: { in: fasesPartielles } } : {}),
     ...(inscription === "absentes" ? { numeroFase: { notIn: fasesInscrites } } : {}),
   };
 
@@ -220,6 +222,7 @@ export default async function AdminCartographiePage({
             <select id="inscription" name="inscription" defaultValue={inscription} className="input-field mt-1">
               <option value="">Toutes</option>
               <option value="inscrites">Inscrites</option>
+              <option value="partielles">Inscrites partiellement</option>
               <option value="absentes">Pas encore</option>
             </select>
           </div>

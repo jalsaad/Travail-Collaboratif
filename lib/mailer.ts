@@ -271,6 +271,67 @@ export async function sendPeerReferralEmail(params: PeerReferralEmail) {
 }
 
 // ---------------------------------------------------------------------------
+// Invitation à la direction : des enseignant·es de son école ont initié un
+// cercle informel (École PARTIAL) et l'invitent à l'inscrire officiellement
+// ---------------------------------------------------------------------------
+
+export type DirectionInvitationEmail = {
+  to: string;
+  schoolName: string;
+  /// « Madame Dubois » / « Monsieur Lefèvre » — cf. lib/civility.ts.
+  initiatorCivility: string;
+  numeroFase: string | null;
+  createEcoleUrl: string;
+};
+
+export async function sendDirectionInvitationEmail(params: DirectionInvitationEmail) {
+  const { to, schoolName, initiatorCivility, numeroFase, createEcoleUrl } = params;
+
+  const subject = `Des enseignant·es de ${schoolName} utilisent déjà Travail Collaboratif`;
+
+  const text = [
+    `${initiatorCivility} et ses collègues de ${schoolName} ont commencé à utiliser Travail`,
+    `Collaboratif, une plateforme gratuite qui simplifie la déclaration et le suivi du travail`,
+    `collaboratif enseignant (circulaire 7167).`,
+    ``,
+    `Leur cercle reste pour l'instant informel : personne n'y détient de droit de gestion sur`,
+    `l'école. En l'inscrivant officiellement, vous obtenez un tableau de bord, les exports`,
+    `collectifs et la personnalisation de l'espace, pour l'ensemble de votre équipe.`,
+    ``,
+    numeroFase ? `Numéro FASE de l'école : ${numeroFase}` : null,
+    `Inscrire l'école : ${createEcoleUrl}`,
+    ``,
+    `Si vous préférez ne pas donner suite, le cercle actuel continue de fonctionner sans vous.`,
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
+
+  if (!SMTP_HOST) {
+    console.log(`[dev] Invitation direction pour ${schoolName} (${to}) : ${createEcoleUrl}`);
+    return;
+  }
+
+  const html = renderBrandedEmail({
+    eyebrow: "Travail collaboratif — gratuit",
+    title: `${escapeHtml(initiatorCivility)} et ses collègues de ${escapeHtml(schoolName)} utilisent déjà Travail Collaboratif.`,
+    bodyHtml: `<p style="margin:0 0 10px;">Travail Collaboratif est une plateforme gratuite qui simplifie la déclaration et
+          le suivi du travail collaboratif enseignant (circulaire 7167). Leur cercle reste pour
+          l'instant informel : personne n'y détient de droit de gestion sur l'école.</p>
+          <p style="margin:0;">En l'inscrivant officiellement, vous obtenez un tableau de bord, les exports collectifs
+          et la personnalisation de l'espace, pour l'ensemble de votre équipe — toujours gratuitement.</p>`,
+    rows: [
+      { label: "École", value: schoolName },
+      ...(numeroFase ? [{ label: "N° FASE", value: numeroFase }] : []),
+    ],
+    cta: { label: "Inscrire mon école", url: createEcoleUrl },
+    footerHtml: `Si vous préférez ne pas donner suite, le cercle actuel de vos enseignant·es continue
+          de fonctionner sans vous.`,
+  });
+
+  await createTransport()!.sendMail({ from: SMTP_FROM, to, subject, text, html });
+}
+
+// ---------------------------------------------------------------------------
 // Notification à la direction : nouveau rattachement d'enseignant
 // ---------------------------------------------------------------------------
 

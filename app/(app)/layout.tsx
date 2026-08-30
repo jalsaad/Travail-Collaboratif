@@ -19,7 +19,10 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
     getCurrentSchoolYear(),
   ]);
   const active = await resolveActiveMembership(session.userId, memberships);
-  const pending = active && active.schoolStatus !== "APPROVED";
+  // PARTIAL (cercle informel initié par un·e enseignant·e, cf.
+  // app/(auth)/rejoindre/actions.ts::initiatePartialSchool) est opérationnelle
+  // tout de suite, comme APPROVED — seules PENDING/REJECTED bloquent l'accès.
+  const pending = active && active.schoolStatus !== "APPROVED" && active.schoolStatus !== "PARTIAL";
 
   return (
     <div className="min-h-screen bg-stone-50 pt-4 dark:bg-stone-950">

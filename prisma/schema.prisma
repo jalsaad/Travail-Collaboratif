@@ -61,10 +61,20 @@ enum InvitationStatus {
 /// que la plateforme ne l'a pas validée (aucune fonctionnalité opérationnelle
 /// pour ses membres avant ça — cf. app/(app)/layout.tsx). Les écoles déjà
 /// existantes (seed, création manuelle) restent APPROVED par défaut.
+///
+/// PARTIAL : cercle informel initié par un·e enseignant·e depuis son propre
+/// formulaire d'inscription (jamais depuis /creer-ecole, réservé à la
+/// direction) — cf. app/(auth)/rejoindre/actions.ts::initiatePartialSchool.
+/// Opérationnelle tout de suite (comme APPROVED, cf. app/(app)/layout.tsx),
+/// sans validation plateforme : aucun membre n'y détient de rôle de gestion
+/// (DIRECTION/REFERENT_NUMERIQUE), la circulation se fait uniquement par
+/// parrainage entre pairs. Affichée « Inscrite partiellement » sur la
+/// cartographie, en attendant une inscription officielle par la direction.
 enum SchoolStatus {
   PENDING
   APPROVED
   REJECTED
+  PARTIAL
 }
 
 /// Les DEUX seules formes de travail collaboratif ayant valeur normative
@@ -230,40 +240,46 @@ model SupportTicket {
 }
 
 model School {
-  id                String          @id @default(cuid())
-  name              String
+  id                  String          @id @default(cuid())
+  name                String
   /// Réseau d'enseignement (WBE, officiel subventionné, libre subventionné...)
-  reseau            String?
+  reseau              String?
   /// Région/province — texte libre (pas d'enum : les découpages varient),
   /// renseigné par l'admin plateforme (cf. AdminSchoolEditForm).
-  region            String?
+  region              String?
   /// Niveaux offerts (maternelle/primaire/secondaire) — admin uniquement.
-  niveaux           SchoolLevel[]   @default([])
+  niveaux             SchoolLevel[]   @default([])
   /// Type(s) d'enseignement (ordinaire/spécialisé) — admin uniquement.
-  typesEnseignement EducationType[] @default([])
+  typesEnseignement   EducationType[] @default([])
   /// Numéro FASE / matricule officiel de l'établissement
-  numeroFase        String?         @unique
+  numeroFase          String?         @unique
   /// Rue et numéro. Les écoles créées avant le découpage de l'adresse y ont
   /// encore leur adresse complète en texte libre (code postal et localité
   /// restent alors vides jusqu'à la prochaine édition du formulaire).
-  address           String?
+  address             String?
   /// Code postal belge à 4 chiffres — cf. lib/belgian-postal-codes.ts.
-  postalCode        String?
+  postalCode          String?
   /// Localité correspondant au code postal (un code en dessert plusieurs).
-  locality          String?
+  locality            String?
   /// Pays, renseigné uniquement pour les écoles à programme belge à
   /// l'étranger (cf. lib/reseau-options.ts::isReseauEtranger). Vide pour les
   /// écoles situées en Belgique, dont le code postal suffit à localiser.
-  country           String?
-  phone             String?
+  country             String?
+  phone               String?
   /// Site web de l'école, si elle en a un. Facultatif : beaucoup de petites
   /// implantations n'en ont pas, et une adresse inventée vaut moins que rien.
-  website           String?
+  website             String?
   /// Logo affiché dans l'espace école (personnalisation par la direction)
-  logoUrl           String?
-  status            SchoolStatus    @default(APPROVED)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  logoUrl             String?
+  status              SchoolStatus    @default(APPROVED)
+  /// Email de la direction saisi par l'enseignant·e à l'initiation d'une
+  /// école PARTIAL — sert uniquement à l'informer par email (jamais un
+  /// compte), cf. lib/mailer.ts::sendDirectionInvitationEmail. Nul pour toute
+  /// école qui n'est pas passée par ce chemin.
+  directionEmail      String?
+  directionNotifiedAt DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
   implantations       Implantation[]
   memberships         Membership[]

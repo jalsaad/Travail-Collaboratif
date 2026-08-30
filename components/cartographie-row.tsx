@@ -68,8 +68,20 @@ export function CartographieRow({
         <td className="px-5 py-3 text-xs text-stone-500 dark:text-stone-400">{ecole.bassin ?? "—"}</td>
         <td className="px-5 py-3">
           {inscrite ? (
-            <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-              {inscrite.status === "APPROVED" ? "Inscrite" : "En attente"}
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                inscrite.status === "APPROVED"
+                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                  : inscrite.status === "PARTIAL"
+                    ? "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300"
+                    : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+              }`}
+            >
+              {inscrite.status === "APPROVED"
+                ? "Inscrite"
+                : inscrite.status === "PARTIAL"
+                  ? "Inscrite partiellement"
+                  : "En attente"}
             </span>
           ) : (
             <span className="text-xs text-stone-400 dark:text-stone-500">—</span>
