@@ -23,15 +23,29 @@ const FONCTION_OPTIONS = ["Direction", "Direction adjointe", "Autre"] as const;
 export function CreateSchoolForm() {
   const [state, formAction, pending] = useActionState(createSchool, initialState);
   const formRef = useRef<HTMLFormElement>(null);
+  const step2Ref = useRef<HTMLDivElement>(null);
   // Formulaire très long à plat : découpé en deux écrans (école, puis
   // identité/identifiants) sans changer la soumission elle-même — un seul
-  // POST final, tous les champs restent montés en continu (cf. `hidden` ci-
-  // dessous plutôt qu'un rendu conditionnel), l'étape masquée est juste
-  // exclue de la validation native le temps de l'autre étape.
+  // POST final, tous les champs restent montés en continu (`hidden` plutôt
+  // qu'un rendu conditionnel, pour ne perdre aucune valeur en changeant
+  // d'étape).
   const [step, setStep] = useState<1 | 2>(1);
 
+  // `display:none` (la classe `hidden`) ne dispense PAS un champ requis de la
+  // validation native du navigateur — seul `disabled` le fait. Sans ce
+  // détour, les champs requis de l'étape 2 (email, mot de passe...), encore
+  // vides, rendaient tout le formulaire perpétuellement invalide et
+  // bloquaient "Continuer" sans le moindre message visible (rien à montrer
+  // sur un champ masqué). On les désactive le temps du contrôle, puis on les
+  // réactive aussitôt pour qu'ils soient bien soumis une fois l'étape 2 atteinte.
   function suivant() {
-    if (!formRef.current?.reportValidity()) return;
+    const champsEtape2 = step2Ref.current?.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+      "input, select, textarea"
+    );
+    champsEtape2?.forEach((c) => (c.disabled = true));
+    const valide = formRef.current?.reportValidity() ?? true;
+    champsEtape2?.forEach((c) => (c.disabled = false));
+    if (!valide) return;
     setStep(2);
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -310,7 +324,7 @@ export function CreateSchoolForm() {
       </button>
       </div>
 
-      <div className={step === 2 ? "space-y-4" : "hidden"}>
+      <div ref={step2Ref} className={step === 2 ? "space-y-4" : "hidden"}>
       <div>
         <label htmlFor="fonction" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
           Fonction

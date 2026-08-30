@@ -18,6 +18,7 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
   const [mode, setMode] = useState<"code" | "school">(defaultCode ? "code" : "school");
   const [selectedSchool, setSelectedSchool] = useState<JoinableSchool | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const step2Ref = useRef<HTMLDivElement>(null);
   // Formulaire long à plat : découpé en deux écrans (école, puis niveaux +
   // identité + identifiants) — même mécanique que components/create-school-
   // form.tsx (un seul POST final, `hidden` plutôt qu'un rendu conditionnel
@@ -25,9 +26,20 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
   const [step, setStep] = useState<1 | 2>(1);
   const ecoleChoisie = mode === "code" || !!selectedSchool;
 
+  // `display:none` (la classe `hidden`) ne dispense pas un champ requis de la
+  // validation native — seul `disabled` le fait. Sans ce détour, les champs
+  // requis de l'étape 2 (prénom, email, mot de passe...), encore vides,
+  // rendaient tout le formulaire perpétuellement invalide et bloquaient
+  // "Continuer" sans le moindre message visible.
   function suivant() {
     if (!ecoleChoisie) return;
-    if (!formRef.current?.reportValidity()) return;
+    const champsEtape2 = step2Ref.current?.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+      "input, select, textarea"
+    );
+    champsEtape2?.forEach((c) => (c.disabled = true));
+    const valide = formRef.current?.reportValidity() ?? true;
+    champsEtape2?.forEach((c) => (c.disabled = false));
+    if (!valide) return;
     setStep(2);
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -99,7 +111,7 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
       </button>
       </div>
 
-      <div className={step === 2 ? "space-y-4" : "hidden"}>
+      <div ref={step2Ref} className={step === 2 ? "space-y-4" : "hidden"}>
       <div>
         <LevelHoursPicker />
       </div>
