@@ -2,11 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { TEACHING_LEVEL_OPTIONS } from "@/lib/teaching-levels";
 import {
   getBaseUrl,
+  sendDirectionInvitationEmail,
   sendNewMemberNotification,
   sendNewSchoolNotification,
   sendTeacherReminderEmail,
 } from "@/lib/mailer";
 import { civilityAndLastName } from "@/lib/civility";
+import type { PartialSchoolNotice } from "@/lib/school-join-target";
 
 // Notifications déclenchées par un rattachement ou une inscription d'école.
 //
@@ -25,6 +27,30 @@ function summarizeTeaching(
   return levels
     .map((l) => `${LEVEL_LABEL.get(l.level as never) ?? l.level} — ${l.discipline.name} (${l.hours} h)`)
     .join(", ");
+}
+
+/// Invite la direction d'une école PARTIAL à l'inscrire officiellement.
+/// Renvoyé à CHAQUE nouveau ralliement tant que l'école n'est pas inscrite —
+/// l'intérêt de l'équipe grandit à chaque fois, et c'est précisément ce que
+/// l'email annonce. `directionNotifiedAt` garde la date du dernier envoi.
+export async function notifyDirectionOfPartialSchool(
+  schoolId: string,
+  notice: PartialSchoolNotice,
+  joinerCivility: string
+): Promise<void> {
+  try {
+    const baseUrl = await getBaseUrl();
+    await sendDirectionInvitationEmail({
+      to: notice.directionEmail,
+      schoolName: notice.name,
+      initiatorCivility: joinerCivility,
+      numeroFase: notice.numeroFase,
+      createEcoleUrl: `${baseUrl}/creer-ecole`,
+    });
+    await prisma.school.update({ where: { id: schoolId }, data: { directionNotifiedAt: new Date() } });
+  } catch (error) {
+    console.error(`[partial-school] Échec de l'invitation à la direction (école ${schoolId}) :`, error);
+  }
 }
 
 /// Prévient la direction et les référent·es numériques de l'école qu'un

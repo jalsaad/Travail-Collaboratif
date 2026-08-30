@@ -8,12 +8,18 @@ import { prisma } from "@/lib/prisma";
 import { logAudit, AuditAction } from "@/lib/audit-log";
 import { parseLevelHoursFromFormData } from "@/lib/teaching-levels";
 import { recomputeUserQuotas } from "@/lib/quota-engine";
-import { notifySchoolDirectionOfNewMember } from "@/lib/school-notifications";
+import {
+  notifyDirectionOfPartialSchool,
+  notifySchoolDirectionOfNewMember,
+} from "@/lib/school-notifications";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 import { teacherIdentitySchema, createTeacherAccountAndMembership } from "@/lib/teacher-signup";
-import { getBaseUrl, sendDirectionInvitationEmail } from "@/lib/mailer";
 import { civilityAndLastName } from "@/lib/civility";
-import { reseauPlateforme, regionPlateforme } from "@/lib/fwb-directory";
+import {
+  createPartialSchoolRecord,
+  loadFwbSchoolForInitiation,
+  resolveExistingSchoolTarget,
+} from "@/lib/school-join-target";
 
 export type JoinState = { error?: string };
 
@@ -74,37 +80,18 @@ export async function joinViaCode(
 
   const email = parsed.data.email.trim();
 
-  // Trois façons d'arriver ici, jamais un schoolId de client pris pour
-  // argent comptant sans revérification :
-  // - un code tapé à la main → doit résoudre un JoinCode actif ;
-  // - une école APPROVED choisie dans la liste → idem, via son code actif ;
-  // - une école PARTIAL choisie dans la liste → aucun code n'existe (aucun
-  //   membre n'y a de droit de gestion pour en générer un), le cercle étant
-  //   volontairement ouvert à qui le trouve par son nom.
-  let targetSchoolId: string;
-  let auditAction: string = AuditAction.JOIN_VIA_CODE;
-  if (parsed.data.code) {
-    const joinCode = await prisma.joinCode.findUnique({ where: { code: parsed.data.code.toUpperCase() } });
-    if (!joinCode || !joinCode.active) {
-      // Message générique : ne révèle jamais si le code existe mais est désactivé.
-      return { error: "Code de rattachement invalide ou expiré." };
-    }
-    targetSchoolId = joinCode.schoolId;
-  } else {
-    const school = await prisma.school.findUnique({ where: { id: parsed.data.schoolId! } });
-    if (!school) return { error: "École introuvable." };
-    if (school.status === "PARTIAL") {
-      targetSchoolId = school.id;
-      auditAction = AuditAction.JOIN_PARTIAL_SCHOOL;
-    } else {
-      const joinCode = await prisma.joinCode.findFirst({
-        where: { schoolId: school.id, active: true },
-        orderBy: { createdAt: "desc" },
-      });
-      if (!joinCode) return { error: "Code de rattachement invalide ou expiré." };
-      targetSchoolId = joinCode.schoolId;
-    }
-  }
+  // Règles communes aux deux parcours de rattachement (cf.
+  // lib/school-join-target.ts) : code actif, école APPROVED via son code, ou
+  // école PARTIAL ouverte à qui la trouve par son nom.
+  const resolved = await resolveExistingSchoolTarget({
+    code: parsed.data.code,
+    schoolId: parsed.data.schoolId,
+  });
+  if (!resolved.ok) return { error: resolved.error };
+  // partialNotice n'est renseigné que pour une école PARTIAL : chaque nouveau
+  // ralliement relance l'invitation à la direction (cf. plus bas), pas
+  // seulement celui de l'enseignant·e qui l'a initiée.
+  const { schoolId: targetSchoolId, auditAction, partialNotice } = resolved.target;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -147,8 +134,18 @@ export async function joinViaCode(
     await recomputeUserQuotas(created.user.id, schoolYear.id);
   }
 
-  // Avant signIn, qui redirige : rien ne s'exécuterait après.
+  // Avant signIn, qui redirige : rien ne s'exécuterait après. No-op tant
+  // qu'aucun Admin/Direction n'existe (cas de toute école PARTIAL).
   await notifySchoolDirectionOfNewMember(created.membership.id);
+
+  // Chaque nouvel enseignant qui rejoint un cercle PARTIAL relance
+  // l'invitation à la direction — pas seulement l'initiateur — tant que
+  // l'école n'est pas officiellement inscrite. Best effort, comme les autres
+  // notifications de la plateforme : un SMTP injoignable ne doit jamais
+  // faire perdre le compte déjà créé.
+  if (partialNotice) {
+    await notifyDirectionOfPartialSchool(targetSchoolId, partialNotice, civilityAndLastName(parsed.data));
+  }
 
   try {
     await signIn("credentials", {
@@ -236,19 +233,9 @@ export async function initiatePartialSchool(
     return { error: parsedLevels.error };
   }
 
-  const fwbSchool = await prisma.fwbSchool.findUnique({ where: { numeroFase: parsed.data.numeroFase } });
-  if (!fwbSchool) return { error: "École introuvable dans l'annuaire. Recherchez-la à nouveau." };
-
-  // Ne réinitie jamais une école déjà présente sur la plateforme, quel que
-  // soit son statut — un doublon violerait l'unicité de numeroFase, mais
-  // surtout, la bonne porte d'entrée existe déjà : "Chercher mon école".
-  const dejaPresente = await prisma.school.findUnique({ where: { numeroFase: parsed.data.numeroFase } });
-  if (dejaPresente) {
-    return {
-      error:
-        "Cette école est déjà sur la plateforme. Utilisez plutôt « Chercher mon école » pour la rejoindre.",
-    };
-  }
+  const annuaire = await loadFwbSchoolForInitiation(parsed.data.numeroFase);
+  if (!annuaire.ok) return { error: annuaire.error };
+  const { fwbSchool } = annuaire;
 
   const email = parsed.data.email.trim();
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -260,22 +247,7 @@ export async function initiatePartialSchool(
   let schoolId: string;
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const school = await tx.school.create({
-        data: {
-          name: fwbSchool.name,
-          reseau: reseauPlateforme(fwbSchool.reseau),
-          region: regionPlateforme(fwbSchool.bassin),
-          niveaux: fwbSchool.niveaux,
-          typesEnseignement: fwbSchool.genres,
-          address: fwbSchool.address,
-          postalCode: fwbSchool.postalCode,
-          locality: fwbSchool.locality,
-          numeroFase: fwbSchool.numeroFase,
-          status: "PARTIAL",
-          directionEmail: parsed.data.directionEmail,
-          directionNotifiedAt: new Date(),
-        },
-      });
+      const school = await createPartialSchoolRecord(tx, fwbSchool, parsed.data.directionEmail);
       const account = await createTeacherAccountAndMembership(tx, {
         schoolId: school.id,
         identity: parsed.data,
@@ -316,21 +288,16 @@ export async function initiatePartialSchool(
     await recomputeUserQuotas(created.user.id, schoolYear.id);
   }
 
-  // Avant signIn, qui redirige : rien ne s'exécuterait après. Best effort,
-  // comme les autres notifications de la plateforme : un SMTP injoignable ne
-  // doit jamais faire perdre le compte déjà créé.
-  try {
-    const baseUrl = await getBaseUrl();
-    await sendDirectionInvitationEmail({
-      to: parsed.data.directionEmail,
-      schoolName: fwbSchool.name,
-      initiatorCivility: civilityAndLastName(parsed.data),
+  // Avant signIn, qui redirige : rien ne s'exécuterait après.
+  await notifyDirectionOfPartialSchool(
+    schoolId,
+    {
+      name: fwbSchool.name,
       numeroFase: fwbSchool.numeroFase,
-      createEcoleUrl: `${baseUrl}/creer-ecole`,
-    });
-  } catch (error) {
-    console.error("[partial-school] Échec d'envoi de l'invitation à la direction :", error);
-  }
+      directionEmail: parsed.data.directionEmail,
+    },
+    civilityAndLastName(parsed.data)
+  );
 
   try {
     await signIn("credentials", {

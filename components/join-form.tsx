@@ -1,10 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useActionState } from "react";
-import { submitJoin, type JoinState, type JoinableSchool } from "@/app/(auth)/rejoindre/actions";
-import { JoinableSchoolSearch } from "@/components/joinable-school-search";
-import { SchoolNameSearch } from "@/components/school-name-search";
+import { submitJoin, type JoinState } from "@/app/(auth)/rejoindre/actions";
+import { SchoolChoiceFields, type SchoolChoiceMode } from "@/components/school-choice-fields";
 import { LevelHoursPicker } from "@/components/level-hours-picker";
 import { PasswordInput } from "@/components/password-input";
 
@@ -12,13 +11,17 @@ const initialState: JoinState = {};
 
 export function JoinForm({ defaultCode }: { defaultCode: string }) {
   const [state, formAction, pending] = useActionState(submitJoin, initialState);
-  // "code" par défaut seulement quand un lien de poster (cf.
-  // lib/join-poster.ts) l'a déjà rempli en query param — sinon la recherche
-  // par nom est le chemin le plus probable, la plupart des enseignants
-  // n'ayant pas le code sous les yeux au moment de s'inscrire.
-  const [mode, setMode] = useState<"code" | "school" | "initiate">(defaultCode ? "code" : "school");
-  const [selectedSchool, setSelectedSchool] = useState<JoinableSchool | null>(null);
-  const [numeroFaseAInitier, setNumeroFaseAInitier] = useState<string | null>(null);
+  // Le choix de l'école vit dans SchoolChoiceFields (partagé avec
+  // components/join-school-form.tsx) ; seul son état résumé remonte ici, pour
+  // piloter le bouton « Continuer » et le libellé d'envoi.
+  const [choix, setChoix] = useState<{ mode: SchoolChoiceMode; prete: boolean }>({
+    mode: defaultCode ? "code" : "school",
+    prete: true,
+  });
+  const onChoixChange = useCallback(
+    (etat: { mode: SchoolChoiceMode; prete: boolean }) => setChoix(etat),
+    []
+  );
   const formRef = useRef<HTMLFormElement>(null);
   const step2Ref = useRef<HTMLDivElement>(null);
   // Formulaire long à plat : découpé en deux écrans (école, puis niveaux +
@@ -26,8 +29,7 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
   // form.tsx (un seul POST final, `hidden` plutôt qu'un rendu conditionnel
   // pour garder tous les champs montés entre les deux écrans).
   const [step, setStep] = useState<1 | 2>(1);
-  const ecoleChoisie =
-    mode === "code" || (mode === "school" && !!selectedSchool) || (mode === "initiate" && !!numeroFaseAInitier);
+  const ecoleChoisie = choix.prete;
 
   // `display:none` (la classe `hidden`) ne dispense pas un champ requis de la
   // validation native — seul `disabled` le fait. Sans ce détour, les champs
@@ -61,93 +63,7 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
       </div>
 
       <div className={step === 1 ? "space-y-4" : "hidden"}>
-      <div className="flex gap-1.5 rounded-lg bg-stone-100 p-1 text-sm dark:bg-stone-800">
-        <button
-          type="button"
-          onClick={() => setMode("code")}
-          className={`flex-1 rounded-md py-1.5 font-medium transition ${
-            mode === "code"
-              ? "bg-white text-brand-700 shadow-sm dark:bg-stone-700 dark:text-brand-300"
-              : "text-stone-500 dark:text-stone-400"
-          }`}
-        >
-          J&apos;ai un code
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("school")}
-          className={`flex-1 rounded-md py-1.5 font-medium transition ${
-            mode === "school"
-              ? "bg-white text-brand-700 shadow-sm dark:bg-stone-700 dark:text-brand-300"
-              : "text-stone-500 dark:text-stone-400"
-          }`}
-        >
-          Chercher mon école
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("initiate")}
-          className={`flex-1 rounded-md py-1.5 font-medium transition ${
-            mode === "initiate"
-              ? "bg-white text-brand-700 shadow-sm dark:bg-stone-700 dark:text-brand-300"
-              : "text-stone-500 dark:text-stone-400"
-          }`}
-        >
-          Pas encore inscrite
-        </button>
-      </div>
-
-      <input type="hidden" name="joinMode" value={mode === "initiate" ? "initiate" : "join"} />
-
-      {mode === "code" && (
-        <div>
-          <label htmlFor="code" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-            Code de rattachement
-          </label>
-          <input
-            id="code"
-            name="code"
-            defaultValue={defaultCode}
-            placeholder="ex: TILL-2026-8K3"
-            className="input-field mt-1.5 uppercase"
-          />
-        </div>
-      )}
-
-      {mode === "school" && (
-        <div>
-          <JoinableSchoolSearch onSelect={setSelectedSchool} selected={selectedSchool} />
-          <input type="hidden" name="schoolId" value={selectedSchool?.id ?? ""} />
-          <p className="mt-1.5 text-xs text-stone-400 dark:text-stone-500">
-            Seules les écoles déjà inscrites et rattachables apparaissent dans les résultats.
-          </p>
-        </div>
-      )}
-
-      {mode === "initiate" && (
-        <div className="space-y-4">
-          <div className="rounded-lg border border-brand-100 bg-brand-50/60 p-3 text-xs text-stone-600 dark:border-brand-900 dark:bg-brand-950/40 dark:text-stone-400">
-            Vous réunissez ici votre petit cercle de collègues. Vous restez enseignant·e — aucun droit
-            de gestion sur l&apos;école ne vous est attribué. Votre direction sera informée par email et
-            pourra inscrire l&apos;école officiellement pour en faire bénéficier toute l&apos;équipe.
-          </div>
-          <SchoolNameSearch onSelect={setNumeroFaseAInitier} />
-          <input type="hidden" name="numeroFase" value={numeroFaseAInitier ?? ""} />
-          <div>
-            <label htmlFor="directionEmail" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-              Email de votre direction
-            </label>
-            <input
-              id="directionEmail"
-              name="directionEmail"
-              type="email"
-              required
-              placeholder="ex: direction@ecole.be"
-              className="input-field mt-1.5"
-            />
-          </div>
-        </div>
-      )}
+      <SchoolChoiceFields defaultCode={defaultCode} onChange={onChoixChange} />
 
       <button type="button" onClick={suivant} disabled={!ecoleChoisie} className="btn-primary w-full">
         Continuer
@@ -272,7 +188,11 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
           disabled={pending || !ecoleChoisie}
           className="btn-primary flex-1"
         >
-          {pending ? "Création du compte..." : mode === "initiate" ? "Créer mon compte" : "Rejoindre l'école"}
+          {pending
+            ? "Création du compte..."
+            : choix.mode === "initiate"
+              ? "Créer mon compte"
+              : "Rejoindre l'école"}
         </button>
       </div>
       </div>
