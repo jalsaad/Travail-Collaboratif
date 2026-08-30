@@ -301,7 +301,7 @@ export async function sendDirectionInvitationEmail(params: DirectionInvitationEm
     numeroFase ? `Numéro FASE de l'école : ${numeroFase}` : null,
     `Inscrire l'école : ${createEcoleUrl}`,
     ``,
-    `Si vous préférez ne pas donner suite, le cercle actuel continue de fonctionner sans vous.`,
+    `L'inscription est gratuite et ne prend que quelques minutes.`,
   ]
     .filter((line): line is string => line !== null)
     .join("\n");
@@ -324,8 +324,7 @@ export async function sendDirectionInvitationEmail(params: DirectionInvitationEm
       ...(numeroFase ? [{ label: "N° FASE", value: numeroFase }] : []),
     ],
     cta: { label: "Inscrire mon école", url: createEcoleUrl },
-    footerHtml: `Si vous préférez ne pas donner suite, le cercle actuel de vos enseignant·es continue
-          de fonctionner sans vous.`,
+    footerHtml: `L'inscription est gratuite et ne prend que quelques minutes.`,
   });
 
   await createTransport()!.sendMail({ from: SMTP_FROM, to, subject, text, html });

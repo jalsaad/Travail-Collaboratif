@@ -127,10 +127,9 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
       {mode === "initiate" && (
         <div className="space-y-4">
           <div className="rounded-lg border border-brand-100 bg-brand-50/60 p-3 text-xs text-stone-600 dark:border-brand-900 dark:bg-brand-950/40 dark:text-stone-400">
-            Vous réunissez votre petit cercle de collègues sans attendre que votre direction s&apos;en
-            charge. Vous restez enseignant·e — aucun droit de gestion sur l&apos;école ne vous est
-            attribué. Votre direction sera informée par email et pourra inscrire l&apos;école
-            officiellement quand elle le souhaite.
+            Vous réunissez ici votre petit cercle de collègues. Vous restez enseignant·e — aucun droit
+            de gestion sur l&apos;école ne vous est attribué. Votre direction sera informée par email et
+            pourra inscrire l&apos;école officiellement pour en faire bénéficier toute l&apos;équipe.
           </div>
           <SchoolNameSearch onSelect={setNumeroFaseAInitier} />
           <input type="hidden" name="numeroFase" value={numeroFaseAInitier ?? ""} />
