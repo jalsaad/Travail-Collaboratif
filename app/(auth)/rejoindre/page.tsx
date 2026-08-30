@@ -25,7 +25,8 @@ export default async function RejoindrePage({
             <LogoHomeLink />
             <h1 className="mt-3 text-xl font-semibold text-stone-900 dark:text-stone-100">Rejoindre votre école</h1>
             <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-              Utilisez le code de rattachement transmis par votre référent numérique ou votre direction.
+              Avec le code de rattachement transmis par votre référent numérique ou votre direction, ou
+              directement en recherchant votre école si elle est déjà inscrite.
             </p>
           </div>
           <div className="mt-7">

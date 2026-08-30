@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useActionState } from "react";
-import { joinViaCode, type JoinState } from "@/app/(auth)/rejoindre/actions";
+import { joinViaCode, type JoinState, type JoinableSchool } from "@/app/(auth)/rejoindre/actions";
+import { JoinableSchoolSearch } from "@/components/joinable-school-search";
 import { LevelHoursPicker } from "@/components/level-hours-picker";
 import { PasswordInput } from "@/components/password-input";
 
@@ -9,22 +11,62 @@ const initialState: JoinState = {};
 
 export function JoinForm({ defaultCode }: { defaultCode: string }) {
   const [state, formAction, pending] = useActionState(joinViaCode, initialState);
+  // "code" par défaut seulement quand un lien de poster (cf.
+  // lib/join-poster.ts) l'a déjà rempli en query param — sinon la recherche
+  // par nom est le chemin le plus probable, la plupart des enseignants
+  // n'ayant pas le code sous les yeux au moment de s'inscrire.
+  const [mode, setMode] = useState<"code" | "school">(defaultCode ? "code" : "school");
+  const [selectedSchool, setSelectedSchool] = useState<JoinableSchool | null>(null);
 
   return (
     <form action={formAction} className="space-y-4">
-      <div>
-        <label htmlFor="code" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-          Code de rattachement
-        </label>
-        <input
-          id="code"
-          name="code"
-          required
-          defaultValue={defaultCode}
-          placeholder="ex: TILL-2026-8K3"
-          className="input-field mt-1.5 uppercase"
-        />
+      <div className="flex gap-1.5 rounded-lg bg-stone-100 p-1 text-sm dark:bg-stone-800">
+        <button
+          type="button"
+          onClick={() => setMode("code")}
+          className={`flex-1 rounded-md py-1.5 font-medium transition ${
+            mode === "code"
+              ? "bg-white text-brand-700 shadow-sm dark:bg-stone-700 dark:text-brand-300"
+              : "text-stone-500 dark:text-stone-400"
+          }`}
+        >
+          J&apos;ai un code
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("school")}
+          className={`flex-1 rounded-md py-1.5 font-medium transition ${
+            mode === "school"
+              ? "bg-white text-brand-700 shadow-sm dark:bg-stone-700 dark:text-brand-300"
+              : "text-stone-500 dark:text-stone-400"
+          }`}
+        >
+          Chercher mon école
+        </button>
       </div>
+
+      {mode === "code" ? (
+        <div>
+          <label htmlFor="code" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+            Code de rattachement
+          </label>
+          <input
+            id="code"
+            name="code"
+            defaultValue={defaultCode}
+            placeholder="ex: TILL-2026-8K3"
+            className="input-field mt-1.5 uppercase"
+          />
+        </div>
+      ) : (
+        <div>
+          <JoinableSchoolSearch onSelect={setSelectedSchool} selected={selectedSchool} />
+          <input type="hidden" name="schoolId" value={selectedSchool?.id ?? ""} />
+          <p className="mt-1.5 text-xs text-stone-400 dark:text-stone-500">
+            Seules les écoles déjà inscrites et rattachables apparaissent dans les résultats.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -130,7 +172,11 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
 
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
 
-      <button type="submit" disabled={pending} className="btn-primary w-full">
+      <button
+        type="submit"
+        disabled={pending || (mode === "school" && !selectedSchool)}
+        className="btn-primary w-full"
+      >
         {pending ? "Création du compte..." : "Rejoindre l'école"}
       </button>
     </form>
