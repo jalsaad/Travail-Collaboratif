@@ -14,7 +14,9 @@ export function PeerReferralJoinForm({ token }: { token: string }) {
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="token" value={token} />
 
-      <div className="grid grid-cols-2 gap-3">
+      <LevelHoursPicker />
+
+      <div className="grid grid-cols-2 gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
         <div>
           <label htmlFor="firstName" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
             Prénom
@@ -74,10 +76,6 @@ export function PeerReferralJoinForm({ token }: { token: string }) {
           Les 7 premiers chiffres sont calculés automatiquement à partir du sexe et de la date de
           naissance.
         </p>
-      </div>
-
-      <div className="border-t border-stone-100 pt-4 dark:border-stone-800">
-        <LevelHoursPicker />
       </div>
 
       <div>

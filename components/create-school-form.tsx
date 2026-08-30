@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useActionState } from "react";
 import {
   createSchool,
@@ -22,6 +22,24 @@ const FONCTION_OPTIONS = ["Direction", "Direction adjointe", "Autre"] as const;
 
 export function CreateSchoolForm() {
   const [state, formAction, pending] = useActionState(createSchool, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Formulaire très long à plat : découpé en deux écrans (école, puis
+  // identité/identifiants) sans changer la soumission elle-même — un seul
+  // POST final, tous les champs restent montés en continu (cf. `hidden` ci-
+  // dessous plutôt qu'un rendu conditionnel), l'étape masquée est juste
+  // exclue de la validation native le temps de l'autre étape.
+  const [step, setStep] = useState<1 | 2>(1);
+
+  function suivant() {
+    if (!formRef.current?.reportValidity()) return;
+    setStep(2);
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function precedent() {
+    setStep(1);
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   // Le réseau pilote la saisie de l'adresse : une école à programme belge à
   // l'étranger n'a ni code postal belge, ni zone FWB, et doit préciser son pays.
@@ -85,7 +103,14 @@ export function CreateSchoolForm() {
   }
 
   return (
-    <form action={formAction} className="space-y-4" encType="multipart/form-data">
+    <form ref={formRef} action={formAction} className="space-y-4" encType="multipart/form-data">
+      <div className="flex items-center gap-2 text-xs font-medium text-stone-500 dark:text-stone-400">
+        <span className={step === 1 ? "text-brand-700 dark:text-brand-400" : ""}>1. École</span>
+        <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
+        <span className={step === 2 ? "text-brand-700 dark:text-brand-400" : ""}>2. Vos informations</span>
+      </div>
+
+      <div className={step === 1 ? "space-y-4" : "hidden"}>
       {/* En tête du formulaire : trouver son école par son nom suffit à
           remplir tout le reste. Le numéro FASE, que les enseignants ne
           connaissent généralement pas par cœur, reste disponible en repli
@@ -280,6 +305,12 @@ export function CreateSchoolForm() {
         </p>
       </div>
 
+      <button type="button" onClick={suivant} className="btn-primary w-full">
+        Continuer
+      </button>
+      </div>
+
+      <div className={step === 2 ? "space-y-4" : "hidden"}>
       <div>
         <label htmlFor="fonction" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
           Fonction
@@ -409,9 +440,19 @@ export function CreateSchoolForm() {
 
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
 
-      <button type="submit" disabled={pending} className="btn-primary w-full">
-        {pending ? "Création..." : "Créer l'espace de mon école"}
-      </button>
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={precedent}
+          className="shrink-0 rounded-lg border border-stone-300 px-4 text-sm font-semibold text-stone-600 transition hover:bg-stone-100 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+        >
+          Retour
+        </button>
+        <button type="submit" disabled={pending} className="btn-primary flex-1">
+          {pending ? "Création..." : "Créer l'espace de mon école"}
+        </button>
+      </div>
+      </div>
     </form>
   );
 }

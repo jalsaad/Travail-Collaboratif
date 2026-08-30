@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useActionState } from "react";
 import { joinViaCode, type JoinState, type JoinableSchool } from "@/app/(auth)/rejoindre/actions";
 import { JoinableSchoolSearch } from "@/components/joinable-school-search";
@@ -17,9 +17,35 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
   // n'ayant pas le code sous les yeux au moment de s'inscrire.
   const [mode, setMode] = useState<"code" | "school">(defaultCode ? "code" : "school");
   const [selectedSchool, setSelectedSchool] = useState<JoinableSchool | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Formulaire long à plat : découpé en deux écrans (école, puis niveaux +
+  // identité + identifiants) — même mécanique que components/create-school-
+  // form.tsx (un seul POST final, `hidden` plutôt qu'un rendu conditionnel
+  // pour garder tous les champs montés entre les deux écrans).
+  const [step, setStep] = useState<1 | 2>(1);
+  const ecoleChoisie = mode === "code" || !!selectedSchool;
+
+  function suivant() {
+    if (!ecoleChoisie) return;
+    if (!formRef.current?.reportValidity()) return;
+    setStep(2);
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function precedent() {
+    setStep(1);
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form ref={formRef} action={formAction} className="space-y-4">
+      <div className="flex items-center gap-2 text-xs font-medium text-stone-500 dark:text-stone-400">
+        <span className={step === 1 ? "text-brand-700 dark:text-brand-400" : ""}>1. École</span>
+        <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
+        <span className={step === 2 ? "text-brand-700 dark:text-brand-400" : ""}>2. Vos informations</span>
+      </div>
+
+      <div className={step === 1 ? "space-y-4" : "hidden"}>
       <div className="flex gap-1.5 rounded-lg bg-stone-100 p-1 text-sm dark:bg-stone-800">
         <button
           type="button"
@@ -68,7 +94,17 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      <button type="button" onClick={suivant} disabled={!ecoleChoisie} className="btn-primary w-full">
+        Continuer
+      </button>
+      </div>
+
+      <div className={step === 2 ? "space-y-4" : "hidden"}>
+      <div>
+        <LevelHoursPicker />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
         <div>
           <label htmlFor="firstName" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
             Prénom
@@ -130,10 +166,6 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
         </p>
       </div>
 
-      <div className="border-t border-stone-100 pt-4 dark:border-stone-800">
-        <LevelHoursPicker />
-      </div>
-
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
           Email
@@ -172,13 +204,23 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
 
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
 
-      <button
-        type="submit"
-        disabled={pending || (mode === "school" && !selectedSchool)}
-        className="btn-primary w-full"
-      >
-        {pending ? "Création du compte..." : "Rejoindre l'école"}
-      </button>
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={precedent}
+          className="shrink-0 rounded-lg border border-stone-300 px-4 text-sm font-semibold text-stone-600 transition hover:bg-stone-100 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+        >
+          Retour
+        </button>
+        <button
+          type="submit"
+          disabled={pending || !ecoleChoisie}
+          className="btn-primary flex-1"
+        >
+          {pending ? "Création du compte..." : "Rejoindre l'école"}
+        </button>
+      </div>
+      </div>
     </form>
   );
 }
