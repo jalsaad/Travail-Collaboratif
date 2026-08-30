@@ -34,6 +34,12 @@ export default async function DeclarerPage() {
             membershipId: m.id,
             name: `${m.user.firstName} ${m.user.lastName}`,
           }))}
+          // Cercle initié par un·e enseignant·e, pas encore inscrit
+          // officiellement : personne n'y a de code de rattachement à
+          // distribuer, et le sélecteur ci-dessus est vide tant qu'aucun·e
+          // collègue n'a créé son compte. L'invitation par email est alors le
+          // seul moyen d'associer quelqu'un à la période.
+          peutInviter={active.schoolStatus === "PARTIAL"}
         />
       </Reveal>
     </div>

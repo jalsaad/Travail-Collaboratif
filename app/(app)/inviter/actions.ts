@@ -5,11 +5,10 @@ import QRCode from "qrcode";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
-import { logAudit, AuditAction } from "@/lib/audit-log";
-import { getBaseUrl, sendPeerReferralEmail } from "@/lib/mailer";
+import { sendPeerReferralEmail } from "@/lib/mailer";
 import { civilityAndLastName } from "@/lib/civility";
 import { periodTypeLabel } from "@/lib/period-labels";
-import { generatePeerReferralToken, PEER_REFERRAL_TTL_MS } from "@/lib/peer-referral";
+import { createPeerReferralLink } from "@/lib/peer-referrals";
 
 export type CreatePeerReferralState = { error?: string; link?: string; qrDataUrl?: string; emailSentTo?: string };
 
@@ -73,31 +72,13 @@ export async function createPeerReferral(
     };
   }
 
-  const { rawToken, tokenHash } = generatePeerReferralToken();
-  const expiresAt = new Date(Date.now() + PEER_REFERRAL_TTL_MS);
-
-  const referral = await prisma.peerReferral.create({
-    data: {
-      schoolId: active.schoolId,
-      referredByMembershipId: active.membershipId,
-      periodId,
-      invitedName: parsed.data.invitedName,
-      tokenHash,
-      expiresAt,
-    },
-  });
-
-  await logAudit({
+  const { link } = await createPeerReferralLink({
     schoolId: active.schoolId,
-    actorId: session.userId,
-    action: AuditAction.CREATE_PEER_REFERRAL,
-    targetType: "PeerReferral",
-    targetId: referral.id,
-    metadata: { periodId },
+    referredByMembershipId: active.membershipId,
+    actorUserId: session.userId,
+    periodId,
+    invitedName: parsed.data.invitedName,
   });
-
-  const baseUrl = await getBaseUrl();
-  const link = `${baseUrl}/rejoindre/parrainage/${rawToken}`;
   const qrDataUrl = await QRCode.toDataURL(link, { errorCorrectionLevel: "M", margin: 1 });
 
   if (parsed.data.inviteeEmail) {
