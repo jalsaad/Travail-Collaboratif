@@ -10,7 +10,23 @@ const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
-const SMTP_FROM = process.env.SMTP_FROM || "Travail Collaboratif <no-reply@travail-collaboratif.be>";
+
+/// Ramène tout enchaînement d'espaces — sauts de ligne, tabulations, espaces
+/// insécables — à une espace simple. Une valeur bien formée en ressort
+/// identique ; une valeur cassée dans le .env cesse de dégrader en silence
+/// TOUS les emails sortants.
+///
+/// Vécu : des guillemets courant sur deux lignes donnaient un nom
+/// d'expéditeur contenant un saut de ligne, affiché « Travail Collab oratif »
+/// chez les destinataires. Une espace insécable, elle, empêchait carrément
+/// nodemailer de reconnaître l'adresse, qui disparaissait de l'en-tête.
+function normalizeSender(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+const SMTP_FROM = normalizeSender(
+  process.env.SMTP_FROM || "Travail Collaboratif <no-reply@travail-collaboratif.be>"
+);
 
 // Construit l'URL absolue à partir des headers de la requête entrante plutôt
 // que d'une variable d'environnement dédiée — évite une désynchronisation
