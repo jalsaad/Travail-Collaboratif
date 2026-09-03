@@ -11,12 +11,15 @@ export function PasswordInput({
   required,
   minLength,
   autoComplete,
+  defaultValue,
 }: {
   id: string;
   name: string;
   required?: boolean;
   minLength?: number;
   autoComplete?: string;
+  /// Pré-remplissage du compte de démonstration (cf. lib/demo-mode.ts).
+  defaultValue?: string;
 }) {
   const [visible, setVisible] = useState(false);
 
@@ -29,6 +32,7 @@ export function PasswordInput({
         required={required}
         minLength={minLength}
         autoComplete={autoComplete}
+        defaultValue={defaultValue}
         className="input-field pr-10"
       />
       <button

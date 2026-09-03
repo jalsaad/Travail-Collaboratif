@@ -8,6 +8,14 @@
 // donc le seul qui couvre aussi les fonctionnalités qu'on ajoutera ensuite
 // sans y repenser.
 
+/// Identifiants du compte partagé, écrits ici une seule fois : le script qui
+/// monte la démo (scripts/creer-demo.ts) et le formulaire de connexion qui les
+/// pré-remplit (app/(auth)/login/direction) lisent la même source, pour qu'ils
+/// ne puissent pas diverger. Ce compte ne peut rien écrire, les publier est
+/// donc sans conséquence — c'est même le but.
+export const DEMO_EMAIL = "demo@travail-collaboratif.be";
+export const DEMO_PASSWORD = "demo2026";
+
 /// Message montré à la direction quand elle tente d'enregistrer. Volontairement
 /// explicite sur la cause ET sur ce qui n'a pas eu lieu.
 export const DEMO_WRITE_MESSAGE =

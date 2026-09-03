@@ -7,7 +7,17 @@ import { PasswordInput } from "@/components/password-input";
 
 const initialState: LoginState = {};
 
-export function LoginForm({ espace }: { espace: "profs" | "direction" }) {
+export function LoginForm({
+  espace,
+  defaultEmail = "",
+  defaultPassword = "",
+}: {
+  espace: "profs" | "direction";
+  /// Pré-remplissage du compte de démonstration (cf. lib/demo-mode.ts) : la
+  /// direction n'a plus qu'à cliquer « Se connecter ». Vide partout ailleurs.
+  defaultEmail?: string;
+  defaultPassword?: string;
+}) {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
 
   return (
@@ -23,6 +33,7 @@ export function LoginForm({ espace }: { espace: "profs" | "direction" }) {
           type="email"
           required
           autoComplete="email"
+          defaultValue={defaultEmail}
           className="input-field mt-1.5"
         />
       </div>
@@ -38,7 +49,13 @@ export function LoginForm({ espace }: { espace: "profs" | "direction" }) {
             Mot de passe oublié ?
           </Link>
         </div>
-        <PasswordInput id="password" name="password" required autoComplete="current-password" />
+        <PasswordInput
+          id="password"
+          name="password"
+          required
+          autoComplete="current-password"
+          defaultValue={defaultPassword}
+        />
       </div>
       {state?.error && (
         <p className="text-sm text-red-600">

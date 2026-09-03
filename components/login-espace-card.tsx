@@ -9,11 +9,15 @@ export function LoginEspaceCard({
   subtitle,
   espace,
   footer,
+  defaultEmail,
+  defaultPassword,
 }: {
   title: string;
   subtitle: string;
   espace: "profs" | "direction";
   footer?: ReactNode;
+  defaultEmail?: string;
+  defaultPassword?: string;
 }) {
   // Deux sorties distinctes depuis un formulaire de connexion :
   //  - le logo ramène à l'accueil (/login), qui présente la plateforme ;
@@ -39,7 +43,7 @@ export function LoginEspaceCard({
             <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{subtitle}</p>
           </div>
           <div className="mt-7">
-            <LoginForm espace={espace} />
+            <LoginForm espace={espace} defaultEmail={defaultEmail} defaultPassword={defaultPassword} />
           </div>
           {footer}
           <p className="mt-2 text-center text-sm text-stone-500 dark:text-stone-400">

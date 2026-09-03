@@ -21,11 +21,11 @@ import {
   type TeachingLevel,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { DEMO_EMAIL, DEMO_PASSWORD as DEMO_PASSWORD_DEFAUT } from "../lib/demo-mode";
 
 const prisma = new PrismaClient();
 
-const DEMO_EMAIL = "demo@travail-collaboratif.be";
-const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "demo2026";
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD || DEMO_PASSWORD_DEFAUT;
 const SCHOOL_NAME = "Athénée Royal de la Démonstration";
 
 /// 1 période = 50 minutes (cf. lib/period-duration.ts).

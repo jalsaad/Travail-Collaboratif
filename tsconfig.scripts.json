@@ -6,7 +6,18 @@
     "noEmit": true,
     "incremental": false,
     "jsx": "react-jsx",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["scripts/**/*.ts", "lib/invitation-directions.ts", "lib/email-template.ts", "lib/prospection-csv.ts", "lib/env-local.ts", "lib/fwb-directory.ts", "lib/prospection-suivi.ts"]
+  "include": [
+    "scripts/**/*.ts",
+    "lib/invitation-directions.ts",
+    "lib/email-template.ts",
+    "lib/prospection-csv.ts",
+    "lib/env-local.ts",
+    "lib/fwb-directory.ts",
+    "lib/prospection-suivi.ts",
+    "lib/demo-mode.ts"
+  ]
 }
