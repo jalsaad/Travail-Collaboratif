@@ -123,14 +123,22 @@ export default function LoginGatewayPage() {
                 className="hidden h-auto w-full dark:block"
               />
             </Link>
-            {/* Voir plutôt que lire : une direction se décide plus vite en
-                parcourant l'espace qu'en parcourant un guide. Le lien mène au
-                formulaire de connexion avec les identifiants de démonstration
-                déjà remplis (cf. lib/demo-mode.ts) — le compte ne peut rien
-                écrire, l'école reste donc intacte pour la visite suivante. */}
+            <a
+              href="/guides/guide-direction.html"
+              target="_blank"
+              rel="noopener"
+              className="relative mt-3 flex items-center justify-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-brand-700 shadow-sm ring-1 ring-brand-100 transition hover:-translate-y-0.5 hover:shadow-md dark:bg-stone-800 dark:text-brand-400 dark:ring-stone-700"
+            >
+              📗 Guide direction
+            </a>
+            {/* Sous le guide : voir vaut souvent mieux que lire. Le lien mène
+                au formulaire de connexion avec les identifiants de
+                démonstration déjà remplis (cf. lib/demo-mode.ts) — ce compte
+                ne peut rien écrire, l'école reste donc intacte pour la visite
+                suivante. */}
             <Link
               href="/login/direction?demo=1"
-              className="relative mt-3 flex items-center justify-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-brand-700 shadow-sm ring-1 ring-brand-100 transition hover:-translate-y-0.5 hover:shadow-md dark:bg-stone-800 dark:text-brand-400 dark:ring-stone-700"
+              className="relative mt-2 flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-teal px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:shadow-md"
             >
               🎬 Démo direction
             </Link>
