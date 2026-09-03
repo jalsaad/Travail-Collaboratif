@@ -172,7 +172,17 @@ export function CreateSchoolForm() {
               " L'annuaire ne précise pas la confession : vérifiez le réseau proposé."}
           </p>
         )}
-        {resultat?.found && resultat.dejaInscrite && (
+        {/* Un cercle ouvert par des enseignant·es n'est pas un doublon à
+            refuser : c'est précisément ce que la direction vient régler. On
+            l'y encourage au lieu de la renvoyer. */}
+        {resultat?.found && resultat.cercleAComplecter && (
+          <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">
+            Des enseignant·es de <strong>{resultat.name}</strong> ont déjà ouvert un espace. En
+            poursuivant, vous <strong>complétez leur inscription</strong> et en prenez la direction —
+            leur travail déjà encodé est conservé, rien n&apos;est recréé.
+          </p>
+        )}
+        {resultat?.found && resultat.dejaInscrite && !resultat.cercleAComplecter && (
           <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
             <strong>{resultat.name}</strong> est déjà inscrite sur la plateforme. Demandez un lien de
             parrainage ou le code de rattachement à un·e collègue déjà inscrit·e plutôt que de créer un

@@ -223,29 +223,55 @@ export async function createSchool(
     throw error;
   }
 
+  // Une école déjà ouverte par ses enseignant·es (statut PARTIAL, cf.
+  // initiatePartialSchool) n'est PAS un doublon à refuser : c'est exactement
+  // la situation que l'email d'invitation demande à la direction de régler.
+  // Elle complète alors le dossier de l'école existante, sans que le cercle
+  // déjà constitué ni les périodes déjà déclarées ne soient perdus.
+  const cercleExistant = parsedSchool.data.numeroFase
+    ? await prisma.school.findUnique({ where: { numeroFase: parsedSchool.data.numeroFase } })
+    : null;
+  if (cercleExistant && cercleExistant.status !== "PARTIAL") {
+    return { error: await refus("Ce numéro FASE est déjà utilisé.", "numeroFase") };
+  }
+
+  const donneesEcole = {
+    name: parsedSchool.data.name,
+    reseau: parsedSchool.data.reseau,
+    region: parsedSchool.data.region,
+    niveaux: niveaux.data,
+    typesEnseignement: typesEnseignement.data,
+    address: parsedSchool.data.address,
+    postalCode: parsedSchool.data.postalCode,
+    locality: parsedSchool.data.locality,
+    country: parsedSchool.data.country,
+    phone: parsedSchool.data.phone,
+    website: parsedSchool.data.website,
+    numeroFase: parsedSchool.data.numeroFase,
+  };
+
   let school;
   try {
     school = await prisma.$transaction(async (tx) => {
-      const createdSchool = await tx.school.create({
-        data: {
-          name: parsedSchool.data.name,
-          reseau: parsedSchool.data.reseau,
-          region: parsedSchool.data.region,
-          niveaux: niveaux.data,
-          typesEnseignement: typesEnseignement.data,
-          address: parsedSchool.data.address,
-          postalCode: parsedSchool.data.postalCode,
-          locality: parsedSchool.data.locality,
-          country: parsedSchool.data.country,
-          phone: parsedSchool.data.phone,
-          website: parsedSchool.data.website,
-          numeroFase: parsedSchool.data.numeroFase,
-          // Toute école créée via ce flux public attend une validation par
-          // la plateforme (app/admin/ecoles) avant de devenir opérationnelle
-          // — cf. la garde dans app/(app)/layout.tsx.
-          status: "PENDING",
-        },
-      });
+      const ecole = cercleExistant
+        ? await tx.school.update({
+            where: { id: cercleExistant.id },
+            // Le cercle passe APPROVED plutôt que PENDING : il fonctionnait
+            // déjà, et l'attente d'une validation plateforme le mettrait à
+            // l'arrêt pour des enseignant·es qui n'ont rien demandé (cf. la
+            // garde dans app/(app)/layout.tsx). La plateforme est prévenue
+            // ci-dessous et garde la main a posteriori.
+            data: { ...donneesEcole, status: "APPROVED" },
+          })
+        : await tx.school.create({
+            data: {
+              ...donneesEcole,
+              // Toute école créée de zéro via ce flux public attend une
+              // validation par la plateforme (app/admin/ecoles) avant de
+              // devenir opérationnelle — cf. la garde dans app/(app)/layout.tsx.
+              status: "PENDING",
+            },
+          });
 
       // Le fondateur devient titulaire du compte (isAccountOwner) — cf.
       // permissions.md : protégé contre le retrait/la rétrogradation par qui
@@ -253,7 +279,7 @@ export async function createSchool(
       await tx.membership.create({
         data: {
           userId: founderUserId,
-          schoolId: createdSchool.id,
+          schoolId: ecole.id,
           role,
           fonction: parsedFounderRole.data.fonction,
           fonctionAutre: parsedFounderRole.data.fonction === "Autre" ? parsedFounderRole.data.fonctionAutre : null,
@@ -262,9 +288,12 @@ export async function createSchool(
         },
       });
 
-      await createJoinCodeForSchool(tx, createdSchool.id, createdSchool.name, founderUserId);
+      // Un cercle PARTIAL n'a jamais eu de code de rattachement — personne
+      // n'y avait le droit d'en générer un. La direction en obtient un ici,
+      // en même temps que ses droits de gestion.
+      await createJoinCodeForSchool(tx, ecole.id, ecole.name, founderUserId);
 
-      return createdSchool;
+      return ecole;
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -288,12 +317,17 @@ export async function createSchool(
   await logAudit({
     schoolId: school.id,
     actorId: founderUserId,
-    action: AuditAction.CREATE_SCHOOL,
+    // Distinguer la reprise d'un cercle d'une création de zéro : ce n'est
+    // pas le même événement, et le journal sert précisément à le retracer.
+    action: cercleExistant ? AuditAction.COMPLETE_PARTIAL_SCHOOL : AuditAction.CREATE_SCHOOL,
     targetType: "School",
     targetId: school.id,
   });
 
-  // L'école reste PENDING : la plateforme doit savoir qu'une demande attend.
+  // Création de zéro : l'école attend une validation, la plateforme doit le
+  // savoir. Reprise d'un cercle : elle est déjà opérationnelle, mais la
+  // plateforme doit pouvoir vérifier a posteriori qui s'en est déclaré
+  // direction.
   await notifyPlatformOfNewSchool(school.id, founderUserId);
 
   try {
@@ -332,6 +366,11 @@ export type FwbLookup =
       /// Déjà inscrite sur la plateforme : la création échouerait de toute
       /// façon (School.numeroFase est unique), autant le dire tout de suite.
       dejaInscrite: boolean;
+      /// Cercle ouvert par des enseignant·es (statut PARTIAL) : ce n'est PAS
+      /// un doublon à refuser, la direction est au contraire invitée à
+      /// compléter le dossier — l'école existante est alors reprise, cercle
+      /// et périodes compris (cf. createSchool).
+      cercleAComplecter: boolean;
     };
 
 /// Recherche une école dans l'annuaire officiel de la FWB (table fwb_schools,
@@ -347,9 +386,9 @@ export async function lookupFwbSchool(numeroFaseSaisi: string): Promise<FwbLooku
   const numeroFase = normaliserFase(numeroFaseSaisi);
   if (!numeroFase || numeroFase.length > 8) return { found: false };
 
-  const [ecole, dejaInscrite] = await Promise.all([
+  const [ecole, inscrite] = await Promise.all([
     prisma.fwbSchool.findUnique({ where: { numeroFase } }),
-    prisma.school.findUnique({ where: { numeroFase }, select: { id: true } }),
+    prisma.school.findUnique({ where: { numeroFase }, select: { id: true, status: true } }),
   ]);
   if (!ecole) return { found: false };
 
@@ -367,7 +406,8 @@ export async function lookupFwbSchool(numeroFaseSaisi: string): Promise<FwbLooku
     niveaux: ecole.niveaux,
     typesEnseignement: ecole.genres,
     implantationCount: ecole.implantationCount,
-    dejaInscrite: dejaInscrite !== null,
+    dejaInscrite: inscrite !== null,
+    cercleAComplecter: inscrite?.status === "PARTIAL",
   };
 }
 
