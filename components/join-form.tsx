@@ -68,6 +68,12 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
       <button type="button" onClick={suivant} disabled={!ecoleChoisie} className="btn-primary w-full">
         Continuer
       </button>
+      {/* Un bouton grisé sans explication se lit comme un bouton en panne. */}
+      {!ecoleChoisie && (
+        <p className="text-center text-xs text-stone-400 dark:text-stone-500">
+          Choisissez d&apos;abord votre école dans les résultats de recherche.
+        </p>
+      )}
       </div>
 
       <div ref={step2Ref} className={step === 2 ? "space-y-4" : "hidden"}>

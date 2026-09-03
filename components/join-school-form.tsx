@@ -39,6 +39,12 @@ export function JoinSchoolForm() {
             ? "Créer le cercle de mon école"
             : "Rejoindre cette école"}
       </button>
+      {/* Un bouton grisé sans explication se lit comme un bouton en panne. */}
+      {!choix.prete && (
+        <p className="text-xs text-stone-400 dark:text-stone-500">
+          Choisissez d&apos;abord votre école dans les résultats de recherche.
+        </p>
+      )}
     </form>
   );
 }

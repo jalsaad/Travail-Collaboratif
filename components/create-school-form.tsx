@@ -24,6 +24,7 @@ export function CreateSchoolForm() {
   const [state, formAction, pending] = useActionState(createSchool, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const step2Ref = useRef<HTMLDivElement>(null);
+  const faseDetailsRef = useRef<HTMLDetailsElement>(null);
   // Formulaire très long à plat : découpé en deux écrans (école, puis
   // identité/identifiants) sans changer la soumission elle-même — un seul
   // POST final, tous les champs restent montés en continu (`hidden` plutôt
@@ -43,6 +44,16 @@ export function CreateSchoolForm() {
       "input, select, textarea"
     );
     champsEtape2?.forEach((c) => (c.disabled = true));
+
+    // Le numéro FASE est requis mais vit dans un repli fermé par défaut :
+    // le navigateur refusait alors la validation SANS pouvoir afficher son
+    // message (rien à pointer sur un champ non affiché), et "Continuer"
+    // paraissait mort. On déplie avant de valider quand il manque, pour que
+    // le message atterrisse sur un champ visible.
+    if (faseDetailsRef.current && numeroFase.trim() === "") {
+      faseDetailsRef.current.open = true;
+    }
+
     const valide = formRef.current?.reportValidity() ?? true;
     champsEtape2?.forEach((c) => (c.disabled = false));
     if (!valide) return;
@@ -133,10 +144,14 @@ export function CreateSchoolForm() {
       <div className="rounded-lg border border-brand-100 bg-brand-50/60 p-4 dark:border-brand-900 dark:bg-brand-950/40">
         <SchoolNameSearch onSelect={choisirEcole} />
 
-        <details className="mt-3">
+        <details ref={faseDetailsRef} className="mt-3">
           <summary className="cursor-pointer text-xs font-medium text-brand-700 dark:text-brand-400">
             Vous connaissez déjà le numéro FASE ?
           </summary>
+          <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+            Rempli automatiquement dès que vous choisissez votre école ci-dessus. À saisir à la main
+            uniquement si elle ne ressort pas de la recherche.
+          </p>
           <div className="mt-2 flex gap-2">
             <input
               id="numeroFase"
