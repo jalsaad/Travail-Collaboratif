@@ -9,6 +9,7 @@ import { sendPeerReferralEmail } from "@/lib/mailer";
 import { civilityAndLastName } from "@/lib/civility";
 import { periodTypeLabel } from "@/lib/period-labels";
 import { createPeerReferralLink } from "@/lib/peer-referrals";
+import { demoErrorState } from "@/lib/demo-mode";
 
 export type CreatePeerReferralState = { error?: string; link?: string; qrDataUrl?: string; emailSentTo?: string };
 
@@ -30,7 +31,7 @@ const schema = z.object({
     }),
 });
 
-export async function createPeerReferral(
+async function createPeerReferralImpl(
   _prevState: CreatePeerReferralState | undefined,
   formData: FormData
 ): Promise<CreatePeerReferralState> {
@@ -104,4 +105,19 @@ export async function createPeerReferral(
   }
 
   return { link, qrDataUrl };
+}
+
+// Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts) :
+// on traduit le refus en message lisible plutôt qu'en page d'erreur.
+export async function createPeerReferral(
+  prevState: CreatePeerReferralState | undefined,
+  formData: FormData
+): Promise<CreatePeerReferralState> {
+  try {
+    return await createPeerReferralImpl(prevState, formData);
+  } catch (error) {
+    const demo = demoErrorState(error);
+    if (demo) return demo;
+    throw error;
+  }
 }

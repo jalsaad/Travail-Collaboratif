@@ -154,6 +154,13 @@ model User {
   /// Membership (qui restent scopés à une école). Réservé à l'équipe produit
   /// pour assister les directions ; ne pas confondre avec Role.DIRECTION.
   isSuperAdmin        Boolean   @default(false)
+  /// Compte de démonstration ouvert aux directions qui découvrent la
+  /// plateforme : il peut TOUT consulter et remplir les formulaires, mais
+  /// aucune écriture ne lui est permise (cf. lib/prisma.ts, qui bloque au
+  /// niveau du client Prisma plutôt qu'action par action — une nouvelle
+  /// fonctionnalité est ainsi couverte sans qu'on ait à y penser). L'espace
+  /// reste donc identique pour le visiteur suivant.
+  isDemo              Boolean   @default(false)
   lastLoginAt         DateTime?
   /// Note de satisfaction courante (1 à 5), modifiable à tout moment depuis
   /// le widget étoiles du menu (cf. components/satisfaction-stars.tsx) — une

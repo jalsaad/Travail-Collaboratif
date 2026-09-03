@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { AppTransactionClient } from "@/lib/prisma";
 
 function generateJoinCode(schoolName: string): string {
   const prefix =
@@ -15,7 +15,7 @@ function generateJoinCode(schoolName: string): string {
 // sur la contrainte @unique(code). Ne désactive pas d'éventuel code déjà
 // actif — à l'appelant de le faire s'il s'agit d'une régénération.
 export async function createJoinCodeForSchool(
-  tx: Prisma.TransactionClient,
+  tx: AppTransactionClient,
   schoolId: string,
   schoolName: string,
   createdById: string

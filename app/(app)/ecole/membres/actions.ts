@@ -11,10 +11,11 @@ import {
   ForbiddenError,
 } from "@/lib/school-authorization";
 import { logAudit, AuditAction } from "@/lib/audit-log";
+import { demoErrorState } from "@/lib/demo-mode";
 
 export type MemberActionState = { error?: string; success?: string };
 
-export async function removeMember(
+async function removeMemberImpl(
   _prevState: MemberActionState | undefined,
   formData: FormData
 ): Promise<MemberActionState> {
@@ -62,7 +63,7 @@ export async function removeMember(
 
 const roleSchema = z.enum(["ENSEIGNANT", "REFERENT_NUMERIQUE"]); // jamais DIRECTION, même en entrée
 
-export async function updateMemberRole(
+async function updateMemberRoleImpl(
   _prevState: MemberActionState | undefined,
   formData: FormData
 ): Promise<MemberActionState> {
@@ -100,4 +101,34 @@ export async function updateMemberRole(
 
   revalidatePath("/ecole");
   return { success: "Rôle mis à jour." };
+}
+
+// Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts) :
+// on traduit le refus en message lisible plutôt qu'en page d'erreur.
+export async function removeMember(
+  prevState: MemberActionState | undefined,
+  formData: FormData
+): Promise<MemberActionState> {
+  try {
+    return await removeMemberImpl(prevState, formData);
+  } catch (error) {
+    const demo = demoErrorState(error);
+    if (demo) return demo;
+    throw error;
+  }
+}
+
+// Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts) :
+// on traduit le refus en message lisible plutôt qu'en page d'erreur.
+export async function updateMemberRole(
+  prevState: MemberActionState | undefined,
+  formData: FormData
+): Promise<MemberActionState> {
+  try {
+    return await updateMemberRoleImpl(prevState, formData);
+  } catch (error) {
+    const demo = demoErrorState(error);
+    if (demo) return demo;
+    throw error;
+  }
 }

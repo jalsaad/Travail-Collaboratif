@@ -1,5 +1,5 @@
-import type { Prisma } from "@prisma/client";
 import { toOptions } from "@/lib/disciplines";
+import type { AppTransactionClient } from "@/lib/prisma";
 
 // Toutes les valeurs sélectionnables par le <select> de LevelHoursPicker —
 // calculé une seule fois (référentiel statique, cf. lib/disciplines.ts).
@@ -59,6 +59,6 @@ export function toPickerDefaultValue(code: string | null, label: string): { disc
 // libellé"), gardant la table normalisée pour le ciblage des annonces (cf.
 // components/announcement-form.tsx) et le filtre de l'annuaire admin (cf.
 // lib/admin-directory.ts).
-export async function resolveOrCreateDiscipline(tx: Prisma.TransactionClient, code: string, label: string) {
+export async function resolveOrCreateDiscipline(tx: AppTransactionClient, code: string, label: string) {
   return tx.discipline.upsert({ where: { code }, update: { name: label }, create: { code, name: label } });
 }

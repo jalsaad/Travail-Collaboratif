@@ -21,6 +21,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: `${user.firstName} ${user.lastName}`,
           isSuperAdmin: user.isSuperAdmin,
+          isDemo: user.isDemo,
         };
       },
     }),
@@ -32,12 +33,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.name = user.name;
         token.email = user.email;
         token.isSuperAdmin = user.isSuperAdmin;
+        token.isDemo = user.isDemo;
       }
       return token;
     },
     async session({ session, token }) {
       session.userId = token.userId as string;
       session.isSuperAdmin = token.isSuperAdmin as boolean;
+      session.isDemo = token.isDemo === true;
       if (session.user) {
         session.user.name = token.name ?? null;
         session.user.email = token.email ?? "";

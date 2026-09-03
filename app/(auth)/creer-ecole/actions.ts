@@ -60,7 +60,14 @@ const schoolSchema = z.object({
       }
     })
     .nullable(),
-  numeroFase: z.string().min(1, "Numéro FASE requis"),
+  // Facultatif : toutes les écoles n'en ont pas (programme belge à
+  // l'étranger, implantation absente de l'annuaire...), et l'exiger revenait
+  // à leur fermer l'inscription. Reste unique quand il est fourni — Postgres
+  // autorise autant de NULL qu'on veut sur une colonne unique, donc plusieurs
+  // écoles sans numéro coexistent sans se gêner. Conséquence assumée : sans
+  // FASE, l'école ne se rapproche pas de l'annuaire et n'apparaît pas sur la
+  // cartographie (cf. le commentaire de FwbSchool dans prisma/schema.prisma).
+  numeroFase: z.string().transform((v) => v.trim() || null),
   // Exigé uniquement pour les écoles à programme belge à l'étranger, où le
   // code postal ne suffit pas à localiser l'établissement.
   country: z.string().transform((v) => v.trim() || null).nullable(),
@@ -123,7 +130,7 @@ export async function createSchool(
     locality: formData.get("locality"),
     phone: formData.get("phone"),
     website: formData.get("website") ?? "",
-    numeroFase: formData.get("numeroFase"),
+    numeroFase: formData.get("numeroFase") ?? "",
     country: formData.get("country") ?? "",
   });
   if (!parsedSchool.success) {

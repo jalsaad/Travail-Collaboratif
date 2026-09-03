@@ -8,6 +8,7 @@ import { resolveActiveMembership } from "@/lib/active-school";
 import { assertCanManageSchool, ForbiddenError } from "@/lib/school-authorization";
 import { logAudit, AuditAction } from "@/lib/audit-log";
 import { notifyTeachersOfReminder } from "@/lib/school-notifications";
+import { demoErrorState } from "@/lib/demo-mode";
 
 export type ReminderActionState = { error?: string; success?: string };
 
@@ -25,7 +26,7 @@ const reminderSchema = z.object({
 // (jamais aux autres écoles ni aux autres rôles) — réutilise le système
 // d'annonces existant (Announcement/AnnouncementTarget), simplement scopé à
 // l'école active et expirant automatiquement 5 jours après publication.
-export async function publishTeacherReminder(
+async function publishTeacherReminderImpl(
   _prevState: ReminderActionState | undefined,
   formData: FormData
 ): Promise<ReminderActionState> {
@@ -115,4 +116,19 @@ export async function cancelTeacherReminder(announcementId: string) {
   });
 
   revalidatePath("/ecole");
+}
+
+// Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts) :
+// on traduit le refus en message lisible plutôt qu'en page d'erreur.
+export async function publishTeacherReminder(
+  prevState: ReminderActionState | undefined,
+  formData: FormData
+): Promise<ReminderActionState> {
+  try {
+    return await publishTeacherReminderImpl(prevState, formData);
+  } catch (error) {
+    const demo = demoErrorState(error);
+    if (demo) return demo;
+    throw error;
+  }
 }

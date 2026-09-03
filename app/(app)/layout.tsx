@@ -6,6 +6,7 @@ import { getActiveMemberships, resolveActiveMembership } from "@/lib/active-scho
 import { Nav } from "@/components/nav";
 import { AnnouncementBanner } from "@/components/announcement-banner";
 import { SchoolApprovalNotice } from "@/components/school-approval-notice";
+import { DemoBanner } from "@/components/demo-banner";
 import { SchoolLogoBadge } from "@/components/school-logo-badge";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
@@ -26,6 +27,7 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
 
   return (
     <div className="min-h-screen bg-stone-50 pt-4 dark:bg-stone-950">
+      {session.isDemo && <DemoBanner />}
       <Nav
         session={session}
         active={active}

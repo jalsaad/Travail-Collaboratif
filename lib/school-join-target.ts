@@ -1,5 +1,4 @@
-import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma, type AppTransactionClient } from "@/lib/prisma";
 import { AuditAction } from "@/lib/audit-log";
 import { reseauPlateforme, regionPlateforme } from "@/lib/fwb-directory";
 
@@ -118,7 +117,7 @@ export async function loadFwbSchoolForInitiation(
 /// nom. `directionEmail` ne sert qu'à prévenir la direction, jamais à créer
 /// un compte à sa place.
 export async function createPartialSchoolRecord(
-  tx: Prisma.TransactionClient,
+  tx: AppTransactionClient,
   fwbSchool: FwbSchoolForInitiation,
   directionEmail: string
 ) {

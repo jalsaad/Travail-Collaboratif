@@ -1,9 +1,9 @@
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
 import { computeMatricule, MATRICULE_MANUAL_PATTERN } from "@/lib/matricule";
 import { resolveOrCreateDiscipline } from "@/lib/discipline-form";
 import type { LevelHoursEntry } from "@/lib/teaching-levels";
+import type { AppTransactionClient } from "@/lib/prisma";
 
 // Champs d'identité communs aux parcours d'auto-inscription enseignant : par
 // code de rattachement (app/(auth)/rejoindre/actions.ts) et par lien de
@@ -36,7 +36,7 @@ export type TeacherIdentity = z.infer<typeof teacherIdentitySchema>;
 // jamais DIRECTION/REFERENT_NUMERIQUE (réservé au fondateur de l'école ou à
 // une promotion ultérieure, cf. permissions.md).
 export async function createTeacherAccountAndMembership(
-  tx: Prisma.TransactionClient,
+  tx: AppTransactionClient,
   params: { schoolId: string; identity: TeacherIdentity; levels: LevelHoursEntry[] }
 ) {
   const passwordHash = await bcrypt.hash(params.identity.password, 10);

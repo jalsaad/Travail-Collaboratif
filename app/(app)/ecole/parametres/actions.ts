@@ -10,6 +10,7 @@ import { logAudit, AuditAction } from "@/lib/audit-log";
 import { createJoinCodeForSchool } from "@/lib/join-codes";
 import { saveSchoolLogo, InvalidLogoError } from "@/lib/school-logo";
 import { normalizeWebsite, InvalidWebsiteError } from "@/lib/website-url";
+import { demoErrorState } from "@/lib/demo-mode";
 
 export type SchoolActionState = { error?: string; success?: string };
 
@@ -41,7 +42,7 @@ const schoolInfoSchema = z.object({
 const niveauSchema = z.enum(["MATERNELLE", "PRIMAIRE", "SECONDAIRE"]);
 const typeEnseignementSchema = z.enum(["ORDINAIRE", "SPECIALISE"]);
 
-export async function updateSchoolInfo(
+async function updateSchoolInfoImpl(
   _prevState: SchoolActionState | undefined,
   formData: FormData
 ): Promise<SchoolActionState> {
@@ -125,7 +126,7 @@ export async function updateSchoolInfo(
   return { success: "Informations mises à jour." };
 }
 
-export async function regenerateJoinCode(): Promise<SchoolActionState> {
+async function regenerateJoinCodeImpl(): Promise<SchoolActionState> {
   const session = await auth();
   if (!session) throw new Error("Non authentifié.");
   const active = await resolveActiveMembership(session.userId);
@@ -162,4 +163,31 @@ export async function regenerateJoinCode(): Promise<SchoolActionState> {
 
   revalidatePath("/ecole/parametres");
   return { success: `Nouveau code : ${newCode.code}` };
+}
+
+// Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts) :
+// on traduit le refus en message lisible plutôt qu'en page d'erreur.
+export async function updateSchoolInfo(
+  prevState: SchoolActionState | undefined,
+  formData: FormData
+): Promise<SchoolActionState> {
+  try {
+    return await updateSchoolInfoImpl(prevState, formData);
+  } catch (error) {
+    const demo = demoErrorState(error);
+    if (demo) return demo;
+    throw error;
+  }
+}
+
+// Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts) :
+// on traduit le refus en message lisible plutôt qu'en page d'erreur.
+export async function regenerateJoinCode(): Promise<SchoolActionState> {
+  try {
+    return await regenerateJoinCodeImpl();
+  } catch (error) {
+    const demo = demoErrorState(error);
+    if (demo) return demo;
+    throw error;
+  }
 }
