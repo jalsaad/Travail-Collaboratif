@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { tolerateDemoWrite } from "@/lib/demo-mode";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { periodTypeLabel } from "@/lib/period-labels";
 import { formatPeriodes, formatTimeRange } from "@/lib/period-duration";
@@ -87,8 +88,11 @@ export async function GET(request: Request) {
   const buffer = await buildPeriodsPdf(rows, title, logos, identity);
 
   if (schoolYear) {
-    await prisma.exportLog.create({
-      data: {
+    // Le PDF est déjà produit : en démonstration, sa trace est simplement
+    // abandonnée plutôt que de faire échouer le téléchargement.
+    await tolerateDemoWrite(() =>
+      prisma.exportLog.create({
+        data: {
         schoolId: active.schoolId,
         schoolYearId: schoolYear.id,
         scope: "INDIVIDUAL",
@@ -98,8 +102,9 @@ export async function GET(request: Request) {
         rangeEnd: range.end,
         requestedById: session.userId,
         fileUrl: request.url,
-      },
-    });
+        },
+      })
+    );
   }
 
   return new NextResponse(new Uint8Array(buffer), {

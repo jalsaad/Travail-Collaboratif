@@ -35,6 +35,26 @@ export function demoErrorState(error: unknown): { error: string } | null {
   return error instanceof DemoModeError ? { error: DEMO_WRITE_MESSAGE } : null;
 }
 
+/// Exécute une écriture ACCESSOIRE en tolérant qu'elle soit refusée en
+/// démonstration : une trace d'export, un horodatage de connexion, une
+/// préférence d'affichage. Ces écritures accompagnent un geste dont le
+/// résultat utile est ailleurs (le PDF est déjà produit, la session est déjà
+/// ouverte) — les laisser échouer transformerait un bouton parfaitement
+/// fonctionnel en cul-de-sac, alors que la démonstration promet l'inverse :
+/// tout fonctionne, rien ne s'enregistre.
+///
+/// À ne PAS utiliser pour l'écriture qui EST le but du geste (déclarer une
+/// période, inviter un membre) : là, le refus doit se voir, et les actions
+/// concernées l'affichent via demoErrorState.
+export async function tolerateDemoWrite(ecriture: () => Promise<unknown>): Promise<void> {
+  try {
+    await ecriture();
+  } catch (error) {
+    // Toute autre panne remonte : on ne masque que le refus de la démo.
+    if (!(error instanceof DemoModeError)) throw error;
+  }
+}
+
 /// Opérations Prisma qui modifient l'état. Tout le reste (findMany, count,
 /// aggregate…) reste autorisé : la démo doit se consulter normalement.
 const WRITE_OPERATIONS = new Set([

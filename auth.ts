@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { verifyCredentials } from "@/lib/verify-credentials";
 import { prisma } from "@/lib/prisma";
+import { tolerateDemoWrite } from "@/lib/demo-mode";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
@@ -51,10 +52,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   events: {
     async signIn({ user }) {
       if (user?.id) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { lastLoginAt: new Date() },
-        });
+        // Toléré en démonstration : le compte partagé n'écrit rien, et son
+        // horodatage de connexion ne vaut pas d'empêcher la connexion.
+        await tolerateDemoWrite(() =>
+          prisma.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() },
+          })
+        );
       }
     },
   },

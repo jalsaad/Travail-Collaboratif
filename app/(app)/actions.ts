@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { setActiveSchoolCookie } from "@/lib/active-school";
+import { tolerateDemoWrite } from "@/lib/demo-mode";
 
 export async function signOutAction() {
   await signOut({ redirectTo: "/login" });
@@ -21,11 +22,15 @@ export async function dismissAnnouncement(announcementId: string) {
   const session = await auth();
   if (!session) return;
 
-  await prisma.announcementRead.upsert({
-    where: { announcementId_userId: { announcementId, userId: session.userId } },
-    update: { dismissedAt: new Date() },
-    create: { announcementId, userId: session.userId, dismissedAt: new Date() },
-  });
+  // Fermer une annonce est un confort d'affichage : en démonstration, le
+  // bandeau se referme sans que rien ne soit retenu.
+  await tolerateDemoWrite(() =>
+    prisma.announcementRead.upsert({
+      where: { announcementId_userId: { announcementId, userId: session.userId } },
+      update: { dismissedAt: new Date() },
+      create: { announcementId, userId: session.userId, dismissedAt: new Date() },
+    })
+  );
 
   revalidatePath("/", "layout");
 }
@@ -37,8 +42,10 @@ export async function setSatisfactionRating(rating: number) {
   if (!session) return;
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) return;
 
-  await prisma.user.update({
-    where: { id: session.userId },
-    data: { satisfactionRating: rating, satisfactionRatedAt: new Date() },
-  });
+  await tolerateDemoWrite(() =>
+    prisma.user.update({
+      where: { id: session.userId },
+      data: { satisfactionRating: rating, satisfactionRatedAt: new Date() },
+    })
+  );
 }
