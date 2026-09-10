@@ -58,14 +58,19 @@ export function Nav({
   const [hasOpenedOnce, setHasOpenedOnce] = useState(false);
   const initial = session.user?.name?.trim().charAt(0).toUpperCase() ?? "?";
 
-  // Deux fermetures, et deux seulement : le bouton X, et un clic dans la page
-  // (le rideau). Naviguer vers une entrée du menu le laisse ouvert — on garde
-  // ainsi le fil de la navigation d'une page à l'autre. Ne pas rajouter de
-  // `onClick` de fermeture sur les liens du tiroir.
+  // Trois fermetures : le bouton X, un clic dans la page (le rideau), et le
+  // choix d'une destination dans le tiroir — on ne reste pas devant un menu
+  // ouvert sur la page qu'on vient d'atteindre.
+  //
+  // Seuls les éléments qui MÈNENT quelque part referment : les étoiles de
+  // satisfaction, elles, se cliquent sur place et refermer le tiroir sous les
+  // doigts donnerait l'impression d'avoir raté sa cible.
   function handleOpenChange(next: boolean) {
     if (next) setHasOpenedOnce(true);
     setOpen(next);
   }
+
+  const fermer = () => handleOpenChange(false);
 
   const pathname = usePathname();
   const peutGererEcole = active?.role === "DIRECTION" || active?.role === "REFERENT_NUMERIQUE";
@@ -165,12 +170,19 @@ export function Nav({
           — pas une `transition-opacity`, peu fiable ici avec les nuages
           enfants qui arrêtent leur propre animation au même instant).
           Pendant l'ouverture, les nuages grossissent en boucle vers la vue
-          (effet "pare-brise d'avion"). Assez translucide pour laisser
-          deviner le contenu de la page derrière. */}
+          (effet "pare-brise d'avion").
+
+          Le flou porte sur le fond (`backdrop-blur`) et non sur la page
+          elle-même : ses animations continuent de tourner derrière, mais le
+          contenu cesse de disputer l'attention au menu. Les nuages sont des
+          enfants du rideau, donc peints PAR-DESSUS ce flou — ils restent
+          nets et animés. Le voile se teinte selon le thème : blanc sur fond
+          clair, ardoise sur fond sombre, où un voile blanc éclaircirait la
+          page au lieu de l'estomper. */}
       <div
         onClick={() => handleOpenChange(false)}
         aria-hidden="true"
-        className={`fixed inset-0 z-30 overflow-hidden ${
+        className={`fixed inset-0 z-30 overflow-hidden backdrop-blur-[6px] ${
           curtainState === "closed"
             ? "opacity-0 pointer-events-none"
             : curtainState === "opening"
@@ -178,7 +190,7 @@ export function Nav({
               : "opacity-0 pointer-events-none animate-curtain-fade-out"
         }`}
       >
-        <div className="absolute inset-0 bg-white/10" />
+        <div className="absolute inset-0 bg-white/40 dark:bg-stone-950/50" />
         <div
           className={`absolute left-[22%] top-[28%] h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-500/30 blur-3xl ${cloudFlyClass("animate-cloud-fly-a")}`}
           style={cloudStyle}
@@ -250,6 +262,7 @@ export function Nav({
                     <Link
                       key={href}
                       href={href}
+                      onClick={fermer}
                       aria-current={estActif(href) ? "page" : undefined}
                       className={`${linkBase} ${estActif(href) ? linkActive : linkIdle}`}
                     >
@@ -269,6 +282,7 @@ export function Nav({
           )}
           <Link
             href="/mon-profil"
+            onClick={fermer}
             className="flex items-center gap-2 rounded-lg px-1 py-1 text-sm transition hover:bg-brand-50 dark:hover:bg-stone-800"
           >
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-teal text-xs font-semibold text-white">
