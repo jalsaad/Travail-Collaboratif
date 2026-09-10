@@ -9,9 +9,7 @@ import { periodesBetween } from "@/lib/period-duration";
 import { notifyPendingParticipants } from "@/lib/participation-invitations";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 import { zipExternalParticipants } from "@/lib/external-participants";
-import { invitePeerByEmail, zipColleagueInvites } from "@/lib/peer-referrals";
-import { civilityAndLastName } from "@/lib/civility";
-import { periodTypeLabel } from "@/lib/period-labels";
+import { inviteColleaguesOnPeriod } from "@/lib/peer-referrals";
 
 export type CreatePeriodState = { error?: string };
 
@@ -96,42 +94,14 @@ export async function createPeriod(
 
   await notifyPendingParticipants(created.id);
 
-  // Collègues encore sans compte, invités depuis la déclaration : chacun
-  // reçoit un lien de parrainage rattaché à CETTE période, donc créer son
-  // compte vaudra confirmation de sa participation. Après la création de la
-  // période, forcément : le lien porte son identifiant.
-  const invites = zipColleagueInvites(
-    formData.getAll("inviteeName"),
-    formData.getAll("inviteeEmail")
-  );
-  if (invites.length > 0) {
-    const auteur = await prisma.user.findUnique({
-      where: { id: session.userId },
-      select: { firstName: true, lastName: true, sex: true },
-    });
-    const periodPourEmail = {
-      dateLabel: created.date.toLocaleDateString("fr-BE", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }),
-      typeLabel: periodTypeLabel[created.type],
-      description: created.description,
-    };
-    for (const invite of invites) {
-      await invitePeerByEmail({
-        to: invite.email,
-        schoolId: active.schoolId,
-        schoolName: active.schoolName,
-        referredByMembershipId: active.membershipId,
-        actorUserId: session.userId,
-        inviterCivility: auteur ? civilityAndLastName(auteur) : "Un·e collègue",
-        periodId: created.id,
-        period: periodPourEmail,
-        invitedName: invite.fullName,
-      });
-    }
-  }
+  await inviteColleaguesOnPeriod({
+    formData,
+    period: created,
+    schoolId: active.schoolId,
+    schoolName: active.schoolName,
+    referredByMembershipId: active.membershipId,
+    actorUserId: session.userId,
+  });
 
   redirect("/mes-periodes");
 }

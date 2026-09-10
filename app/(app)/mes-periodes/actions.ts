@@ -9,6 +9,7 @@ import { createPeriodSchema } from "@/app/(app)/declarer/schema";
 import { periodesBetween } from "@/lib/period-duration";
 import { notifyPendingParticipants } from "@/lib/participation-invitations";
 import { zipExternalParticipants } from "@/lib/external-participants";
+import { inviteColleaguesOnPeriod } from "@/lib/peer-referrals";
 
 // Invariant d'autorisation (cf. permissions.md > assertCanConfirmParticipation) :
 // le where est TOUJOURS construit à partir de session.userId, jamais d'un
@@ -157,6 +158,23 @@ export async function updatePeriod(
   // Après réédition, TOUS les intervenants sont repassés en attente : ils
   // doivent être prévenus, sans quoi la période resterait bloquée.
   await notifyPendingParticipants(periodId);
+
+  // Un·e collègue oublié·e à la déclaration, ou arrivé·e depuis : la
+  // modification doit permettre de l'inviter, sans quoi il faudrait
+  // supprimer la période et la refaire.
+  await inviteColleaguesOnPeriod({
+    formData,
+    period: {
+      id: periodId,
+      date: new Date(parsed.data.date),
+      type: parsed.data.type,
+      description: parsed.data.description,
+    },
+    schoolId: active.schoolId,
+    schoolName: active.schoolName,
+    referredByMembershipId: active.membershipId,
+    actorUserId: session.userId,
+  });
 
   revalidatePath("/mes-periodes");
   redirect("/mes-periodes");

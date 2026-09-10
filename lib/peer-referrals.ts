@@ -1,4 +1,7 @@
+import type { PeriodType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { civilityAndLastName } from "@/lib/civility";
+import { periodTypeLabel } from "@/lib/period-labels";
 import { logAudit, AuditAction } from "@/lib/audit-log";
 import { getBaseUrl, sendPeerReferralEmail } from "@/lib/mailer";
 import { generatePeerReferralToken, PEER_REFERRAL_TTL_MS } from "@/lib/peer-referral";
@@ -65,6 +68,58 @@ export async function createPeerReferralLink(params: {
 
   const baseUrl = await getBaseUrl();
   return { referralId: referral.id, link: `${baseUrl}/rejoindre/parrainage/${rawToken}` };
+}
+
+/// Invite d'un coup les collègues sans compte saisis sur une période — à sa
+/// déclaration (app/(app)/declarer) comme à sa modification
+/// (app/(app)/mes-periodes) : le geste est le même des deux côtés, et son
+/// contrat aussi. Chacun reçoit un lien rattaché à CETTE période, donc créer
+/// son compte vaudra confirmation de sa participation.
+///
+/// Toujours appelé APRÈS l'écriture de la période : le lien porte son
+/// identifiant. Best effort par invitation (cf. invitePeerByEmail) — un
+/// email qui ne part pas ne doit pas faire perdre la période déjà écrite.
+export async function inviteColleaguesOnPeriod(params: {
+  formData: FormData;
+  period: { id: string; date: Date; type: PeriodType; description: string };
+  schoolId: string;
+  schoolName: string;
+  referredByMembershipId: string;
+  actorUserId: string;
+}): Promise<void> {
+  const invites = zipColleagueInvites(
+    params.formData.getAll("inviteeName"),
+    params.formData.getAll("inviteeEmail")
+  );
+  if (invites.length === 0) return;
+
+  const auteur = await prisma.user.findUnique({
+    where: { id: params.actorUserId },
+    select: { firstName: true, lastName: true, sex: true },
+  });
+  const periodPourEmail: PeriodSummaryForInvite = {
+    dateLabel: params.period.date.toLocaleDateString("fr-BE", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }),
+    typeLabel: periodTypeLabel[params.period.type],
+    description: params.period.description,
+  };
+
+  for (const invite of invites) {
+    await invitePeerByEmail({
+      to: invite.email,
+      schoolId: params.schoolId,
+      schoolName: params.schoolName,
+      referredByMembershipId: params.referredByMembershipId,
+      actorUserId: params.actorUserId,
+      inviterCivility: auteur ? civilityAndLastName(auteur) : "Un·e collègue",
+      periodId: params.period.id,
+      period: periodPourEmail,
+      invitedName: invite.fullName,
+    });
+  }
 }
 
 /// Crée le parrainage ET l'envoie par email. Best effort sur l'envoi, comme

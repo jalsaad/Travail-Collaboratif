@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { updatePeriod, type UpdatePeriodState } from "@/app/(app)/mes-periodes/actions";
 import { ColleaguePicker } from "@/components/colleague-picker";
+import { ColleagueInvitesField } from "@/components/colleague-invites-field";
 import {
   ExternalParticipantsField,
   type ExternalParticipantDraft,
@@ -26,6 +27,7 @@ export function EditPeriodForm({
   colleagues,
   selectedMembershipIds,
   externalParticipants,
+  peutInviter = false,
 }: {
   periodId: string;
   type: string;
@@ -40,6 +42,10 @@ export function EditPeriodForm({
   colleagues: { membershipId: string; name: string }[];
   selectedMembershipIds: string[];
   externalParticipants: ExternalParticipantDraft[];
+  /// Vrai dans une école pas encore inscrite officiellement : le sélecteur de
+  /// collègues y est souvent vide, la seule façon d'associer quelqu'un est de
+  /// l'inviter (cf. app/(app)/mes-periodes/[periodId]/modifier/page.tsx).
+  peutInviter?: boolean;
 }) {
   const updatePeriodWithId = updatePeriod.bind(null, periodId);
   const [state, formAction, pending] = useActionState(updatePeriodWithId, initialState);
@@ -69,6 +75,21 @@ export function EditPeriodForm({
           <ColleaguePicker colleagues={colleagues} initialSelected={selectedMembershipIds} />
         </div>
       </div>
+
+      {peutInviter && (
+        <div>
+          <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+            Collègues sans compte <span className="font-normal text-stone-400">(facultatif)</span>
+          </span>
+          <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
+            Chacun·e reçoit un lien par email : en créant son compte, il ou elle rejoint votre école et
+            valide du même geste sa participation à cette période.
+          </p>
+          <div className="mt-1.5">
+            <ColleagueInvitesField />
+          </div>
+        </div>
+      )}
 
       <div>
         <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">
