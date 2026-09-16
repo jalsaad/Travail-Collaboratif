@@ -50,13 +50,17 @@ export const RESPONSABLE: {
   /// Adresse à laquelle exercer ses droits.
   email: string | null;
   /// Délégué à la protection des données, s'il en a été désigné un. `false`
-  /// signifie « aucun DPO désigné », `null` « pas encore renseigné ».
+  /// signifie « aucun DPO désigné », `null` « pas encore renseigné ». Le
+  /// responsable du traitement ne peut pas être son propre DPO (conflit
+  /// d'intérêts, art. 38.6) ; la désignation n'est pas obligatoire ici
+  /// (art. 37.1 : ni autorité publique, ni suivi à grande échelle, ni données
+  /// sensibles).
   dpo: string | false | null;
 } = {
-  nom: null,
-  adresse: null,
-  email: null,
-  dpo: null,
+  nom: "Jalal El-Fedyly",
+  adresse: "Chaussée de Renaix 115, 7912 Frasnes-lez-Anvaing (Belgique)",
+  email: "admin@travail-collaboratif.be",
+  dpo: false,
 };
 
 export const PRESTATAIRES: {
@@ -70,10 +74,11 @@ export const PRESTATAIRES: {
   /// Transfert de données hors de l'Union européenne.
   transfertHorsUE: string | null;
 } = {
-  hebergement: null,
-  email: null,
-  stockage: null,
-  transfertHorsUE: null,
+  hebergement: "OVHcloud, centre de données de Roubaix (France)",
+  email: "OVHcloud",
+  stockage: "OVHcloud",
+  transfertHorsUE:
+    "aucun. Les données sont hébergées dans les centres de données d'OVHcloud à Roubaix (France).",
 };
 
 export const CONSERVATION: {
@@ -82,8 +87,13 @@ export const CONSERVATION: {
   /// Relevés archivés en fin d'année scolaire (cf. lib/school-year-archive.ts).
   archives: string | null;
 } = {
-  compte: null,
-  archives: null,
+  // Aucune purge automatique des comptes inactifs n'existe dans le code : ne
+  // pas en annoncer une tant qu'elle n'est pas implémentée.
+  compte: "tant que le compte existe, jusqu'à sa suppression.",
+  // Conforme à ARCHIVE_RETENTION (lib/school-year-archive.ts) : à ajuster si
+  // cette constante change.
+  archives:
+    "les trois dernières années scolaires clôturées ; les archives plus anciennes sont supprimées automatiquement.",
 };
 
 /// Vrai tant qu'au moins un fait obligatoire manque.

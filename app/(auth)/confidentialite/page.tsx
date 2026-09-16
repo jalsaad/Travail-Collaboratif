@@ -288,6 +288,11 @@ export default function ConfidentialitePage() {
             mot de passe, sexe, date de naissance et matricule sont effacés et remplacés par la
             mention « Compte supprimé ».
           </p>
+          <p>
+            Les archives de fin d&apos;année scolaire (nom, adresse email, matricule et périodes des
+            participants) ne sont pas modifiées par la suppression d&apos;un compte : elles sont
+            conservées pendant la durée indiquée ci-dessus, puis supprimées.
+          </p>
         </Section>
 
         <Section titre="7. Vos droits">
