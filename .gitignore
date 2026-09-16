@@ -26,3 +26,13 @@ public/uploads/
 /data/fwb-signaletique.json
 /data/communes-sites.json
 /data/prospection.xlsx
+# Reprise de l'annuaire par les données CPEONS (cf. scripts/importer-cpeons.ts,
+# exporter-fwb-schools.ts) : rapport de reprise et export de travail, tous deux
+# régénérables à la commande.
+/data/import-cpeons-rapport.csv
+/data/prospection-toutes-ecoles.csv
+# Fichiers de campagne, quel que soit leur nom : un « -envoi » porte les
+# établissements à contacter, un « -journal » les adresses réellement
+# contactées. Jamais au dépôt, même pour un essai.
+/data/*-envoi.csv
+/data/*-journal.csv

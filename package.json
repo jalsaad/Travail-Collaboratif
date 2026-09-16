@@ -18,6 +18,9 @@
     "export-prospection": "ts-node -P tsconfig.scripts.json scripts/exporter-prospection.ts",
     "purger-test": "ts-node -P tsconfig.scripts.json scripts/purger-comptes-test.ts",
     "cartographie": "ts-node -P tsconfig.scripts.json scripts/importer-cartographie.ts",
+    "importer-cpeons": "ts-node -P tsconfig.scripts.json scripts/importer-cpeons.ts",
+    "corriger-sites-cpeons": "ts-node -P tsconfig.scripts.json scripts/corriger-sites-cpeons.ts",
+    "exporter-fwb": "ts-node -P tsconfig.scripts.json scripts/exporter-fwb-schools.ts",
     "verifier-adresses": "ts-node -P tsconfig.scripts.json scripts/verifier-adresses.ts",
     "synchro-prospection": "ts-node -P tsconfig.scripts.json scripts/synchroniser-prospection.ts",
     "demo": "ts-node -P tsconfig.scripts.json scripts/creer-demo.ts"
