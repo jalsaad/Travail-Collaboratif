@@ -6,6 +6,8 @@ import { AdminSchoolEditForm } from "@/components/admin-school-edit-form";
 import { AdminMemberRowActions } from "@/components/admin-member-row-actions";
 import { JoinPosterLink } from "@/components/join-poster-link";
 import { AdminPeriodList } from "@/components/admin-period-list";
+import { VoirPlusPeriodes } from "@/components/voir-plus-periodes";
+import { decouperPeriodes, limitePeriodes } from "@/lib/period-pagination";
 
 const roleBadgeStyle: Record<string, string> = {
   DIRECTION: "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900",
@@ -15,15 +17,22 @@ const roleBadgeStyle: Record<string, string> = {
 
 export default async function AdminSchoolDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ schoolId: string }>;
+  searchParams: Promise<{ periodes?: string }>;
 }) {
   const { schoolId } = await params;
+  // Volontairement PAS restreint à l'année en cours, contrairement aux
+  // espaces enseignant et direction : cette page sert l'assistance, qui a
+  // parfois besoin de remonter plus loin. C'est donc la borne qui empêche la
+  // page de grossir indéfiniment d'année en année.
+  const limite = limitePeriodes((await searchParams).periodes);
 
   const school = await prisma.school.findUnique({ where: { id: schoolId } });
   if (!school) notFound();
 
-  const [members, periods, activeJoinCode] = await Promise.all([
+  const [members, periodsPage, totalPeriodes, activeJoinCode] = await Promise.all([
     prisma.membership.findMany({
       where: { schoolId, status: "ACTIVE" },
       include: { user: true },
@@ -33,9 +42,15 @@ export default async function AdminSchoolDetailPage({
       where: { participants: { some: { membership: { schoolId } } } },
       include: { participants: { include: { user: true } } },
       orderBy: { date: "desc" },
+      take: limite + 1,
+    }),
+    prisma.collaborativePeriod.count({
+      where: { participants: { some: { membership: { schoolId } } } },
     }),
     prisma.joinCode.findFirst({ where: { schoolId, active: true } }),
   ]);
+
+  const { visibles: periods, resteAVoir, limiteSuivante } = decouperPeriodes(periodsPage, limite);
 
   return (
     <div className="space-y-6">
@@ -141,13 +156,16 @@ export default async function AdminSchoolDetailPage({
 
       <div>
         <h2 className="text-base font-semibold tracking-tight text-stone-900 dark:text-stone-100">
-          Périodes ({periods.length})
+          Périodes ({totalPeriodes})
         </h2>
         <div className="mt-3">
           <AdminPeriodList
             periods={periods.map((p) => ({ ...p, dureePeriodes: p.dureePeriodes.toString() }))}
             schoolId={schoolId}
           />
+          {resteAVoir && (
+            <VoirPlusPeriodes limiteSuivante={limiteSuivante} affichees={periods.length} />
+          )}
         </div>
       </div>
     </div>

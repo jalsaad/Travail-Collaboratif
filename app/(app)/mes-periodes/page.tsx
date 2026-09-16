@@ -6,12 +6,19 @@ import { getMembershipProgress, getOtherSchoolsPeriodes } from "@/lib/collaborat
 import { formatPeriodes } from "@/lib/period-duration";
 import { CircularProgressRing } from "@/components/circular-progress-ring";
 import { PeriodCard } from "@/components/period-card";
+import { VoirPlusPeriodes } from "@/components/voir-plus-periodes";
+import { decouperPeriodes, limitePeriodes } from "@/lib/period-pagination";
 import { NoActiveSchoolNotice } from "@/components/no-active-school-notice";
 import { ExportPanel } from "@/components/export-panel";
 import { Reveal } from "@/components/reveal";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
-export default async function MesPeriodesPage() {
+export default async function MesPeriodesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ periodes?: string }>;
+}) {
+  const limite = limitePeriodes((await searchParams).periodes);
   const session = await auth();
   if (!session) redirect("/login");
 
@@ -30,7 +37,7 @@ export default async function MesPeriodesPage() {
   // c'est ce qui fait repartir l'écran de zéro après l'archivage de fin
   // d'année (cf. lib/school-year-archive.ts), les périodes clôturées restant
   // en base et dans l'archive disque.
-  const periods = schoolYear
+  const periodsPage = schoolYear
     ? await prisma.collaborativePeriod.findMany({
         where: {
           schoolYearId: schoolYear.id,
@@ -43,8 +50,14 @@ export default async function MesPeriodesPage() {
           externalParticipants: true,
         },
         orderBy: { date: "desc" },
+        // +1 : détecte une suite sans payer un comptage (cf.
+        // lib/period-pagination.ts). L'anneau de progression, lui, vient
+        // d'agrégats séparés — il reste juste malgré la liste bornée.
+        take: limite + 1,
       })
     : [];
+
+  const { visibles: periods, resteAVoir, limiteSuivante } = decouperPeriodes(periodsPage, limite);
 
   return (
     <div className="space-y-4">
@@ -86,6 +99,9 @@ export default async function MesPeriodesPage() {
         {periods.map((period, index) => (
           <PeriodCard key={period.id} period={period} currentUserId={session.userId} index={index} />
         ))}
+        {resteAVoir && (
+          <VoirPlusPeriodes limiteSuivante={limiteSuivante} affichees={periods.length} />
+        )}
       </div>
     </div>
   );

@@ -2,13 +2,14 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
-import { computePeriodStatus } from "@/lib/period-status";
 import { roleLabel } from "@/lib/role-labels";
 import { formatSchoolAddress } from "@/lib/school-address";
 import { websiteLabel } from "@/lib/website-url";
 import { getSchoolTeachersProgress } from "@/lib/collaboration-progress";
 import { formatPeriodes } from "@/lib/period-duration";
 import { SchoolPeriodList } from "@/components/school-period-list";
+import { VoirPlusPeriodes } from "@/components/voir-plus-periodes";
+import { decouperPeriodes, limitePeriodes } from "@/lib/period-pagination";
 import { SchoolTeamTable, type TeamMember } from "@/components/school-team-table";
 import { CircularProgressRing } from "@/components/circular-progress-ring";
 import { ExportPanel } from "@/components/export-panel";
@@ -17,14 +18,19 @@ import { CopyCodeBadge } from "@/components/copy-code-badge";
 import { JoinPosterLink } from "@/components/join-poster-link";
 import { Reveal } from "@/components/reveal";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
-import type { Role } from "@prisma/client";
+import type { Prisma, Role } from "@prisma/client";
 
 // Page unique de l'espace direction : identité de l'école, équipe et périodes.
 // Les anciens onglets « Membres » et « Statistiques » y sont fondus — ils
 // listaient les deux fois les mêmes personnes, l'un avec le rôle et l'ETP,
 // l'autre avec l'avancement, et répétaient chacun le nom de l'école et
 // l'année scolaire déjà affichés ici.
-export default async function EcolePage() {
+export default async function EcolePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ periodes?: string }>;
+}) {
+  const limite = limitePeriodes((await searchParams).periodes);
   const session = await auth();
   if (!session) redirect("/login");
 
@@ -108,12 +114,18 @@ export default async function EcolePage() {
       ? teachersProgress.reduce((sum, t) => sum + t.objective, 0) / teachersProgress.length
       : 0;
 
-  const periods = schoolYear
+  // Portée commune à la liste et aux deux compteurs ci-dessous : ils doivent
+  // parler des mêmes périodes, alors que la liste, elle, est bornée.
+  const porteePeriodes: Prisma.CollaborativePeriodWhereInput | undefined = schoolYear
+    ? {
+        schoolYearId: schoolYear.id,
+        participants: { some: { membership: { schoolId: active.schoolId, status: "ACTIVE" } } },
+      }
+    : undefined;
+
+  const periodsPage = porteePeriodes
     ? await prisma.collaborativePeriod.findMany({
-        where: {
-          schoolYearId: schoolYear.id,
-          participants: { some: { membership: { schoolId: active.schoolId, status: "ACTIVE" } } },
-        },
+        where: porteePeriodes,
         include: {
           // Filtre obligatoire (cf. permissions.md) : jamais un include global
           // des participants, sinon fuite des noms/statuts d'une autre école
@@ -125,10 +137,33 @@ export default async function EcolePage() {
           externalParticipants: true,
         },
         orderBy: { date: "desc" },
+        // +1 : une ligne de rab suffit à savoir s'il reste une suite, sans
+        // payer un comptage supplémentaire (cf. lib/period-pagination.ts).
+        take: limite + 1,
       })
     : [];
 
-  const validee = periods.filter((p) => computePeriodStatus(p.participants) === "validee").length;
+  const { visibles: periods, resteAVoir, limiteSuivante } = decouperPeriodes(periodsPage, limite);
+
+  // Comptés en base, et non déduits de la liste : celle-ci ne contient plus
+  // qu'une page, alors que ces deux nombres portent sur l'année entière.
+  const [totalPeriodes, validee] = porteePeriodes
+    ? await Promise.all([
+        prisma.collaborativePeriod.count({ where: porteePeriodes }),
+        prisma.collaborativePeriod.count({
+          where: {
+            ...porteePeriodes,
+            // Reproduit computePeriodStatus sur les seuls participants de
+            // CETTE école — ce sont les seuls que la page affiche, et donc
+            // les seuls sur lesquels son statut se prononce.
+            participants: {
+              ...porteePeriodes.participants,
+              none: { membership: { schoolId: active.schoolId }, status: { not: "CONFIRMED" } },
+            },
+          },
+        }),
+      ])
+    : [0, 0];
 
   return (
     <div className="space-y-6">
@@ -213,7 +248,7 @@ export default async function EcolePage() {
 
       <Reveal delay={240} className="space-y-3">
         <h2 className="text-base font-semibold tracking-tight text-stone-900 dark:text-stone-100">
-          Travail collaboratif — {validee} validée(s) / {periods.length - validee} en attente
+          Travail collaboratif — {validee} validée(s) / {totalPeriodes - validee} en attente
         </h2>
         <ExportPanel
           action="/api/export/school"
@@ -224,6 +259,9 @@ export default async function EcolePage() {
         />
         <div>
           <SchoolPeriodList periods={periods} />
+          {resteAVoir && (
+            <VoirPlusPeriodes limiteSuivante={limiteSuivante} affichees={periods.length} />
+          )}
         </div>
       </Reveal>
     </div>

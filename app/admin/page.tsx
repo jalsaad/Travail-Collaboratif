@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { computePeriodStatus } from "@/lib/period-status";
 import { roleLabel } from "@/lib/role-labels";
 import { Reveal } from "@/components/reveal";
 import { SatisfactionChart } from "@/components/satisfaction-chart";
@@ -9,15 +8,22 @@ import { AnimatedNumber } from "@/components/animated-number";
 import { AcademicCapIcon, UsersIcon, CalendarIcon, CheckBadgeIcon } from "@/components/admin-icons";
 
 export default async function AdminDashboardPage() {
-  const [schoolCount, roleCounts, periods, recentLogins, satisfactionRatings] = await Promise.all([
+  const [schoolCount, roleCounts, periodCount, valideeCount, recentLogins, satisfactionRatings] = await Promise.all([
     prisma.school.count(),
     prisma.membership.groupBy({
       by: ["role"],
       where: { status: "ACTIVE" },
       _count: true,
     }),
-    prisma.collaborativePeriod.findMany({
-      include: { participants: { select: { status: true } } },
+    // Deux comptages plutôt que le chargement de toutes les périodes de
+    // toutes les écoles : cette page n'en affiche que le nombre, et la
+    // requête précédente grossissait indéfiniment avec la plateforme — des
+    // dizaines de milliers de lignes transférées pour produire deux entiers.
+    prisma.collaborativePeriod.count(),
+    // « Validée » = aucun participant qui ne soit pas encore confirmé, soit
+    // exactement ce que calcule computePeriodStatus, mais côté base.
+    prisma.collaborativePeriod.count({
+      where: { participants: { none: { status: { not: "CONFIRMED" } } } },
     }),
     prisma.user.findMany({
       where: { lastLoginAt: { not: null } },
@@ -30,7 +36,7 @@ export default async function AdminDashboardPage() {
     }),
   ]);
 
-  const validee = periods.filter((p) => computePeriodStatus(p.participants) === "validee").length;
+  const validee = valideeCount;
 
   const satisfactionTotal = satisfactionRatings.length;
   const satisfactionAverage =
@@ -42,7 +48,7 @@ export default async function AdminDashboardPage() {
     count: satisfactionRatings.filter((u) => u.satisfactionRating === rating).length,
   }));
 
-  const validationPct = periods.length > 0 ? (validee / periods.length) * 100 : 0;
+  const validationPct = periodCount > 0 ? (validee / periodCount) * 100 : 0;
 
   return (
     <div className="relative space-y-6">
@@ -69,7 +75,7 @@ export default async function AdminDashboardPage() {
           </Reveal>
         ))}
         <Reveal delay={(roleCounts.length + 1) * 60}>
-          <AdminStatTile icon={<CalendarIcon />} value={periods.length} label="Périodes déclarées" />
+          <AdminStatTile icon={<CalendarIcon />} value={periodCount} label="Périodes déclarées" />
         </Reveal>
         <Reveal delay={(roleCounts.length + 2) * 60} className="col-span-2 card p-4">
           <div className="flex items-center gap-3">
@@ -78,7 +84,7 @@ export default async function AdminDashboardPage() {
             </span>
             <div className="flex-1">
               <p className="text-2xl font-semibold tracking-tight text-stone-900 dark:text-stone-100">
-                <AnimatedNumber value={validee} /> / <AnimatedNumber value={periods.length - validee} />
+                <AnimatedNumber value={validee} /> / <AnimatedNumber value={periodCount - validee} />
               </p>
               <p className="text-sm text-stone-500 dark:text-stone-400">Validées / en attente</p>
             </div>
