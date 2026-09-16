@@ -5,6 +5,7 @@ import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { setActiveSchoolCookie } from "@/lib/active-school";
 import { tolerateDemoWrite } from "@/lib/demo-mode";
+import { privacyAcceptanceRecord } from "@/lib/privacy-policy";
 
 export async function signOutAction() {
   await signOut({ redirectTo: "/login" });
@@ -31,6 +32,21 @@ export async function dismissAnnouncement(announcementId: string) {
       create: { announcementId, userId: session.userId, dismissedAt: new Date() },
     })
   );
+
+  revalidatePath("/", "layout");
+}
+
+// Prise de connaissance de la politique de confidentialité par un compte
+// inscrit avant son introduction (ou avant sa dernière version) : même trace
+// que pour une inscription (cf. lib/privacy-policy.ts).
+export async function acknowledgePrivacyPolicy() {
+  const session = await auth();
+  if (!session || session.isDemo) return;
+
+  await prisma.user.update({
+    where: { id: session.userId },
+    data: privacyAcceptanceRecord(),
+  });
 
   revalidatePath("/", "layout");
 }

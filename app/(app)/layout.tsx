@@ -7,6 +7,8 @@ import { Nav } from "@/components/nav";
 import { AnnouncementBanner } from "@/components/announcement-banner";
 import { SchoolApprovalNotice } from "@/components/school-approval-notice";
 import { DemoBanner } from "@/components/demo-banner";
+import { PrivacyPolicyNotice } from "@/components/privacy-policy-notice";
+import { mustAcknowledgePrivacyPolicy } from "@/lib/privacy-policy";
 import { SchoolLogoBadge } from "@/components/school-logo-badge";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
@@ -16,7 +18,10 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
 
   const [memberships, currentUser, schoolYear] = await Promise.all([
     getActiveMemberships(session.userId),
-    prisma.user.findUnique({ where: { id: session.userId }, select: { satisfactionRating: true } }),
+    prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { satisfactionRating: true, privacyAcceptedAt: true, privacyPolicyVersion: true },
+    }),
     getCurrentSchoolYear(),
   ]);
   const active = await resolveActiveMembership(session.userId, memberships);
@@ -36,6 +41,13 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
         schoolYearLabel={schoolYear?.label ?? null}
       />
       {active && <SchoolLogoBadge />}
+      {/* Indépendant du statut de l'école : l'obligation d'information vaut
+          pour tout compte, y compris en attente d'approbation. Jamais en
+          démonstration : le compte partagé ne pourrait rien enregistrer et
+          le bandeau reviendrait à chaque visite. */}
+      {!session.isDemo && currentUser && mustAcknowledgePrivacyPolicy(currentUser) && (
+        <PrivacyPolicyNotice miseAJour={currentUser.privacyAcceptedAt !== null} />
+      )}
       {active && !pending && <AnnouncementBanner userId={session.userId} active={active} />}
       <main className="mx-auto max-w-3xl px-4 py-8">
         {pending ? (

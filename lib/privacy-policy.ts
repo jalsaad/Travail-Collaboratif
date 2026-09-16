@@ -27,6 +27,14 @@ export function hasAcceptedPrivacyPolicy(formData: FormData): boolean {
   return formData.get(PRIVACY_FIELD) === "on";
 }
 
+/// Le compte doit-il (re)prendre connaissance de la politique ? Vrai pour les
+/// comptes créés avant son introduction (version nulle) comme pour ceux qui
+/// n'ont vu qu'une version antérieure : incrémenter PRIVACY_POLICY_VERSION
+/// suffit donc à réinformer tout le monde (cf. components/privacy-policy-notice.tsx).
+export function mustAcknowledgePrivacyPolicy(user: { privacyPolicyVersion: string | null }): boolean {
+  return user.privacyPolicyVersion !== PRIVACY_POLICY_VERSION;
+}
+
 /// Trace à enregistrer sur le compte au moment de sa création.
 export function privacyAcceptanceRecord() {
   return { privacyAcceptedAt: new Date(), privacyPolicyVersion: PRIVACY_POLICY_VERSION };
