@@ -63,6 +63,12 @@ export const RESPONSABLE: {
   dpo: false,
 };
 
+/// Conception et développement de la plateforme. Mention d'information, pas
+/// une rubrique de l'art. 13 : le développeur n'est pas le responsable du
+/// traitement. S'il accède aux données de production (maintenance, support),
+/// il agit comme sous-traitant (art. 28).
+export const DEVELOPPEMENT = "JAS Digital Works";
+
 export const PRESTATAIRES: {
   /// Hébergement du serveur et de la base de données.
   hebergement: string | null;

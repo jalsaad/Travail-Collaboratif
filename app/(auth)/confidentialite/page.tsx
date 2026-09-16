@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { LogoHomeLink } from "@/components/logo-home-link";
 import {
   CONSERVATION,
+  DEVELOPPEMENT,
   PRESTATAIRES,
   PRIVACY_POLICY_VERSION,
   RESPONSABLE,
@@ -99,6 +100,7 @@ export default function ConfidentialitePage() {
             <li>
               Adresse : <Valeur valeur={RESPONSABLE.adresse} quoi="adresse postale" />
             </li>
+            <li>Conception et développement de la plateforme : {DEVELOPPEMENT}</li>
             <li>
               Contact pour toute question ou demande :{" "}
               {RESPONSABLE.email === null ? (
