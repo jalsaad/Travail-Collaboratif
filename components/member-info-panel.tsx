@@ -2,6 +2,7 @@ import type { TeachingLevel } from "@prisma/client";
 import { TEACHING_LEVEL_OPTIONS } from "@/lib/teaching-levels";
 import { formatPeriodes } from "@/lib/period-duration";
 import { CircularProgressRing } from "@/components/circular-progress-ring";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 const LEVEL_LABEL = new Map(TEACHING_LEVEL_OPTIONS.map((o) => [o.value, o.label]));
 
@@ -36,7 +37,7 @@ export function MemberInfoPanel({
       : "non renseigné";
 
   const connexion = lastLoginAt
-    ? `${lastLoginAt.toLocaleDateString("fr-BE", { day: "numeric", month: "long", year: "numeric" })} à ${lastLoginAt.toLocaleTimeString("fr-BE", { hour: "2-digit", minute: "2-digit" })}`
+    ? `${lastLoginAt.toLocaleDateString("fr-BE", { timeZone: APP_TIME_ZONE, day: "numeric", month: "long", year: "numeric" })} à ${lastLoginAt.toLocaleTimeString("fr-BE", { timeZone: APP_TIME_ZONE, hour: "2-digit", minute: "2-digit" })}`
     : "jamais connecté·e";
 
   const lignes: [string, string][] = [

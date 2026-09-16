@@ -6,6 +6,7 @@ import { periodTypeLabel } from "@/lib/period-labels";
 import { NoActiveSchoolNotice } from "@/components/no-active-school-notice";
 import { PeerReferralForm } from "@/components/peer-referral-form";
 import { Reveal } from "@/components/reveal";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 export default async function InviterPage() {
   const session = await auth();
@@ -26,7 +27,7 @@ export default async function InviterPage() {
 
   const periods = participations.map((p) => ({
     id: p.period.id,
-    label: `${p.period.date.toLocaleDateString("fr-BE", { day: "numeric", month: "short", year: "numeric" })} — ${periodTypeLabel[p.period.type]} — ${p.period.description}`,
+    label: `${p.period.date.toLocaleDateString("fr-BE", { timeZone: APP_TIME_ZONE, day: "numeric", month: "short", year: "numeric" })} — ${periodTypeLabel[p.period.type]} — ${p.period.description}`,
   }));
 
   return (

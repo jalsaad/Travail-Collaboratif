@@ -5,6 +5,7 @@ import { periodTypeLabel } from "@/lib/period-labels";
 import { logAudit, AuditAction } from "@/lib/audit-log";
 import { getBaseUrl, sendPeerReferralEmail } from "@/lib/mailer";
 import { generatePeerReferralToken, PEER_REFERRAL_TTL_MS } from "@/lib/peer-referral";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 // Création d'un lien de parrainage, partagée par les deux endroits qui en
 // émettent : la page dédiée (app/(app)/inviter) et la déclaration de période
@@ -99,6 +100,7 @@ export async function inviteColleaguesOnPeriod(params: {
   });
   const periodPourEmail: PeriodSummaryForInvite = {
     dateLabel: params.period.date.toLocaleDateString("fr-BE", {
+      timeZone: APP_TIME_ZONE,
       day: "numeric",
       month: "long",
       year: "numeric",

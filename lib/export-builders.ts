@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import { CONFORMITY_MENTION } from "@/lib/regulatory-reference";
 import type { LoadedLogo } from "@/lib/export-logos";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 export type ExportPeriodRow = {
   date: Date;
@@ -438,7 +439,7 @@ export function buildPeriodsPdf(
 
     for (const row of rows) {
       const cells = [
-        row.date.toLocaleDateString("fr-BE"),
+        row.date.toLocaleDateString("fr-BE", { timeZone: APP_TIME_ZONE }),
         row.horaire,
         row.type,
         row.nature,

@@ -15,6 +15,7 @@ import { ExternalParticipantChips } from "@/components/external-participant-chip
 import { ParticipationActions } from "@/components/participation-actions";
 import { DeletePeriodButton } from "@/components/delete-period-button";
 import { Reveal } from "@/components/reveal";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 type ParticipantWithRelations = PeriodParticipant & {
   user: User;
@@ -61,6 +62,7 @@ export function PeriodCard({
           )}
           <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
             {new Date(period.date).toLocaleDateString("fr-BE", {
+              timeZone: APP_TIME_ZONE,
               day: "numeric",
               month: "long",
               year: "numeric",

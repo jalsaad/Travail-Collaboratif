@@ -5,6 +5,7 @@ import { civilityAndLastName } from "@/lib/civility";
 import { PeerReferralJoinForm } from "@/components/peer-referral-join-form";
 import { LogoHomeLink } from "@/components/logo-home-link";
 import { Reveal } from "@/components/reveal";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,7 @@ export default async function RejoindreParParrainagePage({
           {civilityAndLastName(referral.referredByMembership.user)} vous invite à rejoindre l&apos;espace
           de {referral.school.name} sur Travail Collaboratif
           {referral.period &&
-            `, et à valider votre participation à la période du ${referral.period.date.toLocaleDateString("fr-BE", { day: "numeric", month: "long", year: "numeric" })}`}
+            `, et à valider votre participation à la période du ${referral.period.date.toLocaleDateString("fr-BE", { timeZone: APP_TIME_ZONE, day: "numeric", month: "long", year: "numeric" })}`}
           .
         </p>
       </div>

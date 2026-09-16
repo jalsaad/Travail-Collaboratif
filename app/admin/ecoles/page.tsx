@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { roleLabel } from "@/lib/role-labels";
 import { SchoolApprovalActions } from "@/components/school-approval-actions";
 import { Reveal } from "@/components/reveal";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 const statusBadge: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
@@ -83,6 +84,7 @@ export default async function AdminEcolesPage() {
                   </td>
                   <td className="px-5 py-3.5 text-xs text-stone-500 dark:text-stone-400">
                     {school.createdAt.toLocaleDateString("fr-BE", {
+                      timeZone: APP_TIME_ZONE,
                       day: "numeric",
                       month: "short",
                       year: "numeric",

@@ -6,6 +6,7 @@ import { FormRejectionsPanel } from "@/components/form-rejections-panel";
 import { AdminStatTile } from "@/components/admin-stat-tile";
 import { AnimatedNumber } from "@/components/animated-number";
 import { AcademicCapIcon, UsersIcon, CalendarIcon, CheckBadgeIcon } from "@/components/admin-icons";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 export default async function AdminDashboardPage() {
   const [schoolCount, roleCounts, periodCount, valideeCount, recentLogins, satisfactionRatings] = await Promise.all([
@@ -152,11 +153,12 @@ export default async function AdminDashboardPage() {
                   <td className="px-5 py-3.5 text-xs text-stone-400 dark:text-stone-500">{u.email}</td>
                   <td className="px-5 py-3.5 text-xs text-stone-500 dark:text-stone-400">
                     {u.lastLoginAt?.toLocaleDateString("fr-BE", {
+                      timeZone: APP_TIME_ZONE,
                       day: "numeric",
                       month: "short",
                       year: "numeric",
                     })}{" "}
-                    {u.lastLoginAt?.toLocaleTimeString("fr-BE", { hour: "2-digit", minute: "2-digit" })}
+                    {u.lastLoginAt?.toLocaleTimeString("fr-BE", { timeZone: APP_TIME_ZONE, hour: "2-digit", minute: "2-digit" })}
                   </td>
                 </tr>
               ))}

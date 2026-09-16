@@ -9,6 +9,7 @@ import {
   RESPONSABLE,
   politiqueIncomplete,
 } from "@/lib/privacy-policy";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 // Politique de confidentialité publique (RGPD art. 5.1.a et 13), liée depuis
 // la case à cocher de chaque formulaire d'inscription (cf.
@@ -53,6 +54,7 @@ function Section({ id, titre, children }: { id?: string; titre: string; children
 
 function dateVersion(): string {
   return new Date(`${PRIVACY_POLICY_VERSION}T12:00:00`).toLocaleDateString("fr-BE", {
+    timeZone: APP_TIME_ZONE,
     day: "numeric",
     month: "long",
     year: "numeric",

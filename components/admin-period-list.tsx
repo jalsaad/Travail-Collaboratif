@@ -8,6 +8,7 @@ import { periodTypeLabel, participantStatusLabel } from "@/lib/period-labels";
 import { formatPeriodSchedule } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
 import { deletePeriodAsAdmin } from "@/app/admin/periodes/[periodId]/actions";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 type ParticipantWithUser = PeriodParticipant & { user: User };
 // `dureePeriodes` (Prisma Decimal) n'est pas un objet serializable au
@@ -62,6 +63,7 @@ export function AdminPeriodList({
                 )}
                 <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
                   {new Date(period.date).toLocaleDateString("fr-BE", {
+                    timeZone: APP_TIME_ZONE,
                     day: "numeric",
                     month: "long",
                     year: "numeric",

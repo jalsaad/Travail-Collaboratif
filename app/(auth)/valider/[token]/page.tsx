@@ -8,6 +8,7 @@ import { civilityAndLastName } from "@/lib/civility";
 import { ParticipationTokenActions } from "@/components/participation-token-actions";
 import { LogoMark } from "@/components/logo-mark";
 import { Reveal } from "@/components/reveal";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +105,7 @@ export default async function ValiderParticipationPage({
           label="Date"
           value={
             new Date(period.date).toLocaleDateString("fr-BE", {
+              timeZone: APP_TIME_ZONE,
               day: "numeric",
               month: "long",
               year: "numeric",

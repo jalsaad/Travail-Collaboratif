@@ -7,6 +7,7 @@ import {
   PARTICIPATION_TOKEN_TTL_MS,
 } from "@/lib/participation-token";
 import { getBaseUrl, sendParticipationInvitationEmail } from "@/lib/mailer";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 // Prévient par email les participants encore en attente sur une période :
 // à la création (invitation initiale) comme après une modification, qui remet
@@ -42,6 +43,7 @@ export async function notifyPendingParticipants(periodId: string): Promise<void>
     const inviterCivility = civilityAndLastName(period.createdBy);
     const dureePeriodes = formatPeriodes(period.dureePeriodes.toString());
     const dateLabel = period.date.toLocaleDateString("fr-BE", {
+      timeZone: APP_TIME_ZONE,
       day: "numeric",
       month: "long",
       year: "numeric",

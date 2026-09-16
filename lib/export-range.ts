@@ -1,3 +1,5 @@
+import { APP_TIME_ZONE } from "@/lib/time-zone";
+
 export class InvalidExportRangeError extends Error {}
 
 // Bornes chronologiques optionnelles communes aux deux routes d'export
@@ -42,7 +44,7 @@ export function formatExportRange(
 ): string | null {
   const debut = start ?? schoolYear?.startDate ?? null;
   const fin = end ?? schoolYear?.endDate ?? null;
-  const jour = (d: Date) => d.toLocaleDateString("fr-BE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const jour = (d: Date) => d.toLocaleDateString("fr-BE", { timeZone: APP_TIME_ZONE, day: "2-digit", month: "2-digit", year: "numeric" });
 
   if (debut && fin) return `du ${jour(debut)} au ${jour(fin)}`;
   if (debut) return `à partir du ${jour(debut)}`;

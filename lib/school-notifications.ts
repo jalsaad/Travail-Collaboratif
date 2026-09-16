@@ -9,6 +9,7 @@ import {
 } from "@/lib/mailer";
 import { civilityAndLastName } from "@/lib/civility";
 import type { PartialSchoolNotice } from "@/lib/school-join-target";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 // Notifications déclenchées par un rattachement ou une inscription d'école.
 //
@@ -92,6 +93,7 @@ export async function notifySchoolDirectionOfNewMember(membershipId: string): Pr
       schoolName: membership.school.name,
       teachingSummary: summarizeTeaching(membership.levelHours),
       joinedAtLabel: membership.joinedAt.toLocaleDateString("fr-BE", {
+        timeZone: APP_TIME_ZONE,
         day: "numeric",
         month: "long",
         year: "numeric",
@@ -177,6 +179,7 @@ export async function notifyTeachersOfReminder(params: {
       message,
       daysLeft,
       deadlineLabel: expiresAt.toLocaleDateString("fr-BE", {
+        timeZone: APP_TIME_ZONE,
         day: "numeric",
         month: "long",
         year: "numeric",

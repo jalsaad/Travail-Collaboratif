@@ -10,6 +10,7 @@ import { civilityAndLastName } from "@/lib/civility";
 import { periodTypeLabel } from "@/lib/period-labels";
 import { createPeerReferralLink } from "@/lib/peer-referrals";
 import { demoErrorState } from "@/lib/demo-mode";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 export type CreatePeerReferralState = { error?: string; link?: string; qrDataUrl?: string; emailSentTo?: string };
 
@@ -64,6 +65,7 @@ async function createPeerReferralImpl(
     periodId = parsed.data.periodId;
     periodForEmail = {
       dateLabel: participation.period.date.toLocaleDateString("fr-BE", {
+        timeZone: APP_TIME_ZONE,
         day: "numeric",
         month: "long",
         year: "numeric",

@@ -10,6 +10,7 @@ import { formatPeriodSchedule } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
 import { ExternalParticipantChips } from "@/components/external-participant-chips";
 import { Reveal } from "@/components/reveal";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 type ParticipantWithUser = PeriodParticipant & { user: User };
 type PeriodWithParticipants = CollaborativePeriod & {
@@ -53,6 +54,7 @@ export function SchoolPeriodList({ periods }: { periods: PeriodWithParticipants[
                 )}
                 <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
                   {new Date(period.date).toLocaleDateString("fr-BE", {
+                    timeZone: APP_TIME_ZONE,
                     day: "numeric",
                     month: "long",
                     year: "numeric",

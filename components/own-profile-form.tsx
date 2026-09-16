@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { updateOwnProfile, type OwnProfileState } from "@/app/(app)/mon-profil/actions";
 import { PasswordInput } from "@/components/password-input";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 const initialState: OwnProfileState = {};
 
@@ -94,7 +95,7 @@ export function OwnProfileForm({
               readOnly
               value={
                 dateOfBirth
-                  ? dateOfBirth.toLocaleDateString("fr-BE", { day: "numeric", month: "long", year: "numeric" })
+                  ? dateOfBirth.toLocaleDateString("fr-BE", { timeZone: APP_TIME_ZONE, day: "numeric", month: "long", year: "numeric" })
                   : "—"
               }
               className="input-field mt-1.5 disabled:bg-stone-50 disabled:text-stone-400 dark:disabled:bg-stone-800 dark:disabled:text-stone-500"

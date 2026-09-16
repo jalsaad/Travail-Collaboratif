@@ -12,6 +12,7 @@ import { AdminUsersExportPanel } from "@/components/admin-users-export-panel";
 import { AdminOrphanAccounts } from "@/components/admin-orphan-accounts";
 import { ANONYMOUS_EMAIL_DOMAIN } from "@/lib/account-deletion";
 import { SatisfactionStarsDisplay, SatisfactionGradientDef } from "@/components/satisfaction-stars-display";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 const PAGE_SIZE = 100;
 
@@ -289,6 +290,7 @@ export default async function AdminUtilisateursPage({
               firstName: u.firstName,
               lastName: u.lastName,
               createdAtLabel: u.createdAt.toLocaleDateString("fr-BE", {
+                timeZone: APP_TIME_ZONE,
                 day: "numeric",
                 month: "short",
                 year: "numeric",

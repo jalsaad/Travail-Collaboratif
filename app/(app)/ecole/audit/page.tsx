@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { Reveal } from "@/components/reveal";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 const actionLabel: Record<string, string> = {
   REMOVE_MEMBER: "Retrait d'un membre",
@@ -59,11 +60,12 @@ export default async function AuditPage() {
               >
                 <td className="whitespace-nowrap px-5 py-3.5 text-xs text-stone-500 dark:text-stone-400">
                   {entry.createdAt.toLocaleDateString("fr-BE", {
+                    timeZone: APP_TIME_ZONE,
                     day: "numeric",
                     month: "short",
                     year: "numeric",
                   })}{" "}
-                  {entry.createdAt.toLocaleTimeString("fr-BE", { hour: "2-digit", minute: "2-digit" })}
+                  {entry.createdAt.toLocaleTimeString("fr-BE", { timeZone: APP_TIME_ZONE, hour: "2-digit", minute: "2-digit" })}
                 </td>
                 <td className="px-5 py-3.5 text-stone-700 dark:text-stone-300">
                   {entry.actor.firstName} {entry.actor.lastName}
