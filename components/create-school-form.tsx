@@ -14,6 +14,7 @@ import { SchoolRegionField } from "@/components/school-region-field";
 import { NIVEAU_OPTIONS, TYPE_ENSEIGNEMENT_OPTIONS } from "@/lib/school-classification-options";
 import { AddressFields } from "@/components/address-fields";
 import { PasswordInput } from "@/components/password-input";
+import { PrivacyPolicyCheckbox } from "@/components/privacy-policy-checkbox";
 import { SchoolNameSearch } from "@/components/school-name-search";
 
 const initialState: CreateSchoolState = {};
@@ -125,6 +126,10 @@ export function CreateSchoolForm() {
       </div>
 
       <div className={step === 1 ? "space-y-4" : "hidden"}>
+      {/* Dans l'étape 1 : « Continuer » la valide (reportValidity), rien ne
+          peut donc être saisi en étape 2 sans prise de connaissance. */}
+      <PrivacyPolicyCheckbox />
+
       {/* En tête du formulaire : trouver son école par son nom suffit à
           remplir tout le reste. Le numéro FASE, que les enseignants ne
           connaissent généralement pas par cœur, reste disponible en repli

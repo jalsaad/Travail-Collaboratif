@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { joinViaPeerReferral, type PeerReferralJoinState } from "@/app/(auth)/rejoindre/parrainage/[token]/actions";
 import { LevelHoursPicker } from "@/components/level-hours-picker";
 import { PasswordInput } from "@/components/password-input";
+import { PrivacyPolicyCheckbox } from "@/components/privacy-policy-checkbox";
 
 const initialState: PeerReferralJoinState = {};
 
@@ -13,6 +14,8 @@ export function PeerReferralJoinForm({ token }: { token: string }) {
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="token" value={token} />
+
+      <PrivacyPolicyCheckbox />
 
       <LevelHoursPicker />
 

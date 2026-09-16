@@ -12,6 +12,11 @@ import { notifySchoolDirectionOfNewMember } from "@/lib/school-notifications";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 import { teacherIdentitySchema, createTeacherAccountAndMembership } from "@/lib/teacher-signup";
 import { hashPeerReferralToken } from "@/lib/peer-referral";
+import {
+  hasAcceptedPrivacyPolicy,
+  privacyAcceptanceRecord,
+  PRIVACY_REFUSED_MESSAGE,
+} from "@/lib/privacy-policy";
 
 export type PeerReferralJoinState = { error?: string };
 
@@ -21,6 +26,10 @@ export async function joinViaPeerReferral(
   _prevState: PeerReferralJoinState | undefined,
   formData: FormData
 ): Promise<PeerReferralJoinState> {
+  // Avant toute autre validation : sans prise de connaissance de la politique
+  // de confidentialité, aucune donnée ne doit même être examinée.
+  if (!hasAcceptedPrivacyPolicy(formData)) return { error: PRIVACY_REFUSED_MESSAGE };
+
   const parsed = joinSchema.safeParse({
     token: formData.get("token"),
     firstName: formData.get("firstName"),
@@ -71,6 +80,7 @@ export async function joinViaPeerReferral(
         schoolId: referral.schoolId,
         identity: parsed.data,
         levels: parsedLevels.data,
+        privacy: privacyAcceptanceRecord(),
       });
 
       // Le jeton est consommé dans la même transaction que la création du

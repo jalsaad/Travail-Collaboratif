@@ -22,6 +22,12 @@ import {
 import { canonicalLocality } from "@/lib/belgian-postal-codes";
 import { FORM_CREATE_SCHOOL, logFormRejection, logZodRejection } from "@/lib/form-rejections";
 import { normalizeWebsite, InvalidWebsiteError } from "@/lib/website-url";
+import {
+  hasAcceptedPrivacyPolicy,
+  privacyAcceptanceRecord,
+  PRIVACY_FIELD,
+  PRIVACY_REFUSED_MESSAGE,
+} from "@/lib/privacy-policy";
 
 export type CreateSchoolState = { error?: string };
 
@@ -121,6 +127,12 @@ export async function createSchool(
   _prevState: CreateSchoolState | undefined,
   formData: FormData
 ): Promise<CreateSchoolState> {
+  // Avant toute autre validation : sans prise de connaissance de la politique
+  // de confidentialité, aucune donnée ne doit même être examinée.
+  if (!hasAcceptedPrivacyPolicy(formData)) {
+    return { error: await refus(PRIVACY_REFUSED_MESSAGE, PRIVACY_FIELD) };
+  }
+
   const parsedSchool = schoolSchema.safeParse({
     name: formData.get("name"),
     reseau: formData.get("reseau"),
@@ -206,6 +218,7 @@ export async function createSchool(
         dateOfBirth: new Date(parsedFounder.data.dateOfBirth),
         sex: parsedFounder.data.sex,
         matricule,
+        ...privacyAcceptanceRecord(),
       },
     });
     founderUserId = user.id;

@@ -158,6 +158,12 @@ export default function LoginGatewayPage() {
 
         <ReseauxEnseignementSection />
         <AboutUsSection />
+
+        <p className="relative mt-10 text-center text-xs text-stone-500 dark:text-stone-400">
+          <Link href="/confidentialite" className="hover:text-brand-700 hover:underline dark:hover:text-brand-400">
+            Politique de confidentialité
+          </Link>
+        </p>
       </div>
     </div>
   );

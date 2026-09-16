@@ -146,8 +146,8 @@ model User {
   dateOfBirth         DateTime?
   sex                 Sex?
   /// Numéro à 11 chiffres calculé à la création du compte (cf. lib/matricule.ts) :
-  /// 1 chiffre sexe + 2 chiffres décennie de naissance + 2 chiffres mois +
-  /// 2 chiffres jour + 4 chiffres encodés manuellement par l'utilisateur.
+  /// 1 chiffre sexe + 2 derniers chiffres de l'année de naissance + 2 chiffres
+  /// mois + 2 chiffres jour + 4 chiffres encodés manuellement par l'utilisateur.
   /// Nullable : les comptes créés avant l'introduction de ce champ n'en ont pas.
   matricule           String?   @unique
   /// Compte plateforme, transverse à toutes les écoles — distinct des rôles
@@ -167,6 +167,14 @@ model User {
   /// seule valeur "actuelle" par compte, pas un historique.
   satisfactionRating  Int?
   satisfactionRatedAt DateTime?
+  /// Prise de connaissance de la politique de confidentialité à l'inscription
+  /// (RGPD art. 13) : date et version du texte présenté. Une attestation
+  /// d'information, pas un consentement — le traitement repose sur l'exécution
+  /// du service (art. 6.1.b), cf. lib/privacy-policy.ts. Nulles pour les comptes
+  /// créés avant l'introduction de la politique, qui n'ont donc pas encore
+  /// reçu cette information.
+  privacyAcceptedAt    DateTime?
+  privacyPolicyVersion String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 

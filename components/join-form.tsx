@@ -6,6 +6,7 @@ import { submitJoin, type JoinState } from "@/app/(auth)/rejoindre/actions";
 import { SchoolChoiceFields, type SchoolChoiceMode } from "@/components/school-choice-fields";
 import { LevelHoursPicker } from "@/components/level-hours-picker";
 import { PasswordInput } from "@/components/password-input";
+import { PrivacyPolicyCheckbox } from "@/components/privacy-policy-checkbox";
 
 const initialState: JoinState = {};
 
@@ -63,6 +64,10 @@ export function JoinForm({ defaultCode }: { defaultCode: string }) {
       </div>
 
       <div className={step === 1 ? "space-y-4" : "hidden"}>
+      {/* Dans l'étape 1 : « Continuer » la valide (reportValidity), rien ne
+          peut donc être saisi en étape 2 sans prise de connaissance. */}
+      <PrivacyPolicyCheckbox />
+
       <SchoolChoiceFields defaultCode={defaultCode} onChange={onChoixChange} />
 
       <button type="button" onClick={suivant} disabled={!ecoleChoisie} className="btn-primary w-full">

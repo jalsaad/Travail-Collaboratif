@@ -1,5 +1,5 @@
-// Numéro de matricule à 11 chiffres : 1 chiffre sexe + 2 chiffres décennie de
-// naissance + 2 chiffres mois + 2 chiffres jour + 4 chiffres encodés
+// Numéro de matricule à 11 chiffres : 1 chiffre sexe + 2 derniers chiffres de
+// l'année de naissance + 2 chiffres mois + 2 chiffres jour + 4 chiffres encodés
 // manuellement par l'utilisateur.
 //
 // dateOfBirthIso est repris tel quel de l'input <input type="date"> au format

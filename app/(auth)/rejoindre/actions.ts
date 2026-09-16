@@ -16,6 +16,11 @@ import { getCurrentSchoolYear } from "@/lib/current-school-year";
 import { teacherIdentitySchema, createTeacherAccountAndMembership } from "@/lib/teacher-signup";
 import { civilityAndLastName } from "@/lib/civility";
 import {
+  hasAcceptedPrivacyPolicy,
+  privacyAcceptanceRecord,
+  PRIVACY_REFUSED_MESSAGE,
+} from "@/lib/privacy-policy";
+import {
   createPartialSchoolRecord,
   loadFwbSchoolForInitiation,
   resolveExistingSchoolTarget,
@@ -57,6 +62,10 @@ export async function joinViaCode(
   _prevState: JoinState | undefined,
   formData: FormData
 ): Promise<JoinState> {
+  // Avant toute autre validation : sans prise de connaissance de la politique
+  // de confidentialité, aucune donnée ne doit même être examinée.
+  if (!hasAcceptedPrivacyPolicy(formData)) return { error: PRIVACY_REFUSED_MESSAGE };
+
   const parsed = joinSchema.safeParse({
     code: formData.get("code") ?? "",
     schoolId: formData.get("schoolId") ?? "",
@@ -105,6 +114,7 @@ export async function joinViaCode(
         schoolId: targetSchoolId,
         identity: parsed.data,
         levels: parsedLevels.data,
+        privacy: privacyAcceptanceRecord(),
       })
     );
   } catch (error) {
@@ -212,6 +222,10 @@ export async function initiatePartialSchool(
   _prevState: JoinState | undefined,
   formData: FormData
 ): Promise<JoinState> {
+  // Avant toute autre validation : sans prise de connaissance de la politique
+  // de confidentialité, aucune donnée ne doit même être examinée.
+  if (!hasAcceptedPrivacyPolicy(formData)) return { error: PRIVACY_REFUSED_MESSAGE };
+
   const parsed = initiateSchema.safeParse({
     numeroFase: formData.get("numeroFase") ?? "",
     directionEmail: formData.get("directionEmail") ?? "",
@@ -252,6 +266,7 @@ export async function initiatePartialSchool(
         schoolId: school.id,
         identity: parsed.data,
         levels: parsedLevels.data,
+        privacy: privacyAcceptanceRecord(),
       });
       return { school, account };
     });

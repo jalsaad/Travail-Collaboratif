@@ -37,7 +37,16 @@ export type TeacherIdentity = z.infer<typeof teacherIdentitySchema>;
 // une promotion ultérieure, cf. permissions.md).
 export async function createTeacherAccountAndMembership(
   tx: AppTransactionClient,
-  params: { schoolId: string; identity: TeacherIdentity; levels: LevelHoursEntry[] }
+  params: {
+    schoolId: string;
+    identity: TeacherIdentity;
+    levels: LevelHoursEntry[];
+    /// Obligatoire, et non facultatif : aucun parcours d'inscription ne doit
+    /// pouvoir créer un compte sans avoir vérifié la prise de connaissance de
+    /// la politique de confidentialité. Un appelant qui l'oublie ne compile
+    /// pas (cf. lib/privacy-policy.ts).
+    privacy: { privacyAcceptedAt: Date; privacyPolicyVersion: string };
+  }
 ) {
   const passwordHash = await bcrypt.hash(params.identity.password, 10);
   const matricule = computeMatricule(
@@ -55,6 +64,7 @@ export async function createTeacherAccountAndMembership(
       dateOfBirth: new Date(params.identity.dateOfBirth),
       sex: params.identity.sex,
       matricule,
+      ...params.privacy,
     },
   });
 
