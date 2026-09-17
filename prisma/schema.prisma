@@ -138,35 +138,35 @@ enum DonationStatus {
 // ---------------------------------------------------------------------------
 
 model User {
-  id                  String    @id @default(cuid())
-  email               String    @unique
-  firstName           String
-  lastName            String
-  passwordHash        String?
-  dateOfBirth         DateTime?
-  sex                 Sex?
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  firstName            String
+  lastName             String
+  passwordHash         String?
+  dateOfBirth          DateTime?
+  sex                  Sex?
   /// Numéro à 11 chiffres calculé à la création du compte (cf. lib/matricule.ts) :
   /// 1 chiffre sexe + 2 derniers chiffres de l'année de naissance + 2 chiffres
   /// mois + 2 chiffres jour + 4 chiffres encodés manuellement par l'utilisateur.
   /// Nullable : les comptes créés avant l'introduction de ce champ n'en ont pas.
-  matricule           String?   @unique
+  matricule            String?   @unique
   /// Compte plateforme, transverse à toutes les écoles — distinct des rôles
   /// Membership (qui restent scopés à une école). Réservé à l'équipe produit
   /// pour assister les directions ; ne pas confondre avec Role.DIRECTION.
-  isSuperAdmin        Boolean   @default(false)
+  isSuperAdmin         Boolean   @default(false)
   /// Compte de démonstration ouvert aux directions qui découvrent la
   /// plateforme : il peut TOUT consulter et remplir les formulaires, mais
   /// aucune écriture ne lui est permise (cf. lib/prisma.ts, qui bloque au
   /// niveau du client Prisma plutôt qu'action par action — une nouvelle
   /// fonctionnalité est ainsi couverte sans qu'on ait à y penser). L'espace
   /// reste donc identique pour le visiteur suivant.
-  isDemo              Boolean   @default(false)
-  lastLoginAt         DateTime?
+  isDemo               Boolean   @default(false)
+  lastLoginAt          DateTime?
   /// Note de satisfaction courante (1 à 5), modifiable à tout moment depuis
   /// le widget étoiles du menu (cf. components/satisfaction-stars.tsx) — une
   /// seule valeur "actuelle" par compte, pas un historique.
-  satisfactionRating  Int?
-  satisfactionRatedAt DateTime?
+  satisfactionRating   Int?
+  satisfactionRatedAt  DateTime?
   /// Prise de connaissance de la politique de confidentialité à l'inscription
   /// (RGPD art. 13) : date et version du texte présenté. Une attestation
   /// d'information, pas un consentement — le traitement repose sur l'exécution
@@ -175,8 +175,8 @@ model User {
   /// reçu cette information.
   privacyAcceptedAt    DateTime?
   privacyPolicyVersion String?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   memberships          Membership[]
   createdPeriods       CollaborativePeriod[] @relation("PeriodAuthor")
@@ -345,26 +345,33 @@ model SchoolYear {
 /// Rattachement d'un User à une School, avec son rôle. Un enseignant
 /// partagé entre plusieurs écoles a une Membership par école.
 model Membership {
-  id             String           @id @default(cuid())
-  userId         String
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  schoolId       String
-  school         School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  implantationId String?
-  implantation   Implantation?    @relation(fields: [implantationId], references: [id])
-  role           Role
+  id               String           @id @default(cuid())
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId         String
+  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  implantationId   String?
+  implantation     Implantation?    @relation(fields: [implantationId], references: [id])
+  role             Role
   /// Intitulé déclaratif choisi à l'inscription ("Direction", "Direction
   /// adjointe", "Autre") — distinct de `role` qui reste la seule source des
   /// permissions réelles. Direction/Direction adjointe → role DIRECTION,
   /// Autre → role REFERENT_NUMERIQUE (cf. app/(auth)/creer-ecole/actions.ts).
-  fonction       String?
+  fonction         String?
   /// Précision libre saisie uniquement quand fonction = "Autre".
-  fonctionAutre  String?
-  status         MembershipStatus @default(ACTIVE)
+  fonctionAutre    String?
+  status           MembershipStatus @default(ACTIVE)
   /// true pour le compte ayant créé l'espace école (non rétrogradable)
-  isAccountOwner Boolean          @default(false)
-  joinedAt       DateTime         @default(now())
-  removedAt      DateTime?
+  isAccountOwner   Boolean          @default(false)
+  /// Préférence PERSONNELLE d'une direction ou d'un·e référent·e numérique :
+  /// recevoir un email à chaque nouvelle inscription dans CETTE école (cf.
+  /// lib/school-notifications.ts). Portée par le rattachement, pas par
+  /// l'école : le choix d'un gestionnaire ne coupe jamais l'email des autres,
+  /// et qui gère deux écoles choisit pour chacune. Sans effet pour un rôle
+  /// qui ne reçoit pas ces emails. Activée par défaut.
+  notifyNewMembers Boolean          @default(true)
+  joinedAt         DateTime         @default(now())
+  removedAt        DateTime?
 
   annualAssignments  AnnualAssignment[]
   authoredInvitation Invitation[]           @relation("InvitationAcceptedAs")

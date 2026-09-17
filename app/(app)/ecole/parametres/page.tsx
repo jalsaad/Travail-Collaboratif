@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { SchoolSettingsForm } from "@/components/school-settings-form";
 import { JoinCodePanel } from "@/components/join-code-panel";
+import { NewMemberNotificationsPanel } from "@/components/new-member-notifications-panel";
 import { Reveal } from "@/components/reveal";
 
 export default async function ParametresPage() {
@@ -13,9 +14,13 @@ export default async function ParametresPage() {
   const active = await resolveActiveMembership(session.userId);
   if (!active) redirect("/mes-periodes");
 
-  const [school, joinCode] = await Promise.all([
+  const [school, joinCode, membership] = await Promise.all([
     prisma.school.findUniqueOrThrow({ where: { id: active.schoolId } }),
     prisma.joinCode.findFirst({ where: { schoolId: active.schoolId, active: true } }),
+    prisma.membership.findUniqueOrThrow({
+      where: { id: active.membershipId },
+      select: { notifyNewMembers: true },
+    }),
   ]);
 
   return (
@@ -44,6 +49,10 @@ export default async function ParametresPage() {
 
       <Reveal delay={80}>
         <JoinCodePanel code={joinCode?.code ?? null} />
+      </Reveal>
+
+      <Reveal delay={160}>
+        <NewMemberNotificationsPanel enabled={membership.notifyNewMembers} />
       </Reveal>
     </div>
   );

@@ -57,7 +57,9 @@ export async function notifyDirectionOfPartialSchool(
 /// Prévient la direction et les référent·es numériques de l'école qu'un
 /// enseignant vient de s'y rattacher. Ces deux rôles sont ceux qui gèrent
 /// l'établissement (cf. lib/school-authorization.ts::assertCanManageSchool),
-/// donc ceux qui doivent surveiller les arrivées.
+/// donc ceux qui doivent surveiller les arrivées — sauf celles et ceux qui
+/// ont désactivé ces emails pour cette école (Membership.notifyNewMembers,
+/// cf. /ecole/parametres).
 export async function notifySchoolDirectionOfNewMember(membershipId: string): Promise<void> {
   try {
     const membership = await prisma.membership.findUnique({
@@ -75,6 +77,7 @@ export async function notifySchoolDirectionOfNewMember(membershipId: string): Pr
         schoolId: membership.schoolId,
         status: "ACTIVE",
         role: { in: ["DIRECTION", "REFERENT_NUMERIQUE"] },
+        notifyNewMembers: true,
         // Ne jamais s'auto-notifier : sans garde, un référent qui rejoint une
         // seconde école recevrait son propre email s'il y gère déjà.
         id: { not: membership.id },

@@ -165,6 +165,37 @@ async function regenerateJoinCodeImpl(): Promise<SchoolActionState> {
   return { success: `Nouveau code : ${newCode.code}` };
 }
 
+/// Préférence personnelle : n'engage que le rattachement de la personne qui
+/// clique, jamais celui des autres gestionnaires. Pas de trace dans le journal
+/// d'audit de l'école, qui retrace la gestion de l'établissement, pas les
+/// réglages de confort de chacun.
+async function setNewMemberNotificationsImpl(enabled: boolean): Promise<SchoolActionState> {
+  const session = await auth();
+  if (!session) throw new Error("Non authentifié.");
+  const active = await resolveActiveMembership(session.userId);
+  if (!active) return { error: "Aucune école active." };
+
+  let membership;
+  try {
+    membership = await assertCanManageSchool(session.userId, active.schoolId);
+  } catch (error) {
+    if (error instanceof ForbiddenError) return { error: error.message };
+    throw error;
+  }
+
+  await prisma.membership.update({
+    where: { id: membership.id },
+    data: { notifyNewMembers: enabled },
+  });
+
+  revalidatePath("/ecole/parametres");
+  return {
+    success: enabled
+      ? "Vous recevrez un email à chaque nouvelle inscription."
+      : "Vous ne recevrez plus d'email lors des nouvelles inscriptions.",
+  };
+}
+
 // Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts) :
 // on traduit le refus en message lisible plutôt qu'en page d'erreur.
 export async function updateSchoolInfo(
@@ -185,6 +216,19 @@ export async function updateSchoolInfo(
 export async function regenerateJoinCode(): Promise<SchoolActionState> {
   try {
     return await regenerateJoinCodeImpl();
+  } catch (error) {
+    const demo = demoErrorState(error);
+    if (demo) return demo;
+    throw error;
+  }
+}
+
+// Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts) :
+// on traduit le refus en message lisible plutôt qu'en page d'erreur.
+export async function setNewMemberNotifications(enabled: boolean): Promise<SchoolActionState> {
+  if (typeof enabled !== "boolean") return { error: "Valeur invalide." };
+  try {
+    return await setNewMemberNotificationsImpl(enabled);
   } catch (error) {
     const demo = demoErrorState(error);
     if (demo) return demo;
