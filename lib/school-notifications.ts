@@ -7,6 +7,7 @@ import {
   sendNewSchoolNotification,
   sendTeacherReminderEmail,
 } from "@/lib/mailer";
+import { newMemberUnsubscribeLinks } from "@/lib/notification-unsubscribe";
 import { civilityAndLastName } from "@/lib/civility";
 import type { PartialSchoolNotice } from "@/lib/school-join-target";
 import { APP_TIME_ZONE } from "@/lib/time-zone";
@@ -84,13 +85,16 @@ export async function notifySchoolDirectionOfNewMember(membershipId: string): Pr
       },
       include: { user: { select: { email: true } } },
     });
-
-    const to = [...new Set(managers.map((m) => m.user.email))];
-    if (to.length === 0) return;
+    if (managers.length === 0) return;
 
     const baseUrl = await getBaseUrl();
     await sendNewMemberNotification({
-      to,
+      // Pas de doublon d'adresse possible : un compte n'a qu'un rattachement
+      // par école (@@unique([userId, schoolId])) et un email par compte.
+      recipients: managers.map((m) => ({
+        email: m.user.email,
+        unsubscribe: newMemberUnsubscribeLinks(baseUrl, m.id),
+      })),
       memberName: `${membership.user.firstName} ${membership.user.lastName}`,
       memberEmail: membership.user.email,
       schoolName: membership.school.name,

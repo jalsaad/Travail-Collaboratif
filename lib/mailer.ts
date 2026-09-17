@@ -352,8 +352,9 @@ export async function sendDirectionInvitationEmail(params: DirectionInvitationEm
 
 export type NewMemberNotification = {
   /// Direction et référent·es numériques de l'école — les deux rôles qui
-  /// gèrent l'établissement (cf. lib/school-authorization.ts).
-  to: string[];
+  /// gèrent l'établissement (cf. lib/school-authorization.ts) — chacun·e
+  /// avec SON lien de désabonnement (cf. lib/notification-unsubscribe.ts).
+  recipients: { email: string; unsubscribe: { page: string; oneClick: string } }[];
   memberName: string;
   memberEmail: string;
   schoolName: string;
@@ -364,9 +365,9 @@ export type NewMemberNotification = {
 };
 
 export async function sendNewMemberNotification(params: NewMemberNotification) {
-  const { to, memberName, memberEmail, schoolName, teachingSummary, joinedAtLabel, membersUrl } =
+  const { recipients, memberName, memberEmail, schoolName, teachingSummary, joinedAtLabel, membersUrl } =
     params;
-  if (to.length === 0) return;
+  if (recipients.length === 0) return;
 
   const subject = `Nouveau rattachement : ${memberName} — ${schoolName}`;
   const text = [
@@ -380,11 +381,18 @@ export async function sendNewMemberNotification(params: NewMemberNotification) {
 
   const transporter = createTransport();
   if (!transporter) {
-    console.log(`[dev] Nouveau rattachement ${memberName} à ${schoolName} — destinataires : ${to.join(", ")}`);
+    for (const r of recipients) {
+      console.log(
+        `[dev] Nouveau rattachement ${memberName} à ${schoolName} — ${r.email} (désabonnement : ${r.unsubscribe.page})`
+      );
+    }
     return;
   }
 
-  const html = renderBrandedEmail({
+  // Un email PAR destinataire, et non plus un seul à plusieurs adresses : le
+  // lien de désabonnement est propre à chacun·e, et ne doit couper que
+  // l'email de la personne qui clique.
+  const html = (unsubscribeUrl: string) => renderBrandedEmail({
     eyebrow: "Espace direction",
     title: `${escapeHtml(memberName)} vient de rejoindre ${escapeHtml(schoolName)}.`,
     rows: [
@@ -394,12 +402,38 @@ export async function sendNewMemberNotification(params: NewMemberNotification) {
       { label: "Enseignement", value: teachingSummary },
     ],
     cta: { label: "Voir les membres de l'école", url: membersUrl },
-    footerHtml: `Ce rattachement s'est fait via le code d'accès de l'école. Si cette personne
-          n'aurait pas dû y accéder, vous pouvez la retirer depuis la liste des membres et
-          régénérer le code dans les paramètres.`,
+    footerHtml: `Si cette personne n'aurait pas dû rejoindre l'école, vous pouvez la retirer depuis
+          la liste des membres et régénérer le code de rattachement dans les paramètres.<br /><br />
+          Vous recevez cet email parce que vous gérez ${escapeHtml(schoolName)} sur Travail
+          Collaboratif. <a href="${escapeHtml(unsubscribeUrl)}" style="color:#78716c;text-decoration:underline;">Ne
+          plus recevoir ces emails</a>`,
   });
 
-  await transporter.sendMail({ from: SMTP_FROM, to, subject, text, html });
+  const resultats = await Promise.allSettled(
+    recipients.map((r) =>
+      transporter.sendMail({
+        from: SMTP_FROM,
+        to: r.email,
+        subject,
+        text: `${text}\n\n—\nNe plus recevoir ces emails : ${r.unsubscribe.page}`,
+        html: html(r.unsubscribe.page),
+        // Désabonnement en un clic depuis la messagerie elle-même (Gmail,
+        // Outlook…), RFC 8058 : le client envoie un POST à cette adresse,
+        // traité par app/api/notifications/desabonnement/route.ts.
+        list: { unsubscribe: { url: r.unsubscribe.oneClick, comment: "Ne plus recevoir ces emails" } },
+        headers: { "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+      })
+    )
+  );
+  // Un destinataire en échec n'empêche pas les autres de recevoir l'email ;
+  // l'échec remonte quand même, pour être journalisé par l'appelant.
+  const echecs = resultats.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+  if (echecs.length > 0) {
+    throw new AggregateError(
+      echecs.map((e) => e.reason),
+      `${echecs.length}/${recipients.length} notification(s) de rattachement non envoyée(s)`
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
