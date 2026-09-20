@@ -63,10 +63,6 @@ export default async function ModifierPeriodePage({
             fullName: e.fullName,
             status: e.status,
           }))}
-          // Même condition qu'à la déclaration : dans un cercle pas encore
-          // inscrit officiellement, personne ne peut distribuer de code de
-          // rattachement et le sélecteur ci-dessus reste vide.
-          peutInviter={active.schoolStatus === "PARTIAL"}
         />
       </Reveal>
     </div>

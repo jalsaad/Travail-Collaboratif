@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { createPeriod, type CreatePeriodState } from "@/app/(app)/declarer/actions";
 import { ColleaguePicker } from "@/components/colleague-picker";
@@ -14,13 +15,8 @@ const initialState: CreatePeriodState = {};
 
 export function DeclarePeriodForm({
   colleagues,
-  peutInviter = false,
 }: {
   colleagues: { membershipId: string; name: string }[];
-  /// Vrai dans une école pas encore inscrite officiellement : le sélecteur de
-  /// collègues y est souvent vide, la seule façon d'associer quelqu'un est de
-  /// l'inviter (cf. app/(app)/declarer/page.tsx).
-  peutInviter?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(createPeriod, initialState);
 
@@ -41,20 +37,38 @@ export function DeclarePeriodForm({
         </div>
       </div>
 
-      {peutInviter && (
-        <div>
-          <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-            Collègues sans compte <span className="font-normal text-stone-400">(facultatif)</span>
-          </span>
-          <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
-            Chacun·e reçoit un lien par email : en créant son compte, il ou elle rejoint votre école et
-            valide du même geste sa participation à cette période.
-          </p>
-          <div className="mt-1.5">
-            <ColleagueInvitesField />
-          </div>
+      {/* Inviter se fait ici, au moment où l'on constate qui manque dans le
+          sélecteur ci-dessus — et non plus depuis une entrée de menu à part,
+          qui obligeait à quitter sa déclaration pour y penser. */}
+      <div>
+        <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+          Collègues pas encore inscrits dans la plateforme{" "}
+          <span className="font-normal text-stone-400">(facultatif)</span>
+        </span>
+        <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
+          Chacun·e reçoit un lien par email : en créant son compte, il ou elle rejoint votre école et
+          valide du même geste sa participation à cette période.
+        </p>
+        <div className="mt-1.5">
+          <ColleagueInvitesField />
         </div>
-      )}
+        {/* Le lien/QR code a son propre formulaire (il s'obtient sans attendre
+            l'enregistrement de la période) : impossible de l'imbriquer dans
+            celui-ci, d'où le renvoi vers la page dédiée. Nouvel onglet, pour
+            ne pas perdre la déclaration en cours. */}
+        <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+          Pas son adresse email sous la main ?{" "}
+          <Link
+            href="/inviter"
+            target="_blank"
+            rel="noopener"
+            className="font-medium text-brand-700 underline hover:no-underline dark:text-brand-400"
+          >
+            Obtenir un lien ou un QR code à lui transmettre
+          </Link>
+          .
+        </p>
+      </div>
 
       <div>
         <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">

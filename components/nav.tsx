@@ -13,7 +13,6 @@ import {
   IconAssistance,
   IconDeclarer,
   IconEcole,
-  IconInviter,
   IconJournal,
   IconParametres,
   IconPeriodes,
@@ -91,7 +90,6 @@ export function Nav({
             entries: [
               { href: "/mes-periodes", label: "Mes périodes", Icon: IconPeriodes },
               { href: "/declarer", label: "Déclarer une période", Icon: IconDeclarer },
-              { href: "/inviter", label: "Inviter un·e collègue", Icon: IconInviter },
             ],
           },
         ]
