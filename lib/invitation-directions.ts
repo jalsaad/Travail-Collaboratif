@@ -289,3 +289,98 @@ export function buildPoInvitation(options: {
     listUnsubscribe: `<mailto:${contactEmail}?subject=DESINSCRIPTION>`,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Relance des directions déjà contactées
+// ---------------------------------------------------------------------------
+
+/// Deuxième message aux écoles déjà destinataires de l'invitation ci-dessus
+/// (cf. scripts/exporter-relance.ts pour la liste, tirée du suivi de
+/// prospection). Une relance ne répète pas l'argumentaire : elle annonce ce
+/// qui a changé depuis, et propose une porte plus basse que la première fois —
+/// voir l'outil en démonstration, ou laisser l'équipe démarrer — plutôt que de
+/// redemander la même inscription.
+///
+/// Aucun reproche, aucune allusion à l'absence de réponse : une direction qui
+/// n'a pas donné suite n'a rien à se justifier, et le lui rappeler ferait
+/// perdre le peu d'attention accordée à ce second message.
+const SUJET_RELANCE = "Travail collaboratif : une démonstration, et la possibilité de commencer à plusieurs";
+
+const SRC_RELANCE = "relance";
+
+export function buildDirectionRelance(options: InvitationOptions): InvitationContent {
+  const { school, baseUrl, contactEmail } = options;
+  const localite = [school.codePostal, school.ville].filter(Boolean).join(" ");
+  const demoUrl = marquer(`${baseUrl}/login/direction?demo=1`, SRC_RELANCE);
+  const inscriptionUrl = marquer(`${baseUrl}/creer-ecole`, SRC_RELANCE);
+  const rejoindreUrl = marquer(`${baseUrl}/rejoindre`, SRC_RELANCE);
+
+  const paragraphes = [
+    "Madame la Directrice, Monsieur le Directeur,",
+    "Nous vous avions présenté Travail Collaboratif, la plateforme gratuite qui prend en " +
+      "charge le recensement des 60 périodes annuelles de travail collaboratif imposées par " +
+      "les circulaires 7167 et 8894. Trois choses ont changé depuis, qui rendent l'essai plus " +
+      "simple.",
+    "Un espace de démonstration est désormais ouvert : vous entrez dans un espace direction " +
+      "complet, avec une école et des enseignant·es fictifs, et vous pouvez tout parcourir — " +
+      "relevés, exports PDF et Excel, suivi de l'équipe. Rien ne s'y enregistre, aucune " +
+      "inscription n'est demandée.",
+    "Vos enseignant·es peuvent aussi commencer de leur côté, à quelques-uns, sans attendre que " +
+      "l'école entière s'y mette : leurs déclarations sont conservées, et le jour où vous " +
+      "créez l'espace de l'établissement, tout ce qu'ils ont déjà encodé s'y retrouve.",
+    "La plateforme reste gratuite et sans limite de comptes, ouverte à tous les réseaux et à " +
+      "tous les niveaux. Sa politique de confidentialité, conforme au RGPD, est publiée sur le " +
+      "site.",
+  ];
+
+  const liens = liensDecouverte(baseUrl, SRC_RELANCE);
+
+  const text = [
+    ...paragraphes,
+    "",
+    `École : ${school.nom}${localite ? ` — ${localite}` : ""}`,
+    `Voir la démonstration (sans inscription) : ${demoUrl}`,
+    `Créer l'espace de votre école : ${inscriptionUrl}`,
+    `Inscription d'un·e enseignant·e : ${rejoindreUrl}`,
+    ...liens.texte,
+    "",
+    `Une question ou une présentation à votre équipe ? ${contactEmail}`,
+    "Vous recevez ce message parce que votre établissement figure à l'annuaire public des",
+    "écoles de la Fédération Wallonie-Bruxelles et a déjà reçu notre présentation. Pour ne",
+    "plus en recevoir, répondez à cet email avec la mention DESINSCRIPTION.",
+  ].join("\n");
+
+  const bodyHtml =
+    paragraphes.map((p) => `<p style="margin:0 0 12px;">${escapeHtml(p)}</p>`).join("\n        ") +
+    "\n        " +
+    `<p style="margin:0 0 12px;">Pour laisser un·e enseignant·e démarrer : ` +
+    `<a href="${rejoindreUrl}" style="color:${BRAND_600};">${escapeHtml(
+      rejoindreUrl.replace(/^https?:\/\//, "")
+    )}</a>.</p>` +
+    "\n        " +
+    liens.html;
+
+  const html = renderBrandedEmail({
+    eyebrow: "Travail Collaboratif",
+    title: "Voir la plateforme en démonstration, avant toute inscription.",
+    bodyHtml,
+    rows: [
+      { label: "École", value: school.nom },
+      ...(localite ? [{ label: "Localité", value: localite }] : []),
+      { label: "Démonstration", value: "Espace direction complet, sans inscription" },
+      { label: "Coût", value: "Gratuite, sans limite de comptes" },
+    ],
+    cta: {
+      label: "Ouvrir la démonstration",
+      url: demoUrl,
+      note: "Identifiants déjà remplis. Rien ne s'enregistre : l'espace reste intact.",
+    },
+    footerHtml: `Une question ou une présentation à votre équipe ?
+          <a href="mailto:${contactEmail}" style="color:${BRAND_600};">${escapeHtml(contactEmail)}</a>.
+          Vous recevez ce message parce que votre établissement figure à l'annuaire public des
+          écoles de la Fédération Wallonie-Bruxelles et a déjà reçu notre présentation ; pour ne
+          plus en recevoir, répondez simplement « DESINSCRIPTION ».`,
+  });
+
+  return { subject: SUJET_RELANCE, text, html, listUnsubscribe: `<mailto:${contactEmail}?subject=DESINSCRIPTION>` };
+}

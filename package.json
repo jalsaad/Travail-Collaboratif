@@ -15,6 +15,7 @@
     "invitations": "ts-node -P tsconfig.scripts.json scripts/inviter-directions.ts",
     "collecte-emails": "ts-node -P tsconfig.scripts.json scripts/collecter-emails.ts",
     "po": "ts-node -P tsconfig.scripts.json scripts/pouvoirs-organisateurs.ts",
+    "liste-relance": "ts-node -P tsconfig.scripts.json scripts/exporter-relance.ts",
     "export-prospection": "ts-node -P tsconfig.scripts.json scripts/exporter-prospection.ts",
     "purger-test": "ts-node -P tsconfig.scripts.json scripts/purger-comptes-test.ts",
     "cartographie": "ts-node -P tsconfig.scripts.json scripts/importer-cartographie.ts",

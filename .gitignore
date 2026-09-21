@@ -31,6 +31,7 @@ public/uploads/
 # régénérables à la commande.
 /data/import-cpeons-rapport.csv
 /data/prospection-toutes-ecoles.csv
+/data/prospection-relance.csv
 # Fichiers de campagne, quel que soit leur nom : un « -envoi » porte les
 # établissements à contacter, un « -journal » les adresses réellement
 # contactées. Jamais au dépôt, même pour un essai.

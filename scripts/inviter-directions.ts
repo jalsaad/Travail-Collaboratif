@@ -19,6 +19,7 @@ import path from "node:path";
 import nodemailer from "nodemailer";
 import {
   buildDirectionInvitation,
+  buildDirectionRelance,
   buildPoInvitation,
   type InvitationContent,
   type InvitedSchool,
@@ -63,6 +64,29 @@ const PROFILS: Record<string, Profil> = {
     nom: "nom",
     contenu: (r, baseUrl, contactEmail) =>
       buildDirectionInvitation({
+        school: {
+          nom: r.nom ?? "",
+          ville: r.ville ?? "",
+          codePostal: r.code_postal ?? "",
+          reseau: r.reseau ?? "",
+          niveau: r.niveau ?? "",
+        } satisfies InvitedSchool,
+        baseUrl,
+        contactEmail,
+      }),
+    decrire: (r) => `${r.nom} (${r.code_postal} ${r.ville})`,
+  },
+  // Deuxième message aux écoles déjà destinataires du premier. Fichier et
+  // journal distincts : le journal de la première campagne contient
+  // précisément les adresses à relancer, s'en servir ici les écarterait
+  // toutes. La liste se construit avec scripts/exporter-relance.ts.
+  relance: {
+    fichier: path.join(RACINE, "data/prospection-relance.csv"),
+    journal: path.join(RACINE, "data/prospection-relance-journal.csv"),
+    email: "email_direction",
+    nom: "nom",
+    contenu: (r, baseUrl, contactEmail) =>
+      buildDirectionRelance({
         school: {
           nom: r.nom ?? "",
           ville: r.ville ?? "",
