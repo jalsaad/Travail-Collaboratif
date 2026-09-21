@@ -313,7 +313,6 @@ export function buildDirectionRelance(options: InvitationOptions): InvitationCon
   const localite = [school.codePostal, school.ville].filter(Boolean).join(" ");
   const demoUrl = marquer(`${baseUrl}/login/direction?demo=1`, SRC_RELANCE);
   const inscriptionUrl = marquer(`${baseUrl}/creer-ecole`, SRC_RELANCE);
-  const rejoindreUrl = marquer(`${baseUrl}/rejoindre`, SRC_RELANCE);
 
   const paragraphes = [
     "Madame la Directrice, Monsieur le Directeur,",
@@ -333,16 +332,12 @@ export function buildDirectionRelance(options: InvitationOptions): InvitationCon
       "site.",
   ];
 
-  const liens = liensDecouverte(baseUrl, SRC_RELANCE);
-
   const text = [
     ...paragraphes,
     "",
     `École : ${school.nom}${localite ? ` — ${localite}` : ""}`,
     `Voir la démonstration (sans inscription) : ${demoUrl}`,
     `Créer l'espace de votre école : ${inscriptionUrl}`,
-    `Inscription d'un·e enseignant·e : ${rejoindreUrl}`,
-    ...liens.texte,
     "",
     `Une question ou une présentation à votre équipe ? ${contactEmail}`,
     "Vous recevez ce message parce que votre établissement figure à l'annuaire public des",
@@ -350,15 +345,13 @@ export function buildDirectionRelance(options: InvitationOptions): InvitationCon
     "plus en recevoir, répondez à cet email avec la mention DESINSCRIPTION.",
   ].join("\n");
 
-  const bodyHtml =
-    paragraphes.map((p) => `<p style="margin:0 0 12px;">${escapeHtml(p)}</p>`).join("\n        ") +
-    "\n        " +
-    `<p style="margin:0 0 12px;">Pour laisser un·e enseignant·e démarrer : ` +
-    `<a href="${rejoindreUrl}" style="color:${BRAND_600};">${escapeHtml(
-      rejoindreUrl.replace(/^https?:\/\//, "")
-    )}</a>.</p>` +
-    "\n        " +
-    liens.html;
+  // Un seul chemin proposé : voir la démonstration. Les liens de découverte
+  // (site, guide) et celui de l'inscription enseignante figuraient déjà dans
+  // le premier message ; les répéter dispersait l'attention d'un email dont
+  // tout l'intérêt est de faire cliquer un seul bouton.
+  const bodyHtml = paragraphes
+    .map((p) => `<p style="margin:0 0 12px;">${escapeHtml(p)}</p>`)
+    .join("\n        ");
 
   const html = renderBrandedEmail({
     eyebrow: "Travail Collaboratif",
