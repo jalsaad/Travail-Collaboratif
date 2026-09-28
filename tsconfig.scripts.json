@@ -12,6 +12,8 @@
   },
   "include": [
     "scripts/**/*.ts",
+    "types/next-auth.d.ts",
+    "lib/quota-rules.ts",
     "lib/invitation-directions.ts",
     "lib/email-template.ts",
     "lib/prospection-csv.ts",

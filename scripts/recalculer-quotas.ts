@@ -15,7 +15,7 @@
 
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
-import { quotaTargetsFor } from "../lib/quota-engine";
+import { quotaTargetsFor } from "../lib/quota-rules";
 import { chargerEnvLocal } from "../lib/env-local";
 
 const RACINE = path.resolve(__dirname, "..");
