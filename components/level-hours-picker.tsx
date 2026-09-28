@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import type { TeachingLevel } from "@prisma/client";
 import { TEACHING_LEVEL_OPTIONS } from "@/lib/teaching-levels";
+import { FULL_TIME_HOURS, quotaTargetsFor } from "@/lib/quota-rules";
 import { groupByFamille } from "@/lib/disciplines";
 import { AUTRE_DISCIPLINE_VALUE } from "@/lib/discipline-form";
 
@@ -55,10 +57,40 @@ export function LevelHoursPicker({
     setRows((r) => r.map((row) => (row.id === id ? { ...row, discipline } : row)));
   }
 
+  function setLevel(id: number, level: string) {
+    setRows((r) => r.map((row) => (row.id === id ? { ...row, level } : row)));
+  }
+
+  function setHours(id: number, valeur: string) {
+    const hours = valeur === "" ? undefined : Number(valeur);
+    setRows((r) => r.map((row) => (row.id === id ? { ...row, hours } : row)));
+  }
+
+  // Récapitulatif vivant sous les lignes. Sans lui, chaque ligne paraît juste
+  // et c'est leur SOMME qui est fausse : une enseignante à 18 h partagées
+  // entre deux disciplines avait saisi 18 h sur chacune, d'où 36 h déclarées
+  // et un objectif de temps plein. Le total et l'objectif rendent l'erreur
+  // visible au moment de la saisie, quand elle se corrige en un clic.
+  const lignesCompletes = rows
+    .filter((r) => r.level !== "" && typeof r.hours === "number" && r.hours > 0)
+    .map((r) => ({ level: r.level as TeachingLevel, hours: r.hours as number }));
+  const totalHeures = lignesCompletes.reduce((somme, l) => somme + l.hours, 0);
+  const cible = quotaTargetsFor([{ id: "apercu", levelHours: lignesCompletes }])[0];
+  // Un temps plein dépassé n'est pas interdit — les prestations au-delà
+  // existent — mais c'est le symptôme de la saisie ci-dessus, d'où un
+  // avertissement et non un blocage.
+  const depassePleinTemps = (cible?.etp ?? 0) > 1;
+  const pleinsTempsCites = [...new Set(lignesCompletes.map((l) => l.level))]
+    .map((level) => {
+      const label = TEACHING_LEVEL_OPTIONS.find((o) => o.value === level)?.label ?? level;
+      return `${label.toLowerCase()} ${FULL_TIME_HOURS[level]} h`;
+    })
+    .join(", ");
+
   return (
     <div>
       <span className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-        Niveau(x) enseigné(s), heures/semaine et discipline
+        Niveau(x) enseigné(s), discipline et heures/semaine par discipline
       </span>
       {rows.length === 0 && (
         <p className="mt-1.5 text-sm text-stone-400 dark:text-stone-500">Aucun niveau déclaré.</p>
@@ -69,7 +101,13 @@ export function LevelHoursPicker({
           return (
             <div key={row.id} className="rounded-lg border border-stone-200 p-2.5 dark:border-stone-700">
               <div className="flex items-center gap-2">
-                <select name="level" required defaultValue={row.level} className="input-field flex-1">
+                <select
+                  name="level"
+                  required
+                  value={row.level}
+                  onChange={(e) => setLevel(row.id, e.target.value)}
+                  className="input-field flex-1"
+                >
                   <option value="" disabled>
                     — Niveau —
                   </option>
@@ -86,8 +124,13 @@ export function LevelHoursPicker({
                   min="0.5"
                   max="99"
                   required
-                  defaultValue={row.hours}
+                  value={row.hours ?? ""}
+                  onChange={(e) => setHours(row.id, e.target.value)}
                   placeholder="Heures/sem."
+                  // Le doute à lever : ces heures sont celles de CETTE
+                  // discipline, pas la charge totale de la personne.
+                  title="Heures par semaine pour cette discipline"
+                  aria-label="Heures par semaine pour cette discipline"
                   className="input-field w-32"
                 />
                 <button
@@ -143,6 +186,35 @@ export function LevelHoursPicker({
       >
         + Ajouter un niveau
       </button>
+
+      {lignesCompletes.length > 0 && (
+        <div
+          aria-live="polite"
+          className={`mt-3 rounded-lg border p-3 text-sm ${
+            depassePleinTemps
+              ? "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200"
+              : "border-stone-200 bg-stone-50 text-stone-700 dark:border-stone-700 dark:bg-stone-950/40 dark:text-stone-300"
+          }`}
+        >
+          <p>
+            Total déclaré : <strong>{totalHeures.toLocaleString("fr-BE")} h/semaine</strong> —
+            objectif annuel : <strong>{cible ? cible.objectifPeriodes : 0} périodes</strong>
+          </p>
+          {depassePleinTemps ? (
+            <p className="mt-1.5">
+              Ce total dépasse un temps plein ({pleinsTempsCites}), l&apos;objectif est donc plafonné
+              à 60 périodes. Si vos {totalHeures.toLocaleString("fr-BE")} h correspondent en réalité
+              à votre charge totale, répartissez-les entre vos disciplines au lieu de les répéter sur
+              chaque ligne.
+            </p>
+          ) : (
+            <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
+              60 périodes pour un temps plein, proportionnellement adaptées en deçà. Si vous
+              enseignez dans plusieurs écoles, cet objectif est réparti entre elles.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
