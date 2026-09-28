@@ -1,7 +1,18 @@
 // Règle de quota, sans accès à la base : importable par les scripts comme par
 // l'application (lib/quota-engine.ts pour les versions qui lisent et écrivent).
 import type { TeachingLevel } from "@prisma/client";
-import { FULL_TIME_HOURS } from "@/lib/teaching-levels";
+
+// Heures/semaine d'un temps plein par niveau — barème fourni par
+// l'utilisateur. Toute correction ici change l'ETP de tous les comptes : il
+// faut alors recalculer les quotas déjà enregistrés (npm run recalculer-quotas),
+// sans quoi les anciens comptes gardent l'objectif calculé avec l'ancien
+// barème et les nouveaux affichent le bon — à côté l'un de l'autre.
+export const FULL_TIME_HOURS: Record<TeachingLevel, number> = {
+  MATERNELLE: 26,
+  PRIMAIRE: 24,
+  SECONDAIRE_INFERIEUR: 22,
+  SECONDAIRE_SUPERIEUR: 22,
+};
 
 export function computeMembershipEtp(levels: { level: TeachingLevel; hours: number }[]): number {
   return levels.reduce((sum, l) => sum + l.hours / FULL_TIME_HOURS[l.level], 0);
