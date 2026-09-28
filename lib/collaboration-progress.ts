@@ -1,8 +1,15 @@
 import { prisma } from "@/lib/prisma";
+import { quotaTargetsForUsers } from "@/lib/quota-engine";
 
-// Objectif par défaut si aucune AnnualAssignment n'existe encore pour la
-// personne sur l'année scolaire courante — équivalent temps plein (cf.
-// commentaire de School.AnnualAssignment dans schema.prisma : 60 * etp).
+// Objectif de dernier recours, quand la personne n'a AUCUNE heure déclarée :
+// il n'y a alors rien à proratiser, et un temps plein est l'hypothèse la moins
+// trompeuse (cf. schema.prisma::AnnualAssignment).
+//
+// Quand des heures sont déclarées mais que la ligne annuelle manque encore
+// — inscription faite avant la création de l'année scolaire, barème corrigé
+// depuis — l'objectif est RECALCULÉ à la lecture (cf. quotaTargetsForUsers)
+// plutôt que remplacé par 60. Afficher 60 à un temps partiel lui demandait le
+// quota d'un temps plein : c'est ce qu'une enseignante à 18/22 nous a signalé.
 const DEFAULT_OBJECTIVE = 60;
 
 export type TeacherProgress = {
@@ -60,8 +67,18 @@ export async function getSchoolTeachersProgress(
     );
   }
 
+  // Seulement pour celles et ceux dont la ligne annuelle manque : une requête
+  // de plus au pire, aucune dans le cas normal.
+  const cibles = await quotaTargetsForUsers(
+    teachers.filter((t) => t.annualAssignments.length === 0).map((t) => t.userId)
+  );
+
   return teachers.map((teacher) => {
-    const objective = Number(teacher.annualAssignments[0]?.objectifPeriodes ?? DEFAULT_OBJECTIVE);
+    const objective = Number(
+      teacher.annualAssignments[0]?.objectifPeriodes ??
+        cibles.get(teacher.id)?.objectifPeriodes ??
+        DEFAULT_OBJECTIVE
+    );
     const done = teacher.periodParticipants.reduce(
       (sum, pp) => sum + Number(pp.period.dureePeriodes),
       0
@@ -92,7 +109,13 @@ export async function getMembershipProgress(
     },
   });
 
-  const objective = Number(membership?.annualAssignments[0]?.objectifPeriodes ?? DEFAULT_OBJECTIVE);
+  const cible =
+    membership && membership.annualAssignments.length === 0
+      ? (await quotaTargetsForUsers([membership.userId])).get(membership.id)
+      : undefined;
+  const objective = Number(
+    membership?.annualAssignments[0]?.objectifPeriodes ?? cible?.objectifPeriodes ?? DEFAULT_OBJECTIVE
+  );
   const done =
     membership?.periodParticipants.reduce((sum, pp) => sum + Number(pp.period.dureePeriodes), 0) ?? 0;
 

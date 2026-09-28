@@ -8,12 +8,16 @@ export const TEACHING_LEVEL_OPTIONS: { value: TeachingLevel; label: string }[] =
   { value: "SECONDAIRE_SUPERIEUR", label: "Secondaire supérieur" },
 ];
 
-// Heures/semaine d'un temps plein par niveau — barème fourni par l'utilisateur.
+// Heures/semaine d'un temps plein par niveau — barème fourni par
+// l'utilisateur. Toute correction ici change l'ETP de tous les comptes : il
+// faut alors recalculer les quotas déjà enregistrés (npm run recalculer-quotas),
+// sans quoi les anciens comptes gardent l'objectif calculé avec l'ancien
+// barème et les nouveaux affichent le bon — à côté l'un de l'autre.
 export const FULL_TIME_HOURS: Record<TeachingLevel, number> = {
   MATERNELLE: 26,
   PRIMAIRE: 24,
   SECONDAIRE_INFERIEUR: 22,
-  SECONDAIRE_SUPERIEUR: 21,
+  SECONDAIRE_SUPERIEUR: 22,
 };
 
 export type LevelHoursEntry = {
