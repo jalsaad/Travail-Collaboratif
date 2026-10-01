@@ -16,6 +16,16 @@
 export const DEMO_EMAIL = "demo@travail-collaboratif.be";
 export const DEMO_PASSWORD = "demo2026";
 
+/// Compte enseignant de la même école fictive, pour visiter l'espace Profs
+/// sans passer par une direction (cf. scripts/creer-demo.ts).
+///
+/// Julie Moreau plutôt qu'un autre profil : elle a déclaré une période et
+/// participe à deux autres, son espace n'est donc pas vide, et son 0,8 ETP
+/// montre un objectif proratisé (43,64 périodes) au lieu du temps plein qui
+/// laisserait croire à une règle unique. Même mot de passe que le compte
+/// direction, et même interdiction d'écrire.
+export const DEMO_TEACHER_EMAIL = "j.moreau@demo.travail-collaboratif.be";
+
 /// Message montré à la direction quand elle tente d'enregistrer. Volontairement
 /// explicite sur la cause ET sur ce qui n'a pas eu lieu.
 export const DEMO_WRITE_MESSAGE =

@@ -85,17 +85,17 @@ export default function LoginGatewayPage() {
                 className="hidden h-auto w-full dark:block"
               />
             </Link>
-            {/* Guide contextuel à l'espace juste au-dessus : c'est ici,
-                au moment de choisir son espace, qu'on a besoin de savoir à
-                quoi s'attendre — pas enfoui plus bas dans la page. */}
-            <a
-              href="/guides/guide-enseignant.html"
-              target="_blank"
-              rel="noopener"
-              className="relative mt-3 flex items-center justify-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-brand-700 shadow-sm ring-1 ring-brand-100 transition hover:-translate-y-0.5 hover:shadow-md dark:bg-stone-800 dark:text-brand-400 dark:ring-stone-700"
+            {/* Voir vaut mieux que lire : à la place des guides, le lien
+                mène au formulaire de connexion avec les identifiants de
+                démonstration déjà remplis (cf. lib/demo-mode.ts) — ce compte
+                ne peut rien écrire, l'école fictive reste donc intacte pour
+                la visite suivante. */}
+            <Link
+              href="/login/profs?demo=1"
+              className="relative mt-3 flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-teal px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:shadow-md"
             >
-              📘 Guide enseignant·e
-            </a>
+              🎬 Démo enseignant·e
+            </Link>
           </Reveal>
           <Reveal delay={0} className="group relative isolate w-full max-w-[240px] sm:max-w-[260px]">
             <div
@@ -123,22 +123,9 @@ export default function LoginGatewayPage() {
                 className="hidden h-auto w-full dark:block"
               />
             </Link>
-            <a
-              href="/guides/guide-direction.html"
-              target="_blank"
-              rel="noopener"
-              className="relative mt-3 flex items-center justify-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-brand-700 shadow-sm ring-1 ring-brand-100 transition hover:-translate-y-0.5 hover:shadow-md dark:bg-stone-800 dark:text-brand-400 dark:ring-stone-700"
-            >
-              📗 Guide direction
-            </a>
-            {/* Sous le guide : voir vaut souvent mieux que lire. Le lien mène
-                au formulaire de connexion avec les identifiants de
-                démonstration déjà remplis (cf. lib/demo-mode.ts) — ce compte
-                ne peut rien écrire, l'école reste donc intacte pour la visite
-                suivante. */}
             <Link
               href="/login/direction?demo=1"
-              className="relative mt-2 flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-teal px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:shadow-md"
+              className="relative mt-3 flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-teal px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:shadow-md"
             >
               🎬 Démo direction
             </Link>
