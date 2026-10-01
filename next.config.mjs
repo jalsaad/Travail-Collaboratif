@@ -11,9 +11,33 @@ const codespaceOrigin =
 
 // Même contrainte en production derrière un nom de domaine réel : sans ça,
 // toute action serveur échoue avec "Invalid Server Actions request." dès
-// qu'on accède au site via son domaine. APP_ORIGIN se règle dans .env
-// (ex: "travail-collaboratif.be", sans protocole).
-const productionOrigin = process.env.APP_ORIGIN;
+// qu'on accède au site via son domaine. APP_ORIGIN se règle dans .env, avec
+// ou sans protocole (les scripts de campagne y attendent une URL complète).
+//
+// Toutes les façons d'écrire le même domaine sont autorisées, car Next compare
+// l'en-tête Origin du navigateur à l'hôte transmis par nginx, et la moindre
+// différence d'écriture annule l'action :
+//   - avec et sans "www" ;
+//   - avec un POINT FINAL ("www.travail-collaboratif.be."), qui est la forme
+//     absolue d'un nom DNS. Un navigateur qui ouvre cette URL — autocomplétion,
+//     ancien signet, lien copié — envoie un Origin pointé alors que nginx
+//     transmet l'hôte sans point : la connexion échouait alors avec
+//     « Application error: a server-side exception has occurred », vécu en
+//     production le 01/10/2026.
+function originesDuDomaine(valeur) {
+  const hote = String(valeur)
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "")
+    .replace(/\.$/, "")
+    .trim()
+    .toLowerCase();
+  if (!hote) return [];
+  const sansWww = hote.replace(/^www\./, "");
+  const hotes = [...new Set([sansWww, `www.${sansWww}`])];
+  return hotes.flatMap((h) => [h, `${h}.`]);
+}
+
+const productionOrigins = process.env.APP_ORIGIN ? originesDuDomaine(process.env.APP_ORIGIN) : [];
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -22,7 +46,7 @@ const nextConfig = {
       allowedOrigins: [
         "localhost:3000",
         ...(codespaceOrigin ? [codespaceOrigin] : []),
-        ...(productionOrigin ? [productionOrigin] : []),
+        ...productionOrigins,
         "*.app.github.dev",
       ],
     },
