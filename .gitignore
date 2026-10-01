@@ -32,6 +32,7 @@ public/uploads/
 /data/import-cpeons-rapport.csv
 /data/prospection-toutes-ecoles.csv
 /data/prospection-relance.csv
+/data/adresses-cfwb.csv
 # Fichiers de campagne, quel que soit leur nom : un « -envoi » porte les
 # établissements à contacter, un « -journal » les adresses réellement
 # contactées. Jamais au dépôt, même pour un essai.
