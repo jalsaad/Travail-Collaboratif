@@ -85,17 +85,6 @@ export default function LoginGatewayPage() {
                 className="hidden h-auto w-full dark:block"
               />
             </Link>
-            {/* Voir vaut mieux que lire : à la place des guides, le lien
-                mène au formulaire de connexion avec les identifiants de
-                démonstration déjà remplis (cf. lib/demo-mode.ts) — ce compte
-                ne peut rien écrire, l'école fictive reste donc intacte pour
-                la visite suivante. */}
-            <Link
-              href="/login/profs?demo=1"
-              className="relative mt-3 flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-teal px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              🎬 Démo enseignant·e
-            </Link>
           </Reveal>
           <Reveal delay={0} className="group relative isolate w-full max-w-[240px] sm:max-w-[260px]">
             <div
@@ -123,12 +112,6 @@ export default function LoginGatewayPage() {
                 className="hidden h-auto w-full dark:block"
               />
             </Link>
-            <Link
-              href="/login/direction?demo=1"
-              className="relative mt-3 flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-teal px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              🎬 Démo direction
-            </Link>
           </Reveal>
 
         </div>
@@ -141,6 +124,33 @@ export default function LoginGatewayPage() {
             facile et un croisement des données en quelques clics.
           </p>
           <p className="mt-4 text-base font-semibold text-brand-700 dark:text-brand-400">Gagnez en productivité ! </p>
+
+          {/* Voir vaut mieux que lire : ces deux liens ont remplacé les guides.
+              Placés après l'argumentaire plutôt que sous les cartes d'espace,
+              ils répondent à la question qui vient de se former — à quoi ça
+              ressemble ? — et peuvent donc être de vrais boutons, là où sous
+              les cartes ils devaient rester discrets pour ne pas concurrencer
+              l'entrée dans son propre espace.
+              Les comptes de démonstration ne peuvent rien écrire (cf.
+              lib/demo-mode.ts) : l'école fictive reste intacte d'une visite à
+              l'autre. */}
+          <div className="relative mt-7 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/login/profs?demo=1"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-600 to-brand-teal px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              🎬 Démo enseignant·e
+            </Link>
+            <Link
+              href="/login/direction?demo=1"
+              className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-5 py-2.5 text-sm font-semibold text-brand-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-stone-700 dark:bg-stone-800 dark:text-brand-300 dark:hover:border-stone-600"
+            >
+              🎬 Démo direction
+            </Link>
+          </div>
+          <p className="relative mt-2.5 text-xs text-stone-400 dark:text-stone-500">
+            Sans inscription, avec une école fictive — rien n&apos;y est enregistré.
+          </p>
         </Reveal>
 
         <ReseauxEnseignementSection />
