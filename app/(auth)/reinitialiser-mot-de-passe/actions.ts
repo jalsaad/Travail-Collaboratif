@@ -7,6 +7,7 @@ import { signIn } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hashResetToken } from "@/lib/password-reset";
 import { logAudit, AuditAction } from "@/lib/audit-log";
+import { horsDemo } from "@/lib/demo-mode";
 
 export type ResetPasswordState = { error?: string };
 
@@ -23,7 +24,7 @@ const schema = z
 
 const INVALID_TOKEN_ERROR = "Ce lien de réinitialisation n'est plus valide. Demandez-en un nouveau.";
 
-export async function resetPassword(
+async function resetPasswordImpl(
   _prevState: ResetPasswordState | undefined,
   formData: FormData
 ): Promise<ResetPasswordState> {
@@ -78,4 +79,14 @@ export async function resetPassword(
     }
     throw error; // laisse passer la redirection interne de signIn en cas de succès
   }
+}
+
+// Parcours public : la personne s'inscrit ou agit en son nom propre. Un
+// cookie de démonstration encore présent dans son navigateur ne doit pas
+// bloquer l'écriture (cf. lib/demo-mode.ts::horsDemo).
+export async function resetPassword(
+  _prevState: ResetPasswordState | undefined,
+  formData: FormData
+): Promise<ResetPasswordState> {
+  return horsDemo(() => resetPasswordImpl(_prevState, formData));
 }

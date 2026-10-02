@@ -28,6 +28,7 @@ import {
   PRIVACY_FIELD,
   PRIVACY_REFUSED_MESSAGE,
 } from "@/lib/privacy-policy";
+import { horsDemo } from "@/lib/demo-mode";
 
 export type CreateSchoolState = { error?: string };
 
@@ -123,7 +124,7 @@ const founderSchema = z
     path: ["passwordConfirmation"],
   });
 
-export async function createSchool(
+async function createSchoolImpl(
   _prevState: CreateSchoolState | undefined,
   formData: FormData
 ): Promise<CreateSchoolState> {
@@ -450,4 +451,14 @@ export async function searchFwbSchoolsByName(query: string): Promise<FwbSchoolSu
     take: 10,
   });
   return ecoles;
+}
+
+// Parcours public : la personne s'inscrit ou agit en son nom propre. Un
+// cookie de démonstration encore présent dans son navigateur ne doit pas
+// bloquer l'écriture (cf. lib/demo-mode.ts::horsDemo).
+export async function createSchool(
+  _prevState: CreateSchoolState | undefined,
+  formData: FormData
+): Promise<CreateSchoolState> {
+  return horsDemo(() => createSchoolImpl(_prevState, formData));
 }

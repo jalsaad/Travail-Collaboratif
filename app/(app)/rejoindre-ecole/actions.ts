@@ -24,6 +24,7 @@ import {
   resolveExistingSchoolTarget,
   type PartialSchoolNotice,
 } from "@/lib/school-join-target";
+import { demoErrorState } from "@/lib/demo-mode";
 
 /// Consigne le motif du refus — jamais le code saisi ni l'identité — puis rend
 /// le message affiché à la personne (cf. lib/form-rejections.ts).
@@ -46,7 +47,7 @@ const joinSchoolSchema = z.object({
   directionEmail: z.string().transform((v) => v.trim() || null),
 });
 
-export async function joinSchoolWithCode(
+async function joinSchoolWithCodeImpl(
   _prevState: JoinSchoolState | undefined,
   formData: FormData
 ): Promise<JoinSchoolState> {
@@ -216,4 +217,19 @@ export async function joinSchoolWithCode(
   await setActiveSchoolCookie(schoolId, session.userId);
   revalidatePath("/", "layout");
   redirect("/mes-periodes");
+}
+
+// Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts) : on
+// traduit le refus en message lisible plutôt qu'en page d'erreur.
+export async function joinSchoolWithCode(
+  _prevState: JoinSchoolState | undefined,
+  formData: FormData
+): Promise<JoinSchoolState> {
+  try {
+    return await joinSchoolWithCodeImpl(_prevState, formData);
+  } catch (error) {
+    const demo = demoErrorState(error);
+    if (demo) return demo;
+    throw error;
+  }
 }

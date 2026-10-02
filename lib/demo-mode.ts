@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+
 // Compte de démonstration : une direction qui découvre la plateforme peut
 // tout consulter et remplir les formulaires, mais rien n'est jamais écrit —
 // l'espace reste donc identique pour le visiteur suivant, sans remise à zéro
@@ -30,6 +32,29 @@ export const DEMO_TEACHER_EMAIL = "j.moreau@demo.travail-collaboratif.be";
 /// explicite sur la cause ET sur ce qui n'a pas eu lieu.
 export const DEMO_WRITE_MESSAGE =
   "Espace de démonstration : votre modification n'a pas été enregistrée. Tout le reste fonctionne normalement — inscrivez votre école pour disposer d'un espace réel.";
+
+/// Parcours PUBLICS — créer l'espace de son école, rejoindre une école,
+/// réinitialiser son mot de passe, valider une participation reçue par email.
+///
+/// Le verrou de la démo ne doit pas s'y appliquer : la personne y agit en son
+/// nom propre, pas dans l'espace fictif. Le cas s'est produit en production —
+/// une direction qui venait de visiter la démo a cliqué sur « Inscrire mon
+/// école » ; le cookie de démonstration était toujours là, l'écriture a été
+/// refusée, et la création s'est terminée sur une page d'erreur (01/10/2026).
+///
+/// AsyncLocalStorage plutôt qu'un drapeau de module : chaque requête a son
+/// propre contexte, deux visiteurs simultanés ne peuvent donc pas se
+/// déverrouiller l'un l'autre.
+const parcoursPublic = new AsyncLocalStorage<true>();
+
+/// Exécute une inscription ou une réinitialisation sans le verrou de la démo.
+export function horsDemo<T>(action: () => Promise<T>): Promise<T> {
+  return parcoursPublic.run(true, action);
+}
+
+export function estParcoursPublic(): boolean {
+  return parcoursPublic.getStore() === true;
+}
 
 export class DemoModeError extends Error {
   constructor() {

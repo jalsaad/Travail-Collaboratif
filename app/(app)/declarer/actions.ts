@@ -10,10 +10,11 @@ import { notifyPendingParticipants } from "@/lib/participation-invitations";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 import { zipExternalParticipants } from "@/lib/external-participants";
 import { inviteColleaguesOnPeriod } from "@/lib/peer-referrals";
+import { demoErrorState } from "@/lib/demo-mode";
 
 export type CreatePeriodState = { error?: string };
 
-export async function createPeriod(
+async function createPeriodImpl(
   _prevState: CreatePeriodState | undefined,
   formData: FormData
 ): Promise<CreatePeriodState> {
@@ -104,4 +105,19 @@ export async function createPeriod(
   });
 
   redirect("/mes-periodes");
+}
+
+// Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts) : on
+// traduit le refus en message lisible plutôt qu'en page d'erreur.
+export async function createPeriod(
+  _prevState: CreatePeriodState | undefined,
+  formData: FormData
+): Promise<CreatePeriodState> {
+  try {
+    return await createPeriodImpl(_prevState, formData);
+  } catch (error) {
+    const demo = demoErrorState(error);
+    if (demo) return demo;
+    throw error;
+  }
 }

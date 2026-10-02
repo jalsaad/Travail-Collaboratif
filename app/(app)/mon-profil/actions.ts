@@ -12,6 +12,7 @@ import { parseLevelHoursFromFormData } from "@/lib/teaching-levels";
 import { resolveOrCreateDiscipline } from "@/lib/discipline-form";
 import { recomputeUserQuotas } from "@/lib/quota-engine";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
+import { demoErrorState } from "@/lib/demo-mode";
 
 export type OwnProfileState = { error?: string; success?: string };
 
@@ -34,7 +35,7 @@ const profileSchema = z.object({
 // et un utilisateur ne peut pas les modifier lui-même, même en falsifiant la
 // requête — le formulaire les affiche en lecture seule mais c'est cette
 // absence côté serveur qui garantit vraiment la restriction.
-export async function updateOwnProfile(
+async function updateOwnProfileImpl(
   _prevState: OwnProfileState | undefined,
   formData: FormData
 ): Promise<OwnProfileState> {
@@ -129,7 +130,7 @@ export type TeachingInfoState = { error?: string; success?: string };
 // un référent numérique peut aussi donner cours) : niveaux/heures/discipline
 // sont facultatifs ici (required: false), contrairement aux parcours
 // d'inscription ENSEIGNANT où ils restent obligatoires.
-export async function updateTeachingInfo(
+async function updateTeachingInfoImpl(
   _prevState: TeachingInfoState | undefined,
   formData: FormData
 ): Promise<TeachingInfoState> {
@@ -182,4 +183,34 @@ export async function updateTeachingInfo(
   revalidatePath("/mon-profil");
   revalidatePath("/mes-periodes");
   return { success: "Informations d'enseignement mises à jour." };
+}
+
+// Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts) : on
+// traduit le refus en message lisible plutôt qu'en page d'erreur.
+export async function updateOwnProfile(
+  _prevState: OwnProfileState | undefined,
+  formData: FormData
+): Promise<OwnProfileState> {
+  try {
+    return await updateOwnProfileImpl(_prevState, formData);
+  } catch (error) {
+    const demo = demoErrorState(error);
+    if (demo) return demo;
+    throw error;
+  }
+}
+
+// Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts) : on
+// traduit le refus en message lisible plutôt qu'en page d'erreur.
+export async function updateTeachingInfo(
+  _prevState: TeachingInfoState | undefined,
+  formData: FormData
+): Promise<TeachingInfoState> {
+  try {
+    return await updateTeachingInfoImpl(_prevState, formData);
+  } catch (error) {
+    const demo = demoErrorState(error);
+    if (demo) return demo;
+    throw error;
+  }
 }

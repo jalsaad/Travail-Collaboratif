@@ -17,12 +17,13 @@ import {
   privacyAcceptanceRecord,
   PRIVACY_REFUSED_MESSAGE,
 } from "@/lib/privacy-policy";
+import { horsDemo } from "@/lib/demo-mode";
 
 export type PeerReferralJoinState = { error?: string };
 
 const joinSchema = teacherIdentitySchema.and(z.object({ token: z.string().min(1, "Lien invalide.") }));
 
-export async function joinViaPeerReferral(
+async function joinViaPeerReferralImpl(
   _prevState: PeerReferralJoinState | undefined,
   formData: FormData
 ): Promise<PeerReferralJoinState> {
@@ -147,4 +148,14 @@ export async function joinViaPeerReferral(
     }
     throw error; // laisse passer la redirection interne de signIn en cas de succès
   }
+}
+
+// Parcours public : la personne s'inscrit ou agit en son nom propre. Un
+// cookie de démonstration encore présent dans son navigateur ne doit pas
+// bloquer l'écriture (cf. lib/demo-mode.ts::horsDemo).
+export async function joinViaPeerReferral(
+  _prevState: PeerReferralJoinState | undefined,
+  formData: FormData
+): Promise<PeerReferralJoinState> {
+  return horsDemo(() => joinViaPeerReferralImpl(_prevState, formData));
 }

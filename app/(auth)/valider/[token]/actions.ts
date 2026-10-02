@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { hashParticipationToken } from "@/lib/participation-token";
+import { horsDemo } from "@/lib/demo-mode";
 
 export type TokenActionState = { error?: string; done?: "CONFIRMED" | "DECLINED" };
 
@@ -48,16 +49,36 @@ async function respond(
   return { done: status };
 }
 
-export async function confirmByToken(
+async function confirmByTokenImpl(
   rawToken: string,
   _prev: TokenActionState | undefined
 ): Promise<TokenActionState> {
   return respond(rawToken, "CONFIRMED");
 }
 
-export async function declineByToken(
+async function declineByTokenImpl(
   rawToken: string,
   _prev: TokenActionState | undefined
 ): Promise<TokenActionState> {
   return respond(rawToken, "DECLINED");
+}
+
+// Parcours public : la personne s'inscrit ou agit en son nom propre. Un
+// cookie de démonstration encore présent dans son navigateur ne doit pas
+// bloquer l'écriture (cf. lib/demo-mode.ts::horsDemo).
+export async function confirmByToken(
+  rawToken: string,
+  _prev: TokenActionState | undefined
+): Promise<TokenActionState> {
+  return horsDemo(() => confirmByTokenImpl(rawToken, _prev));
+}
+
+// Parcours public : la personne s'inscrit ou agit en son nom propre. Un
+// cookie de démonstration encore présent dans son navigateur ne doit pas
+// bloquer l'écriture (cf. lib/demo-mode.ts::horsDemo).
+export async function declineByToken(
+  rawToken: string,
+  _prev: TokenActionState | undefined
+): Promise<TokenActionState> {
+  return horsDemo(() => declineByTokenImpl(rawToken, _prev));
 }

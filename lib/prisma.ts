@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { DemoModeError, isWriteOperation } from "@/lib/demo-mode";
+import { DemoModeError, estParcoursPublic, isWriteOperation } from "@/lib/demo-mode";
 
 // Verrou du compte de démonstration : toute écriture issue d'une session de
 // démo est refusée ICI, au seul endroit que traversent toutes les écritures.
@@ -30,7 +30,10 @@ function createPrismaClient() {
         // Le contrôle ne coûte une lecture de session que sur les écritures :
         // l'immense majorité des requêtes de la démo sont des lectures et ne
         // paient rien.
-        if (isWriteOperation(operation) && (await estSessionDemo())) {
+        // estParcoursPublic() d'abord : une inscription ou une
+        // réinitialisation de mot de passe n'a pas à être bloquée parce qu'un
+        // cookie de démonstration traîne dans le navigateur (cf. horsDemo).
+        if (isWriteOperation(operation) && !estParcoursPublic() && (await estSessionDemo())) {
           throw new DemoModeError();
         }
         return query(args);

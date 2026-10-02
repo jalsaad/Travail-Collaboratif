@@ -10,12 +10,13 @@ import { periodesBetween } from "@/lib/period-duration";
 import { notifyPendingParticipants } from "@/lib/participation-invitations";
 import { zipExternalParticipants } from "@/lib/external-participants";
 import { inviteColleaguesOnPeriod } from "@/lib/peer-referrals";
+import { demoErrorState, tolerateDemoWrite } from "@/lib/demo-mode";
 
 // Invariant d'autorisation (cf. permissions.md > assertCanConfirmParticipation) :
 // le where est TOUJOURS construit à partir de session.userId, jamais d'un
 // identifiant fourni par le client — impossible d'agir sur la ligne d'un tiers.
 
-export async function confirmParticipation(periodId: string) {
+async function confirmParticipationImpl(periodId: string) {
   const session = await auth();
   if (!session) throw new Error("Non authentifié.");
 
@@ -27,7 +28,7 @@ export async function confirmParticipation(periodId: string) {
   revalidatePath("/mes-periodes");
 }
 
-export async function declineParticipation(periodId: string) {
+async function declineParticipationImpl(periodId: string) {
   const session = await auth();
   if (!session) throw new Error("Non authentifié.");
 
@@ -53,7 +54,7 @@ async function assertCanEditPeriod(userId: string, periodId: string) {
 
 export type UpdatePeriodState = { error?: string };
 
-export async function updatePeriod(
+async function updatePeriodImpl(
   periodId: string,
   _prevState: UpdatePeriodState | undefined,
   formData: FormData
@@ -180,7 +181,7 @@ export async function updatePeriod(
   redirect("/mes-periodes");
 }
 
-export async function deletePeriod(periodId: string) {
+async function deletePeriodImpl(periodId: string) {
   const session = await auth();
   if (!session) throw new Error("Non authentifié.");
 
@@ -189,4 +190,35 @@ export async function deletePeriod(periodId: string) {
   await prisma.collaborativePeriod.delete({ where: { id: periodId } });
 
   revalidatePath("/mes-periodes");
+}
+
+// Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts).
+// Pour le formulaire, le refus devient un message ; pour les boutons, qui ne
+// rendent aucun état, il est simplement ignoré — le bandeau de démonstration
+// a déjà prévenu que rien ne s'enregistre, et une page d'erreur serait pire
+// que l'absence d'effet.
+export async function updatePeriod(
+  periodId: string,
+  _prevState: UpdatePeriodState | undefined,
+  formData: FormData
+): Promise<UpdatePeriodState> {
+  try {
+    return await updatePeriodImpl(periodId, _prevState, formData);
+  } catch (error) {
+    const demo = demoErrorState(error);
+    if (demo) return demo;
+    throw error;
+  }
+}
+
+export async function confirmParticipation(periodId: string) {
+  await tolerateDemoWrite(() => confirmParticipationImpl(periodId));
+}
+
+export async function declineParticipation(periodId: string) {
+  await tolerateDemoWrite(() => declineParticipationImpl(periodId));
+}
+
+export async function deletePeriod(periodId: string) {
+  await tolerateDemoWrite(() => deletePeriodImpl(periodId));
 }

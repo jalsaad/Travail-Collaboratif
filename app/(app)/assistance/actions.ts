@@ -7,6 +7,7 @@ import { resolveActiveMembership } from "@/lib/active-school";
 import { getBaseUrl, sendSupportTicketNotification } from "@/lib/mailer";
 import { saveSupportAttachment, InvalidAttachmentError } from "@/lib/support-attachment";
 import { logAudit, AuditAction } from "@/lib/audit-log";
+import { demoErrorState } from "@/lib/demo-mode";
 
 export type SupportTicketState = { error?: string; success?: string };
 
@@ -16,7 +17,7 @@ const schema = z.object({
   message: z.string().min(10, "Message trop court (10 caractères minimum)"),
 });
 
-export async function createSupportTicket(
+async function createSupportTicketImpl(
   _prevState: SupportTicketState | undefined,
   formData: FormData
 ): Promise<SupportTicketState> {
@@ -95,4 +96,19 @@ export async function createSupportTicket(
   });
 
   return { success: "Votre message a été transmis. Nous reviendrons vers vous par email." };
+}
+
+// Le compte de démonstration ne peut rien écrire (cf. lib/demo-mode.ts) : on
+// traduit le refus en message lisible plutôt qu'en page d'erreur.
+export async function createSupportTicket(
+  _prevState: SupportTicketState | undefined,
+  formData: FormData
+): Promise<SupportTicketState> {
+  try {
+    return await createSupportTicketImpl(_prevState, formData);
+  } catch (error) {
+    const demo = demoErrorState(error);
+    if (demo) return demo;
+    throw error;
+  }
 }

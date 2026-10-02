@@ -25,6 +25,7 @@ import {
   loadFwbSchoolForInitiation,
   resolveExistingSchoolTarget,
 } from "@/lib/school-join-target";
+import { horsDemo } from "@/lib/demo-mode";
 
 export type JoinState = { error?: string };
 
@@ -58,7 +59,7 @@ const joinSchema = teacherIdentitySchema
     path: ["code"],
   });
 
-export async function joinViaCode(
+async function joinViaCodeImpl(
   _prevState: JoinState | undefined,
   formData: FormData
 ): Promise<JoinState> {
@@ -218,7 +219,7 @@ const initiateSchema = teacherIdentitySchema.and(
 /// app/(app)/layout.tsx), sans validation plateforme, mais sans personne
 /// pour en générer un JoinCode : la suite se joue par parrainage entre pairs
 /// (cf. app/(app)/inviter) ou par recherche du nom (searchJoinableSchools).
-export async function initiatePartialSchool(
+async function initiatePartialSchoolImpl(
   _prevState: JoinState | undefined,
   formData: FormData
 ): Promise<JoinState> {
@@ -327,4 +328,24 @@ export async function initiatePartialSchool(
     }
     throw error; // laisse passer la redirection interne de signIn en cas de succès
   }
+}
+
+// Parcours public : la personne s'inscrit ou agit en son nom propre. Un
+// cookie de démonstration encore présent dans son navigateur ne doit pas
+// bloquer l'écriture (cf. lib/demo-mode.ts::horsDemo).
+export async function joinViaCode(
+  _prevState: JoinState | undefined,
+  formData: FormData
+): Promise<JoinState> {
+  return horsDemo(() => joinViaCodeImpl(_prevState, formData));
+}
+
+// Parcours public : la personne s'inscrit ou agit en son nom propre. Un
+// cookie de démonstration encore présent dans son navigateur ne doit pas
+// bloquer l'écriture (cf. lib/demo-mode.ts::horsDemo).
+export async function initiatePartialSchool(
+  _prevState: JoinState | undefined,
+  formData: FormData
+): Promise<JoinState> {
+  return horsDemo(() => initiatePartialSchoolImpl(_prevState, formData));
 }

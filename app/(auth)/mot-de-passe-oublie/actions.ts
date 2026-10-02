@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { generateResetToken, RESET_TOKEN_TTL_MS } from "@/lib/password-reset";
 import { sendPasswordResetEmail, getBaseUrl } from "@/lib/mailer";
+import { horsDemo } from "@/lib/demo-mode";
 
 export type ForgotPasswordState = { success?: string; error?: string };
 
@@ -12,7 +13,7 @@ const schema = z.object({ email: z.string().email("Email invalide") });
 const GENERIC_SUCCESS =
   "Si un compte existe avec cet email, un lien de réinitialisation vient de lui être envoyé.";
 
-export async function requestPasswordReset(
+async function requestPasswordResetImpl(
   _prevState: ForgotPasswordState | undefined,
   formData: FormData
 ): Promise<ForgotPasswordState> {
@@ -42,4 +43,14 @@ export async function requestPasswordReset(
   }
 
   return { success: GENERIC_SUCCESS };
+}
+
+// Parcours public : la personne s'inscrit ou agit en son nom propre. Un
+// cookie de démonstration encore présent dans son navigateur ne doit pas
+// bloquer l'écriture (cf. lib/demo-mode.ts::horsDemo).
+export async function requestPasswordReset(
+  _prevState: ForgotPasswordState | undefined,
+  formData: FormData
+): Promise<ForgotPasswordState> {
+  return horsDemo(() => requestPasswordResetImpl(_prevState, formData));
 }
