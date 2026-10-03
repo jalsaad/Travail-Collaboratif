@@ -155,6 +155,13 @@ export default function ConfidentialitePage() {
               jointe éventuelle) et note de satisfaction si vous en donnez une.
             </li>
             <li>
+              <strong>Inscriptions qui n&apos;aboutissent pas</strong> : quand un formulaire
+              d&apos;inscription est refusé (adresse déjà utilisée, champ manquant…), le motif du
+              refus est conservé avec les coordonnées déjà saisies — nom, email, nom de
+              l&apos;école — afin de pouvoir vous recontacter et vous aider à terminer votre
+              inscription. Ni mot de passe, ni matricule, ni adresse IP.
+            </li>
+            <li>
               <strong>Sécurité</strong> : journal des actions sensibles (création de compte,
               rattachement, export…), avec leur auteur et leur date.
             </li>
@@ -174,6 +181,12 @@ export default function ConfidentialitePage() {
               votre direction, envoyer les emails qui en découlent (invitation, demande de
               validation, information de la direction de l&apos;école lorsqu&apos;un nouveau membre
               la rejoint). Base : exécution du service demandé (art. 6.1.b RGPD).
+            </li>
+            <li>
+              <strong>Vous aider quand une inscription échoue</strong> — reprendre contact avec
+              une personne dont le formulaire a été refusé, pour débloquer son inscription.
+              Base : intérêt légitime à ce qu&apos;une démarche entamée puisse aboutir
+              (art. 6.1.f RGPD). Vous pouvez vous y opposer (section 7).
             </li>
             <li>
               <strong>Assurer la sécurité de la plateforme</strong> et pouvoir retracer les actions
@@ -278,6 +291,9 @@ export default function ConfidentialitePage() {
           <ul className="list-disc space-y-1 pl-5">
             <li>
               Données du compte : <Valeur valeur={CONSERVATION.compte} quoi="durée de conservation des comptes" />
+            </li>
+            <li>
+              Inscriptions refusées : six mois, puis effacement automatique.
             </li>
             <li>
               Relevés archivés en fin d&apos;année scolaire :{" "}

@@ -12,7 +12,7 @@
 /// À incrémenter à chaque modification substantielle du texte : la version
 /// acceptée est enregistrée avec chaque compte, ce qui permet de savoir qui a
 /// été informé de quoi (principe de responsabilité, art. 5.2).
-export const PRIVACY_POLICY_VERSION = "2026-09-16";
+export const PRIVACY_POLICY_VERSION = "2026-10-03";
 
 /// Nom du champ de formulaire — partagé entre la case (côté client) et sa
 /// vérification (côté serveur), qui ne doivent pas diverger.

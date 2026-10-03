@@ -17,7 +17,7 @@ import {
 } from "@/lib/school-notifications";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 import { civilityAndLastName } from "@/lib/civility";
-import { FORM_JOIN_SCHOOL, logFormRejection } from "@/lib/form-rejections";
+import { FORM_JOIN_SCHOOL, logFormRejection, type ContactRefus } from "@/lib/form-rejections";
 import {
   createPartialSchoolRecord,
   loadFwbSchoolForInitiation,
@@ -26,10 +26,16 @@ import {
 } from "@/lib/school-join-target";
 import { demoErrorState } from "@/lib/demo-mode";
 
-/// Consigne le motif du refus — jamais le code saisi ni l'identité — puis rend
-/// le message affiché à la personne (cf. lib/form-rejections.ts).
-async function consigner(message: string, champ: string | null): Promise<string> {
-  await logFormRejection(FORM_JOIN_SCHOOL, message, champ);
+/// Consigne le motif du refus — jamais le code saisi — avec de quoi rappeler
+/// la personne, puis rend le message qui lui est affiché (cf.
+/// lib/form-rejections.ts). Ici elle est connectée : ses coordonnées viennent
+/// de son compte, pas du formulaire.
+async function consigner(
+  message: string,
+  champ: string | null,
+  contact?: ContactRefus
+): Promise<string> {
+  await logFormRejection(FORM_JOIN_SCHOOL, message, champ, contact);
   return message;
 }
 
@@ -54,6 +60,15 @@ async function joinSchoolWithCodeImpl(
   const session = await auth();
   if (!session) throw new Error("Non authentifié.");
 
+  const compte = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { email: true, firstName: true, lastName: true },
+  });
+  const contact: ContactRefus = {
+    email: compte?.email ?? null,
+    fullName: compte ? `${compte.firstName} ${compte.lastName}` : null,
+  };
+
   const parsed = joinSchoolSchema.safeParse({
     joinMode: formData.get("joinMode") ?? "join",
     code: formData.get("code") ?? "",
@@ -61,7 +76,7 @@ async function joinSchoolWithCodeImpl(
     numeroFase: formData.get("numeroFase") ?? "",
     directionEmail: formData.get("directionEmail") ?? "",
   });
-  if (!parsed.success) return { error: await consigner("Formulaire invalide.", null) };
+  if (!parsed.success) return { error: await consigner("Formulaire invalide.", null, contact) };
 
   const parsedLevels = parseLevelHoursFromFormData(formData);
   if (!parsedLevels.ok) return { error: parsedLevels.error };
@@ -75,18 +90,18 @@ async function joinSchoolWithCodeImpl(
 
   if (initiation) {
     if (!parsed.data.numeroFase) {
-      return { error: await consigner("Choisissez votre école dans la liste.", "numeroFase") };
+      return { error: await consigner("Choisissez votre école dans la liste.", "numeroFase", contact) };
     }
     const emailValide =
       parsed.data.directionEmail !== null &&
       z.string().email().safeParse(parsed.data.directionEmail).success;
     if (!emailValide) {
-      return { error: await consigner("Adresse email de la direction invalide.", "directionEmail") };
+      return { error: await consigner("Adresse email de la direction invalide.", "directionEmail", contact) };
     }
     const directionEmail = parsed.data.directionEmail!;
 
     const annuaire = await loadFwbSchoolForInitiation(parsed.data.numeroFase);
-    if (!annuaire.ok) return { error: await consigner(annuaire.error, "numeroFase") };
+    if (!annuaire.ok) return { error: await consigner(annuaire.error, "numeroFase", contact) };
 
     // École et rattachement dans la même transaction : un échec de la seconde
     // ne doit pas laisser une école PARTIAL sans le moindre membre.
@@ -105,7 +120,8 @@ async function joinSchoolWithCodeImpl(
         return {
           error: await consigner(
             "Cette école vient d'être inscrite entre-temps. Utilisez plutôt « Chercher mon école » pour la rejoindre.",
-            "numeroFase"
+            "numeroFase",
+            contact
           ),
         };
       }
@@ -122,7 +138,7 @@ async function joinSchoolWithCodeImpl(
       code: parsed.data.code,
       schoolId: parsed.data.schoolId,
     });
-    if (!resolved.ok) return { error: await consigner(resolved.error, parsed.data.code ? "code" : null) };
+    if (!resolved.ok) return { error: await consigner(resolved.error, parsed.data.code ? "code" : null, contact) };
     schoolId = resolved.target.schoolId;
     auditAction = resolved.target.auditAction;
     partialNotice = resolved.target.partialNotice;
@@ -135,7 +151,7 @@ async function joinSchoolWithCodeImpl(
     });
 
     if (existing?.status === "ACTIVE") {
-      return { error: await consigner("Vous êtes déjà membre de cette école.", null) };
+      return { error: await consigner("Vous êtes déjà membre de cette école.", null, contact) };
     }
 
     if (existing) {

@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { Reveal } from "@/components/reveal";
-import { FORM_CREATE_SCHOOL } from "@/lib/form-rejections";
+import { FORM_CREATE_SCHOOL, RETENTION_JOURS } from "@/lib/form-rejections";
+import { FormRejectionFollowUp } from "@/components/form-rejection-follow-up";
+import { APP_TIME_ZONE } from "@/lib/time-zone";
 
 const LIBELLES: Record<string, string> = {
   "creer-ecole": "Création d'école",
@@ -26,6 +28,23 @@ export async function FormRejectionsPanel() {
     }),
     prisma.formRejection.count({ where: { createdAt: { gte: depuis } } }),
   ]);
+
+  // Les tentatives qu'on peut encore rattraper : celles qui portent de quoi
+  // joindre la personne. Les non traitées d'abord — c'est la liste de travail,
+  // pas un historique.
+  const aRappeler = await prisma.formRejection.findMany({
+    where: { createdAt: { gte: depuis }, OR: [{ email: { not: null } }, { fullName: { not: null } }] },
+    orderBy: [{ contactedAt: { sort: "asc", nulls: "first" } }, { createdAt: "desc" }],
+    take: 25,
+  });
+  const quand = (d: Date) =>
+    d.toLocaleDateString("fr-BE", {
+      timeZone: APP_TIME_ZONE,
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
   return (
     <Reveal delay={240} className="card p-6">
@@ -88,9 +107,74 @@ export async function FormRejectionsPanel() {
         </>
       )}
 
+      {aRappeler.length > 0 && (
+        <div className="mt-6 border-t border-stone-100 pt-4 dark:border-stone-800">
+          <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+            À recontacter
+          </h3>
+          <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+            Chaque ligne est quelqu&apos;un qui a voulu s&apos;inscrire sans y parvenir. Un email
+            suffit souvent à débloquer la situation.
+          </p>
+
+          <ul className="mt-3 space-y-3">
+            {aRappeler.map((r) => (
+              <li
+                key={r.id}
+                className={`rounded-lg border p-3 ${
+                  r.contactedAt
+                    ? "border-stone-100 bg-stone-50/60 dark:border-stone-800 dark:bg-stone-900/40"
+                    : "border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/30"
+                }`}
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <span className="text-sm font-medium text-stone-900 dark:text-stone-100">
+                    {r.fullName ?? "Nom non saisi"}
+                  </span>
+                  <span className="text-xs text-stone-400 dark:text-stone-500">{quand(r.createdAt)}</span>
+                </div>
+
+                <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-400">
+                  {r.email ? (
+                    <a
+                      href={`mailto:${r.email}?subject=${encodeURIComponent("Votre inscription à Travail Collaboratif")}`}
+                      className="font-medium text-brand-700 hover:underline dark:text-brand-400"
+                    >
+                      {r.email}
+                    </a>
+                  ) : (
+                    "Email non saisi"
+                  )}
+                  {r.schoolName ? ` — ${r.schoolName}` : ""}
+                </p>
+
+                <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+                  <span className="text-stone-900 dark:text-stone-100">{r.reason}</span>
+                  {r.field ? ` (${r.field})` : ""} — {LIBELLES[r.form] ?? r.form}
+                </p>
+
+                {r.contactedAt && (
+                  <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">
+                    Traitée le {quand(r.contactedAt)}
+                    {r.notes ? ` — ${r.notes}` : ""}
+                  </p>
+                )}
+
+                <FormRejectionFollowUp
+                  rejectionId={r.id}
+                  contacted={r.contactedAt !== null}
+                  notes={r.notes}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <p className="mt-4 border-t border-stone-100 pt-3 text-xs text-stone-400 dark:border-stone-800 dark:text-stone-500">
-        Seuls les motifs sont conservés — jamais les valeurs saisies, ni l&apos;email, ni
-        l&apos;adresse IP.
+        Conservé : le motif, et les coordonnées déjà saisies dans le formulaire (email, nom,
+        école), pour pouvoir rappeler la personne. Jamais le mot de passe, le matricule ni
+        l&apos;adresse IP. Ces lignes s&apos;effacent après {RETENTION_JOURS} jours.
       </p>
     </Reveal>
   );

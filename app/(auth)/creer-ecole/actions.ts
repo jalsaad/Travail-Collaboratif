@@ -20,7 +20,13 @@ import {
   reseauPlateforme,
 } from "@/lib/fwb-directory";
 import { canonicalLocality } from "@/lib/belgian-postal-codes";
-import { FORM_CREATE_SCHOOL, logFormRejection, logZodRejection } from "@/lib/form-rejections";
+import {
+  contactDepuisFormData,
+  FORM_CREATE_SCHOOL,
+  logFormRejection,
+  logZodRejection,
+  type ContactRefus,
+} from "@/lib/form-rejections";
 import { normalizeWebsite, InvalidWebsiteError } from "@/lib/website-url";
 import {
   hasAcceptedPrivacyPolicy,
@@ -35,8 +41,8 @@ export type CreateSchoolState = { error?: string };
 /// Consigne le motif puis rend le message destiné à la personne. Les deux
 /// diffèrent parfois : le relevé se passe du « Connectez-vous plutôt » qui
 /// n'apprend rien à qui l'analyse.
-async function refus(message: string, champ?: string): Promise<string> {
-  await logFormRejection(FORM_CREATE_SCHOOL, message, champ);
+async function refus(message: string, champ?: string, contact?: ContactRefus): Promise<string> {
+  await logFormRejection(FORM_CREATE_SCHOOL, message, champ, contact);
   return message === "Un compte existe déjà avec cet email."
     ? "Un compte existe déjà avec cet email. Connectez-vous plutôt."
     : message;
@@ -128,10 +134,14 @@ async function createSchoolImpl(
   _prevState: CreateSchoolState | undefined,
   formData: FormData
 ): Promise<CreateSchoolState> {
+  // Coordonnées consignées avec chaque refus, pour pouvoir rappeler la
+  // personne et débloquer son inscription (cf. lib/form-rejections.ts).
+  const contact = contactDepuisFormData(formData);
+
   // Avant toute autre validation : sans prise de connaissance de la politique
   // de confidentialité, aucune donnée ne doit même être examinée.
   if (!hasAcceptedPrivacyPolicy(formData)) {
-    return { error: await refus(PRIVACY_REFUSED_MESSAGE, PRIVACY_FIELD) };
+    return { error: await refus(PRIVACY_REFUSED_MESSAGE, PRIVACY_FIELD, contact) };
   }
 
   const parsedSchool = schoolSchema.safeParse({
@@ -147,13 +157,13 @@ async function createSchoolImpl(
     country: formData.get("country") ?? "",
   });
   if (!parsedSchool.success) {
-    return { error: await logZodRejection(FORM_CREATE_SCHOOL, parsedSchool.error) };
+    return { error: await logZodRejection(FORM_CREATE_SCHOOL, parsedSchool.error, contact) };
   }
 
   const niveaux = niveauSchema.array().safeParse(formData.getAll("niveaux"));
   const typesEnseignement = typeEnseignementSchema.array().safeParse(formData.getAll("typesEnseignement"));
   if (!niveaux.success || !typesEnseignement.success) {
-    return { error: await refus("Niveaux ou type d'enseignement invalide.", "niveaux") };
+    return { error: await refus("Niveaux ou type d'enseignement invalide.", "niveaux", contact) };
   }
 
   const parsedFounderRole = founderRoleSchema.safeParse({
@@ -161,7 +171,7 @@ async function createSchoolImpl(
     fonctionAutre: formData.get("fonctionAutre") || undefined,
   });
   if (!parsedFounderRole.success) {
-    return { error: await logZodRejection(FORM_CREATE_SCHOOL, parsedFounderRole.error) };
+    return { error: await logZodRejection(FORM_CREATE_SCHOOL, parsedFounderRole.error, contact) };
   }
   const role = parsedFounderRole.data.fonction === "Autre" ? "REFERENT_NUMERIQUE" : "DIRECTION";
 
@@ -174,7 +184,7 @@ async function createSchoolImpl(
     try {
       validateLogoFile(logoFile as File);
     } catch (error) {
-      if (error instanceof InvalidLogoError) return { error: await refus(error.message, "logoFile") };
+      if (error instanceof InvalidLogoError) return { error: await refus(error.message, "logoFile", contact) };
       throw error;
     }
   }
@@ -190,13 +200,13 @@ async function createSchoolImpl(
     passwordConfirmation: formData.get("passwordConfirmation"),
   });
   if (!parsedFounder.success) {
-    return { error: await logZodRejection(FORM_CREATE_SCHOOL, parsedFounder.error) };
+    return { error: await logZodRejection(FORM_CREATE_SCHOOL, parsedFounder.error, contact) };
   }
 
   const email = parsedFounder.data.email.trim();
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    return { error: await refus("Un compte existe déjà avec cet email.", "email") };
+    return { error: await refus("Un compte existe déjà avec cet email.", "email", contact) };
   }
 
   const founderEmail = email;
@@ -230,9 +240,9 @@ async function createSchoolImpl(
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const target = (error.meta?.target as string[] | undefined)?.join(",") ?? "";
       if (target.includes("matricule")) {
-        return { error: await refus("Ce numéro de matricule est déjà utilisé.", "matricule") };
+        return { error: await refus("Ce numéro de matricule est déjà utilisé.", "matricule", contact) };
       }
-      return { error: await refus("Un compte existe déjà avec cet email.", "email") };
+      return { error: await refus("Un compte existe déjà avec cet email.", "email", contact) };
     }
     throw error;
   }
@@ -246,7 +256,7 @@ async function createSchoolImpl(
     ? await prisma.school.findUnique({ where: { numeroFase: parsedSchool.data.numeroFase } })
     : null;
   if (cercleExistant && cercleExistant.status !== "PARTIAL") {
-    return { error: await refus("Ce numéro FASE est déjà utilisé.", "numeroFase") };
+    return { error: await refus("Ce numéro FASE est déjà utilisé.", "numeroFase", contact) };
   }
 
   const donneesEcole = {
@@ -311,7 +321,7 @@ async function createSchoolImpl(
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return { error: await refus("Ce numéro FASE est déjà utilisé.", "numeroFase") };
+      return { error: await refus("Ce numéro FASE est déjà utilisé.", "numeroFase", contact) };
     }
     throw error;
   }

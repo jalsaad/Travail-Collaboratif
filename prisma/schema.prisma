@@ -930,13 +930,25 @@ model FwbSchool {
 /// « Un compte existe déjà avec cet email » dit qu'un doublon a été rencontré,
 /// pas lequel.
 model FormRejection {
-  id        String   @id @default(cuid())
+  id          String    @id @default(cuid())
   /// Formulaire concerné : "creer-ecole", "rejoindre-ecole"…
-  form      String
+  form        String
   /// Champ mis en cause quand la validation le désigne, sinon null.
-  field     String?
-  reason    String
-  createdAt DateTime @default(now())
+  field       String?
+  reason      String
+  /// Coordonnées saisies dans le formulaire refusé, pour pouvoir rappeler la
+  /// personne et débloquer son inscription (cf. lib/form-rejections.ts). Nulles
+  /// quand le refus survient avant que ces champs ne soient lisibles, et pour
+  /// les refus enregistrés avant l'introduction de ce suivi.
+  email       String?
+  fullName    String?
+  /// Nom de l'école tel que saisi — reconnaître l'établissement vaut souvent
+  /// mieux que le nom de la personne pour savoir qui rappeler.
+  schoolName  String?
+  /// Suivi : quand la personne a été recontactée, et ce qu'il en est ressorti.
+  contactedAt DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
 
   @@index([form, createdAt])
   @@map("form_rejections")
