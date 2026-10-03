@@ -212,7 +212,7 @@ export function Nav({
       </div>
 
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-screen w-60 shrink-0 flex-col justify-between overflow-hidden border bg-white text-stone-700 transition-transform duration-300 dark:bg-stone-900 dark:text-stone-300 [border-image:linear-gradient(160deg,rgb(46_134_222_/_0.35),rgb(20_184_166_/_0.35))_1] ${
+        className={`fixed left-0 top-0 z-40 flex h-screen w-60 shrink-0 flex-col justify-between overflow-hidden border [height:100dvh] bg-white text-stone-700 transition-transform duration-300 dark:bg-stone-900 dark:text-stone-300 [border-image:linear-gradient(160deg,rgb(46_134_222_/_0.35),rgb(20_184_166_/_0.35))_1] ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -274,7 +274,14 @@ export function Nav({
           </nav>
         </div>
 
-        <div className="relative z-10 shrink-0 space-y-2.5 border-t border-stone-200 bg-white/70 px-3 py-3 backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/70">
+        {/* Pied remonté : collé au bas de la fenêtre, « Déconnexion » passait
+            sous la barre des tâches de Windows, qui mord sur la zone rendue
+            quand la fenêtre déborde ou que l'affichage est mis à l'échelle. Une
+            marge basse généreuse — et l'encoche des téléphones en plus — le
+            ramène dans la partie toujours visible. `100dvh` complète la
+            parade : sur mobile, `h-screen` compte la barre d'adresse qui se
+            rétracte, donc une hauteur supérieure à l'écran réel. */}
+        <div className="relative z-10 shrink-0 space-y-2.5 border-t border-stone-200 bg-white/70 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+3.5rem)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/70">
           {active && memberships.length > 1 && (
             <SchoolSwitcher memberships={memberships} activeSchoolId={active.schoolId} />
           )}
