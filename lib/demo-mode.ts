@@ -16,7 +16,13 @@ import { AsyncLocalStorage } from "node:async_hooks";
 /// ne puissent pas diverger. Ce compte ne peut rien écrire, les publier est
 /// donc sans conséquence — c'est même le but.
 export const DEMO_EMAIL = "demo@travail-collaboratif.be";
-export const DEMO_PASSWORD = "demo2026";
+/// Long et propre à la plateforme, non par souci de secret — il est affiché et
+/// pré-rempli — mais parce que Chrome compare chaque mot de passe saisi aux
+/// corpus de fuites : « demo2026 » y figurait, et une direction qui découvrait
+/// l'outil recevait aussitôt un avertissement de violation de données. Ce
+/// compte ne peut rien écrire, sa robustesse n'a donc aucune importance ; seule
+/// compte l'absence d'alerte.
+export const DEMO_PASSWORD = "DemoTravailCollaboratif-2026-visite";
 
 /// Compte enseignant de la même école fictive, pour visiter l'espace Profs
 /// sans passer par une direction (cf. scripts/creer-demo.ts).
