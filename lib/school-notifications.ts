@@ -3,6 +3,7 @@ import { TEACHING_LEVEL_OPTIONS } from "@/lib/teaching-levels";
 import {
   getBaseUrl,
   sendDirectionInvitationEmail,
+  sendMemberLeftNotification,
   sendNewMemberNotification,
   sendNewSchoolNotification,
   sendTeacherReminderEmail,
@@ -109,6 +110,65 @@ export async function notifySchoolDirectionOfNewMember(membershipId: string): Pr
     });
   } catch (error) {
     console.error(`[rattachement] Échec de notification pour ${membershipId} :`, error);
+  }
+}
+
+/// Pendant du précédent, pour un départ volontaire (cf.
+/// app/(app)/actions.ts::leaveSchool). Même audience, même interrupteur : un
+/// suivi d'effectifs qui enregistrerait les arrivées sans les départs
+/// dériverait silencieusement.
+///
+/// Appelée APRÈS le passage à REMOVED : on lit donc `removedAt`, et le
+/// rattachement n'est plus ACTIVE — d'où la recherche sans filtre de statut.
+export async function notifySchoolDirectionOfDeparture(membershipId: string): Promise<void> {
+  try {
+    const membership = await prisma.membership.findUnique({
+      where: { id: membershipId },
+      include: {
+        user: { select: { firstName: true, lastName: true, email: true } },
+        school: { select: { id: true, name: true } },
+      },
+    });
+    if (!membership) return;
+
+    const [managers, declaredPeriods] = await Promise.all([
+      prisma.membership.findMany({
+        where: {
+          schoolId: membership.schoolId,
+          status: "ACTIVE",
+          role: { in: ["DIRECTION", "REFERENT_NUMERIQUE"] },
+          notifyNewMembers: true,
+          id: { not: membership.id },
+        },
+        include: { user: { select: { email: true } } },
+      }),
+      // Ce que la personne laisse derrière elle. Compté sur le rattachement,
+      // donc borné à CETTE école : ses périodes ailleurs ne regardent pas
+      // cette direction.
+      prisma.periodParticipant.count({ where: { membershipId: membership.id } }),
+    ]);
+    if (managers.length === 0) return;
+
+    const baseUrl = await getBaseUrl();
+    await sendMemberLeftNotification({
+      recipients: managers.map((m) => ({
+        email: m.user.email,
+        unsubscribe: newMemberUnsubscribeLinks(baseUrl, m.id),
+      })),
+      memberName: `${membership.user.firstName} ${membership.user.lastName}`,
+      memberEmail: membership.user.email,
+      schoolName: membership.school.name,
+      leftAtLabel: (membership.removedAt ?? new Date()).toLocaleDateString("fr-BE", {
+        timeZone: APP_TIME_ZONE,
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+      declaredPeriods,
+      membersUrl: `${baseUrl}/ecole`,
+    });
+  } catch (error) {
+    console.error(`[départ] Échec de notification pour ${membershipId} :`, error);
   }
 }
 

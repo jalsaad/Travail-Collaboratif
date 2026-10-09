@@ -11,6 +11,11 @@ export type ActiveMembership = {
   schoolLogoUrl: string | null;
   role: Role;
   schoolStatus: SchoolStatus;
+  /// Fondateur·rice de l'école. Exposé jusqu'à l'interface parce qu'il
+  /// conditionne un refus visible : cette personne ne peut pas quitter son
+  /// école sans la laisser sans administrateur (cf.
+  /// lib/school-authorization.ts::assertCanLeaveSchool).
+  isAccountOwner: boolean;
 };
 
 // Toujours interrogée fraîche en base — jamais mise en cache dans la session
@@ -30,6 +35,7 @@ export async function getActiveMemberships(userId: string): Promise<ActiveMember
     schoolLogoUrl: m.school.logoUrl,
     role: m.role,
     schoolStatus: m.school.status,
+    isAccountOwner: m.isAccountOwner,
   }));
 }
 
@@ -51,4 +57,14 @@ export async function setActiveSchoolCookie(schoolId: string, userId: string) {
 
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, schoolId, { httpOnly: true, sameSite: "lax", path: "/" });
+}
+
+/// Oublie l'école active. Appelé après un départ : resolveActiveMembership
+/// retomberait de toute façon sur la première école restante (le cookie ne
+/// correspond plus à aucun rattachement), mais laisser traîner l'identifiant
+/// d'une école qu'on vient de quitter n'a aucun sens — et si la personne y
+/// revient plus tard, elle ne doit pas y être renvoyée par un vieux cookie.
+export async function clearActiveSchoolCookie() {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_NAME);
 }

@@ -6,6 +6,10 @@ export const AuditAction = {
   REGENERATE_JOIN_CODE: "REGENERATE_JOIN_CODE",
   UPDATE_MEMBER_ROLE: "UPDATE_MEMBER_ROLE",
   REMOVE_MEMBER: "REMOVE_MEMBER",
+  /// Départ VOLONTAIRE, distinct de REMOVE_MEMBER (retrait décidé par la
+  /// direction) : au journal, « elle est partie » et « on l'a retirée » ne
+  /// racontent pas la même histoire.
+  LEAVE_SCHOOL: "LEAVE_SCHOOL",
   UPDATE_MEMBER_PROFILE: "UPDATE_MEMBER_PROFILE",
   UPDATE_TEACHING_INFO: "UPDATE_TEACHING_INFO",
   JOIN_VIA_CODE: "JOIN_VIA_CODE",

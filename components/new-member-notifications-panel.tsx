@@ -32,11 +32,11 @@ export function NewMemberNotificationsPanel({ enabled }: { enabled: boolean }) {
       <div className="mt-3 flex items-start justify-between gap-4">
         <div>
           <p id="notif-inscriptions" className="text-sm text-stone-900 dark:text-stone-100">
-            Recevoir un email à chaque nouvelle inscription
+            Recevoir un email à chaque arrivée ou départ
           </p>
           <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
             Ce réglage ne concerne que vous : les autres membres de la direction gardent le leur.
-            Les nouvelles inscriptions restent toujours visibles dans{" "}
+            Les mouvements restent toujours visibles dans{" "}
             <Link href="/ecole/membres" className="text-brand-700 hover:underline dark:text-brand-400">
               Membres
             </Link>{" "}

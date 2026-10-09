@@ -44,6 +44,26 @@ export async function assertCanRemoveMember(
   return target;
 }
 
+/// Départ VOLONTAIRE : la personne se retire elle-même. À la différence
+/// d'assertCanRemoveMember, aucun droit de gestion n'est exigé — on n'agit que
+/// sur son propre rattachement. Un seul verrou, le même que pour un retrait
+/// décidé par la direction : le ou la titulaire du compte ne peut pas partir,
+/// sans quoi l'école resterait sans personne pour l'administrer.
+export async function assertCanLeaveSchool(userId: string, schoolId: string) {
+  const membership = await prisma.membership.findUnique({
+    where: { userId_schoolId: { userId, schoolId } },
+  });
+  if (!membership || membership.status !== "ACTIVE") {
+    throw new ForbiddenError("Vous n'êtes pas membre de cette école.");
+  }
+  if (membership.isAccountOwner) {
+    throw new ForbiddenError(
+      "Vous avez créé cette école : la quitter la laisserait sans administrateur. Confiez d'abord la direction à quelqu'un d'autre."
+    );
+  }
+  return membership;
+}
+
 // Garde non décrite littéralement par permissions.md (qui ne couvre la règle
 // promote/demote qu'en prose dans la matrice) — même base que
 // assertCanRemoveMember, plus un verrou explicite sur le rôle DIRECTION

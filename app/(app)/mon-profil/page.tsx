@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { resolveActiveMembership } from "@/lib/active-school";
+import { getActiveMemberships, resolveActiveMembership } from "@/lib/active-school";
+import { MySchoolsPanel } from "@/components/my-schools-panel";
 import { toPickerDefaultValue } from "@/lib/discipline-form";
 import { OwnProfileForm } from "@/components/own-profile-form";
 import { TeachingInfoForm } from "@/components/teaching-info-form";
@@ -12,7 +13,10 @@ export default async function MonProfilPage() {
   if (!session) redirect("/login");
 
   const user = await prisma.user.findUniqueOrThrow({ where: { id: session.userId } });
-  const active = await resolveActiveMembership(session.userId);
+  // Une seule lecture des rattachements, partagée : la liste « Mes écoles »
+  // les affiche tous, resolveActiveMembership n'en retient qu'un.
+  const memberships = await getActiveMemberships(session.userId);
+  const active = await resolveActiveMembership(session.userId, memberships);
 
   // Niveaux/heures/discipline sont scopés à la Membership (une école), pas au
   // User — chaque ligne niveau/heures porte sa propre discipline (cf.
@@ -65,6 +69,19 @@ export default async function MonProfilPage() {
           <h2 className="text-base font-semibold tracking-tight text-stone-900 dark:text-stone-100">Mon enseignement</h2>
           <Reveal className="mt-3">
             <TeachingInfoForm schoolName={teachingInfo.schoolName} levelHours={teachingInfo.levelHours} />
+          </Reveal>
+        </div>
+      )}
+
+      {memberships.length > 0 && (
+        <div>
+          <h2 className="text-base font-semibold tracking-tight text-stone-900 dark:text-stone-100">Mes écoles</h2>
+          <p className="mt-1 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+            Quitter une école n'efface rien : vos périodes y restent, et vous pourrez y revenir avec
+            le code de rattachement si vous y êtes réaffectée.
+          </p>
+          <Reveal className="mt-3">
+            <MySchoolsPanel memberships={memberships} />
           </Reveal>
         </div>
       )}

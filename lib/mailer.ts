@@ -437,6 +437,102 @@ export async function sendNewMemberNotification(params: NewMemberNotification) {
 }
 
 // ---------------------------------------------------------------------------
+// Notification à l'école : départ volontaire d'un membre
+// ---------------------------------------------------------------------------
+
+/// Même audience et même interrupteur que l'arrivée d'un membre
+/// (Membership.notifyNewMembers) : c'est le même sujet — les mouvements de
+/// l'équipe — et il serait absurde qu'on puisse couper les arrivées sans
+/// couper les départs. Le libellé du réglage dit donc « arrivées et départs »
+/// (cf. components/new-member-notifications-panel.tsx).
+export type MemberLeftNotification = {
+  recipients: { email: string; unsubscribe: { page: string; oneClick: string } }[];
+  memberName: string;
+  memberEmail: string;
+  schoolName: string;
+  leftAtLabel: string;
+  /// Nombre de périodes que cette personne laisse au dossier de l'école.
+  /// Affiché pour couper court à l'inquiétude : un départ n'efface rien.
+  declaredPeriods: number;
+  membersUrl: string;
+};
+
+export async function sendMemberLeftNotification(params: MemberLeftNotification) {
+  const { recipients, memberName, memberEmail, schoolName, leftAtLabel, declaredPeriods, membersUrl } =
+    params;
+  if (recipients.length === 0) return;
+
+  const periodes =
+    declaredPeriods === 0
+      ? "Aucune période déclarée."
+      : `${declaredPeriods} période${declaredPeriods > 1 ? "s" : ""} déclarée${declaredPeriods > 1 ? "s" : ""}, conservée${declaredPeriods > 1 ? "s" : ""} au dossier de l'école.`;
+
+  const subject = `Départ : ${memberName} — ${schoolName}`;
+  const text = [
+    `${memberName} <${memberEmail}> a quitté ${schoolName}.`,
+    ``,
+    `Départ : ${leftAtLabel}`,
+    periodes,
+    ``,
+    `Rien n'est effacé : les périodes restent au dossier de l'école, et les`,
+    `déclarations des collègues qui y ont nommé cette personne demeurent intactes.`,
+    `En cas de réaffectation, elle retrouve son historique en rejoignant`,
+    `l'école avec le code de rattachement.`,
+    ``,
+    `Consulter la liste des membres : ${membersUrl}`,
+  ].join("\n");
+
+  const transporter = createTransport();
+  if (!transporter) {
+    for (const r of recipients) {
+      console.log(`[dev] Départ de ${memberName} — ${schoolName} — ${r.email}`);
+    }
+    return;
+  }
+
+  const html = (unsubscribeUrl: string) =>
+    renderBrandedEmail({
+      eyebrow: "Espace direction",
+      title: `${escapeHtml(memberName)} a quitté ${escapeHtml(schoolName)}.`,
+      rows: [
+        { label: "Enseignant·e", value: memberName },
+        { label: "Email", value: memberEmail },
+        { label: "Départ", value: leftAtLabel },
+        { label: "Périodes", value: periodes },
+      ],
+      cta: { label: "Voir les membres de l'école", url: membersUrl },
+      footerHtml: `Rien n'est effacé : les périodes restent au dossier de l'école, et les
+          déclarations des collègues qui y ont nommé cette personne demeurent intactes. En cas de
+          réaffectation, elle retrouve son historique en rejoignant l'école avec le code de
+          rattachement.<br /><br />
+          Vous recevez cet email parce que vous gérez ${escapeHtml(schoolName)} sur Travail
+          Collaboratif. <a href="${escapeHtml(unsubscribeUrl)}" style="color:#78716c;text-decoration:underline;">Ne
+          plus recevoir ces emails</a>`,
+    });
+
+  const resultats = await Promise.allSettled(
+    recipients.map((r) =>
+      transporter.sendMail({
+        from: SMTP_FROM,
+        to: r.email,
+        subject,
+        text: `${text}\n\n—\nNe plus recevoir ces emails : ${r.unsubscribe.page}`,
+        html: html(r.unsubscribe.page),
+        list: { unsubscribe: { url: r.unsubscribe.oneClick, comment: "Ne plus recevoir ces emails" } },
+        headers: { "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+      })
+    )
+  );
+  const echecs = resultats.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+  if (echecs.length > 0) {
+    throw new AggregateError(
+      echecs.map((e) => e.reason),
+      `${echecs.length}/${recipients.length} notification(s) de départ non envoyée(s)`
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Notification à la plateforme : nouvelle inscription d'école
 // ---------------------------------------------------------------------------
 

@@ -5,10 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Session } from "next-auth";
 import type { ActiveMembership } from "@/lib/active-school";
-import { SchoolSwitcher } from "@/components/school-switcher";
+import { SchoolMenu } from "@/components/school-menu";
+import { AccountMenu } from "@/components/account-menu";
 import { SatisfactionStars } from "@/components/satisfaction-stars";
 import { SchoolYearBadge } from "@/components/school-year-badge";
-import { signOutAction } from "@/app/(app)/actions";
 import {
   IconAssistance,
   IconDeclarer,
@@ -111,11 +111,19 @@ export function Nav({
       entries: [
         { href: "/rejoindre-ecole", label: "Rejoindre une école", Icon: IconEcole },
         { href: "/assistance", label: "Assistance", Icon: IconAssistance },
-        ...(session.isSuperAdmin
-          ? [{ href: "/admin", label: "Administration plateforme", Icon: IconPlateforme }]
-          : []),
       ],
     },
+    // L'administration de la plateforme n'est pas « autre chose » : c'est un
+    // univers séparé, qui ne concerne qu'une poignée de comptes. Sa propre
+    // section l'empêche de se noyer entre l'assistance et le rattachement.
+    ...(session.isSuperAdmin
+      ? [
+          {
+            titre: "Plateforme",
+            entries: [{ href: "/admin", label: "Administration", Icon: IconPlateforme }],
+          },
+        ]
+      : []),
   ];
 
   const curtainState = !hasOpenedOnce ? "closed" : open ? "opening" : "closing";
@@ -161,6 +169,30 @@ export function Nav({
           </svg>
         )}
       </button>
+
+      {/* Deux contrôles posés en PERMANENCE dans la barre, hors du tiroir.
+          Celui-ci est fermé par défaut : tant qu'il l'est, ni l'école active,
+          ni le profil, ni la déconnexion n'étaient atteignables sans l'ouvrir.
+
+          Le sélecteur d'école s'efface pendant que le tiroir est ouvert. Il
+          se poserait sinon PAR-DESSUS le panneau — z-50 contre z-40 — en
+          plein milieu de la navigation. La pastille de compte, elle, reste :
+          à droite de l'écran, elle ne rencontre jamais le tiroir. */}
+      {active && !open && (
+        <div className="fixed left-16 top-4 z-50">
+          <SchoolMenu active={active} memberships={memberships} />
+        </div>
+      )}
+
+      {/* Le bouton de thème occupe `top-4` sur 36 px de haut (cf.
+          components/theme-toggle.tsx) : `top-16` se pose juste dessous. */}
+      <div className="fixed right-4 top-16 z-50">
+        <AccountMenu
+          name={session.user?.name ?? "Mon compte"}
+          email={session.user?.email ?? null}
+          initial={initial}
+        />
+      </div>
 
       {/* Toujours monté (contrairement à un simple `{open && ...}`) pour
           pouvoir animer la sortie, pas seulement l'entrée : apparition et
@@ -237,8 +269,10 @@ export function Nav({
             <img src="/LogoTCvertical.png" alt="Travail Collaboratif" className="h-[60px] w-auto object-contain" />
           </Link>
           <div className="border-t border-stone-200 px-5 py-2.5 text-left dark:border-stone-800">
+            {/* Pas de soulignement : ce n'est pas un lien, et le laisser
+                souligné promettait un clic qui n'arrivait jamais. */}
             {active && (
-              <span className="block truncate text-sm font-bold text-stone-700 underline dark:text-stone-200">
+              <span className="block truncate text-sm font-bold text-stone-700 dark:text-stone-200">
                 {active.schoolName}
               </span>
             )}
@@ -274,38 +308,25 @@ export function Nav({
           </nav>
         </div>
 
-        {/* Pied remonté : collé au bas de la fenêtre, « Déconnexion » passait
-            sous la barre des tâches de Windows, qui mord sur la zone rendue
-            quand la fenêtre déborde ou que l'affichage est mis à l'échelle. Une
-            marge basse généreuse — et l'encoche des téléphones en plus — le
-            ramène dans la partie toujours visible. `100dvh` complète la
+        {/* Le tiroir ne fait plus QUE de la navigation. L'identité (nom,
+            profil, déconnexion) et le contexte d'école ont rejoint la barre
+            du haut, où ils sont lisibles sans rien ouvrir — cf.
+            components/account-menu.tsx et components/school-menu.tsx. Les
+            garder ici aussi aurait donné deux chemins pour le même geste,
+            dont l'un enterré derrière une ouverture de tiroir.
+
+            Ne reste que l'appréciation, qui n'est ni une destination ni une
+            identité : sa place est bien en pied.
+
+            La marge basse revient du coup à la normale. Ses 3,5 rem
+            supplémentaires ne servaient qu'à hisser « Déconnexion » au-dessus
+            de la barre des tâches de Windows, qui mord sur la zone rendue ;
+            plus rien d'indispensable ne s'y trouve. Seule l'encoche des
+            téléphones reste à compenser. `100dvh` sur l'aside complète la
             parade : sur mobile, `h-screen` compte la barre d'adresse qui se
             rétracte, donc une hauteur supérieure à l'écran réel. */}
-        <div className="relative z-10 shrink-0 space-y-2.5 border-t border-stone-200 bg-white/70 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+3.5rem)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/70">
-          {active && memberships.length > 1 && (
-            <SchoolSwitcher memberships={memberships} activeSchoolId={active.schoolId} />
-          )}
-          <Link
-            href="/mon-profil"
-            onClick={fermer}
-            className="flex items-center gap-2 rounded-lg px-1 py-1 text-sm transition hover:bg-brand-50 dark:hover:bg-stone-800"
-          >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-teal text-xs font-semibold text-white">
-              {initial}
-            </span>
-            <span className="truncate text-stone-700 dark:text-stone-300">{session.user?.name}</span>
-          </Link>
-          <div className="border-t border-stone-100 pt-2.5 dark:border-stone-800">
-            <SatisfactionStars initialRating={satisfactionRating} />
-          </div>
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              className="w-full rounded-lg px-3 py-2 text-left text-sm text-stone-500 transition hover:bg-red-50 hover:text-red-700 dark:text-stone-400 dark:hover:bg-red-950 dark:hover:text-red-400"
-            >
-              Déconnexion
-            </button>
-          </form>
+        <div className="relative z-10 shrink-0 border-t border-stone-200 bg-white/70 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/70">
+          <SatisfactionStars initialRating={satisfactionRating} />
         </div>
       </aside>
     </>
