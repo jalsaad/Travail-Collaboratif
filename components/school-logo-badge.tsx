@@ -11,6 +11,7 @@
 /// Le logo reste utilisé ailleurs sans changement : paramètres de l'école,
 /// en-tête des exports PDF (cf. lib/export-logos.ts), affiche de
 /// rattachement.
+///
 /// Les deux props sont FACULTATIVES : l'espace plateforme (app/admin) monte
 /// ce blason hors de toute école et doit afficher le logo générique.
 export function SchoolLogoBadge({
@@ -23,19 +24,43 @@ export function SchoolLogoBadge({
 } = {}) {
   const estLogoEcole = Boolean(logoUrl);
 
+  // Boîte carrée et `object-contain` : les logos d'école vont du blason
+  // vertical à la bannière très large, et aucun ne doit être déformé ni
+  // rogné.
+  const image = (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={logoUrl || "/TC3d.png"}
+      alt={estLogoEcole ? schoolName : "Travail Collaboratif"}
+      className="h-[85px] w-[85px] object-contain sm:h-[127px] sm:w-[127px]"
+    />
+  );
+
   return (
     <div className="flex justify-center">
-      {/* Boîte carrée et `object-contain` : les logos d'école vont du blason
-          vertical à la bannière très large, et aucun ne doit être déformé ni
-          rogné. Taille réduite d'un quart (85 → 64, 127 → 96) — le blason
-          prenait le tiers de l'écran d'un téléphone avant le moindre
-          contenu. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={logoUrl || "/TC3d.png"}
-        alt={estLogoEcole ? schoolName : "Travail Collaboratif"}
-        className="h-16 w-16 object-contain sm:h-24 sm:w-24"
-      />
+      {estLogoEcole ? (
+        // PLAQUE CLAIRE, dans les DEUX thèmes — et c'est tout l'objet.
+        //
+        // Un logo d'école est téléversé tel quel (cf. lib/school-logo.ts), en
+        // PNG, JPEG, WEBP ou GIF. Or le JPEG n'a pas de canal alpha : son
+        // fond est opaque, presque toujours blanc. En thème sombre, ces
+        // logos-là posaient donc un carré blanc au milieu de la page — et un
+        // logo dessiné pour fond sombre aurait fait l'inverse en thème clair.
+        //
+        // Plutôt que de deviner le fond de chaque fichier, on le lui donne :
+        // posé sur une plaque claire dans les deux thèmes, chaque logo
+        // retrouve l'arrière-plan pour lequel il a été dessiné. Le carré
+        // blanc cesse d'être un accident pour devenir un cadre. Même parti
+        // pris que les avatars d'organisation de GitHub ou Slack.
+        //
+        // Le logo de la plateforme, lui, est réellement transparent (canal
+        // alpha vérifié) et lisible sur les deux fonds : il reste nu.
+        <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-stone-200 dark:ring-stone-700">
+          {image}
+        </div>
+      ) : (
+        image
+      )}
     </div>
   );
 }

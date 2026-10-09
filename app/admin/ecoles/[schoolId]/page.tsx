@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { roleLabel } from "@/lib/role-labels";
+import { SchoolLogoBadge } from "@/components/school-logo-badge";
 import { AdminSchoolEditForm } from "@/components/admin-school-edit-form";
 import { AdminMemberRowActions } from "@/components/admin-member-row-actions";
 import { JoinPosterLink } from "@/components/join-poster-link";
@@ -54,6 +55,12 @@ export default async function AdminSchoolDetailPage({
 
   return (
     <div className="space-y-6">
+      {/* Le blason de l'école remplace ici celui de la plateforme, que le
+          layout efface sur cette route (cf. components/admin-logo-badge.tsx).
+          Reconnaître l'établissement d'un coup d'œil évite d'administrer la
+          mauvaise école — elles se ressemblent beaucoup par le nom. */}
+      <SchoolLogoBadge logoUrl={school.logoUrl} schoolName={school.name} />
+
       <div>
         <Link href="/admin/ecoles" className="text-sm text-brand-700 hover:underline">
           ← Toutes les écoles

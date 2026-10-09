@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { assertIsSuperAdmin } from "@/lib/admin-authorization";
 import { ForbiddenError } from "@/lib/school-authorization";
 import { AdminNav, type AdminNavTab } from "@/components/admin-nav";
-import { SchoolLogoBadge } from "@/components/school-logo-badge";
+import { AdminLogoBadge } from "@/components/admin-logo-badge";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 const tabs: AdminNavTab[] = [
@@ -48,10 +48,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         openTicketsCount={openTicketsCount}
         schoolYearLabel={schoolYear?.label ?? null}
       />
-      <SchoolLogoBadge />
-      <p className="mt-1 text-center text-sm font-semibold text-stone-500 dark:text-stone-400">
-        Administration plateforme
-      </p>
+      {/* S'efface sur la fiche d'une école, qui monte son propre blason —
+          le layout ignore de quelle école il s'agit. */}
+      <AdminLogoBadge />
       <main className="mx-auto max-w-3xl px-4 py-8">{children}</main>
     </div>
   );
