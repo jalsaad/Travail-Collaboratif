@@ -1,9 +1,29 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
+import { useId, useState, useTransition, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { setSatisfactionRating } from "@/app/(app)/actions";
 import { ShareButtons } from "@/components/share-buttons";
+
+/// Projette ses enfants directement dans <body>.
+///
+/// INDISPENSABLE ICI, et pas un raffinement. Ces étoiles vivent au pied du
+/// tiroir de navigation, dont l'`<aside>` coulisse par `translate-x` (cf.
+/// components/nav.tsx). Or une transformation CSS crée un bloc conteneur
+/// pour ses descendants en `position: fixed` : `inset-0` ne désignait donc
+/// plus la fenêtre du navigateur mais les 240 px du tiroir, et son
+/// `overflow-hidden` rognait le débordement. Les deux fenêtres s'affichaient
+/// en colonne étroite, tronquées — y compris celle qui oriente vers
+/// l'assistance, cassée de la même façon depuis son écriture sans que
+/// personne l'ait remarqué.
+///
+/// Rendu nul côté serveur, où `document` n'existe pas : sans conséquence,
+/// ces fenêtres n'étant montées qu'à la suite d'un clic.
+function Portail({ children }: { children: ReactNode }) {
+  if (typeof document === "undefined") return null;
+  return createPortal(children, document.body);
+}
 
 // Étoile pleine si son rang <= note ; dégradé bleu → sarcelle (couleurs du
 // logo) partagé via un <linearGradient> défini une fois. Note non définitive
@@ -72,76 +92,80 @@ export function SatisfactionStars({ initialRating }: { initialRating: number | n
       </div>
 
       {showShareModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-stone-900/50 px-4"
-          onClick={() => setShowShareModal(false)}
-        >
+        <Portail>
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-6 text-center shadow-xl dark:border-stone-800 dark:bg-stone-900"
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-stone-900/50 p-4 backdrop-blur-sm"
+            onClick={() => setShowShareModal(false)}
           >
-            <h2 className="text-base font-semibold text-stone-900 dark:text-stone-100">
-              Merci pour votre avis
-            </h2>
-            <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
-              La plateforme se fait connaître de bouche à oreille. Un mot de votre part à des
-              collègues d&apos;une autre école vaut plus que n&apos;importe quelle publicité.
-            </p>
-            {/* Taille pleine, et non `compact` : ce sont les seuls boutons
-                d'action de cette fenêtre, et 44 px est le minimum confortable
-                pour une cible tactile. */}
-            <div className="mt-5">
-              <ShareButtons />
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowShareModal(false)}
-              className="btn-secondary mt-5 w-full"
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="my-auto w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-6 text-center shadow-2xl dark:border-stone-800 dark:bg-stone-900"
             >
-              Fermer
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showLowRatingModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-stone-900/50 px-4"
-          onClick={() => setShowLowRatingModal(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-6 text-center shadow-xl dark:border-stone-800 dark:bg-stone-900"
-          >
-            <h2 className="text-base font-semibold text-stone-900 dark:text-stone-100">
-              Désolé de cette expérience
-            </h2>
-            <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
-              Dites-nous ce qui ne va pas : un ticket d&apos;assistance nous permet de comprendre et de
-              corriger le problème.
-            </p>
-            <div className="mt-5 flex flex-col gap-2">
-              <Link
-                href="/assistance"
-                onClick={() => setShowLowRatingModal(false)}
-                className="btn-primary"
-              >
-                Contacter l&apos;assistance
-              </Link>
+              <h2 className="text-base font-semibold text-stone-900 dark:text-stone-100">
+                Merci pour votre avis
+              </h2>
+              <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
+                La plateforme se fait connaître de bouche à oreille. Un mot de votre part à des
+                collègues d&apos;une autre école vaut plus que n&apos;importe quelle publicité.
+              </p>
+              {/* Taille pleine, et non `compact` : ce sont les seuls boutons
+                  d'action de cette fenêtre, et 44 px est le minimum
+                  confortable pour une cible tactile. */}
+              <div className="mt-5">
+                <ShareButtons />
+              </div>
               <button
                 type="button"
-                onClick={() => setShowLowRatingModal(false)}
-                className="btn-secondary"
+                onClick={() => setShowShareModal(false)}
+                className="btn-secondary mt-5 w-full"
               >
                 Fermer
               </button>
             </div>
           </div>
-        </div>
+        </Portail>
+      )}
+
+      {showLowRatingModal && (
+        <Portail>
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-stone-900/50 p-4 backdrop-blur-sm"
+            onClick={() => setShowLowRatingModal(false)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="my-auto w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-6 text-center shadow-2xl dark:border-stone-800 dark:bg-stone-900"
+            >
+              <h2 className="text-base font-semibold text-stone-900 dark:text-stone-100">
+                Désolé de cette expérience
+              </h2>
+              <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
+                Dites-nous ce qui ne va pas : un ticket d&apos;assistance nous permet de comprendre
+                et de corriger le problème.
+              </p>
+              <div className="mt-5 flex flex-col gap-2">
+                <Link
+                  href="/assistance"
+                  onClick={() => setShowLowRatingModal(false)}
+                  className="btn-primary"
+                >
+                  Contacter l&apos;assistance
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowLowRatingModal(false)}
+                  className="btn-secondary"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portail>
       )}
     </div>
   );
