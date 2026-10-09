@@ -51,6 +51,21 @@ const nextConfig = {
       ],
     },
   },
+  // Les guides HTML sont abandonnés au profit des démonstrations, et leurs
+  // fichiers supprimés de public/. Mais leur adresse circule encore : elle
+  // figure dans les 142 invitations déjà envoyées aux directions, qui
+  // restent dans des boîtes mail pour des mois. Sans ces redirections, une
+  // direction qui ouvre enfin l'email tombe sur un 404 — le pire accueil
+  // possible pour quelqu'un qui se décidait justement à regarder.
+  //
+  // Permanentes (308) : les guides ne reviendront pas.
+  async redirects() {
+    return [
+      { source: "/guides/guide-direction.html", destination: "/login/direction?demo=1", permanent: true },
+      { source: "/guides/guide-enseignant.html", destination: "/login/profs?demo=1", permanent: true },
+    ];
+  },
+
   // pdfkit charge ses fichiers de polices (.afm) via des chemins relatifs à
   // l'exécution — le bundling webpack de Next casse cette résolution. On
   // l'exclut du bundle pour qu'il soit simplement require() depuis

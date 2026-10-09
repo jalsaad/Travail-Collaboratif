@@ -3,6 +3,7 @@
 import { useId, useState, useTransition } from "react";
 import Link from "next/link";
 import { setSatisfactionRating } from "@/app/(app)/actions";
+import { ShareButtons } from "@/components/share-buttons";
 
 // Étoile pleine si son rang <= note ; dégradé bleu → sarcelle (couleurs du
 // logo) partagé via un <linearGradient> défini une fois. Note non définitive
@@ -11,14 +12,24 @@ export function SatisfactionStars({ initialRating }: { initialRating: number | n
   const gradientId = useId();
   const [rating, setRating] = useState(initialRating ?? 0);
   const [showLowRatingModal, setShowLowRatingModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [, startTransition] = useTransition();
 
+  // Deux réactions symétriques, au moment précis où l'avis vient d'être
+  // exprimé : le mécontent est invité à dire ce qui ne va pas, le satisfait à
+  // en parler autour de lui. Ailleurs qu'ici, un bouton « partager » serait un
+  // ornement que personne ne remarque ; ici, il tombe sur quelqu'un qui vient
+  // tout juste de déclarer sa satisfaction.
+  //
+  // La note de 3 ne déclenche rien : ni assez mauvaise pour alerter, ni assez
+  // bonne pour qu'on demande à cette personne de nous recommander.
   function handleClick(value: number) {
     setRating(value);
     startTransition(() => {
       setSatisfactionRating(value);
     });
     if (value <= 2) setShowLowRatingModal(true);
+    else if (value >= 4) setShowShareModal(true);
   }
 
   return (
@@ -59,6 +70,41 @@ export function SatisfactionStars({ initialRating }: { initialRating: number | n
           </button>
         ))}
       </div>
+
+      {showShareModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-stone-900/50 px-4"
+          onClick={() => setShowShareModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-6 text-center shadow-xl dark:border-stone-800 dark:bg-stone-900"
+          >
+            <h2 className="text-base font-semibold text-stone-900 dark:text-stone-100">
+              Merci pour votre avis
+            </h2>
+            <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
+              La plateforme se fait connaître de bouche à oreille. Un mot de votre part à des
+              collègues d&apos;une autre école vaut plus que n&apos;importe quelle publicité.
+            </p>
+            {/* Taille pleine, et non `compact` : ce sont les seuls boutons
+                d'action de cette fenêtre, et 44 px est le minimum confortable
+                pour une cible tactile. */}
+            <div className="mt-5">
+              <ShareButtons />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowShareModal(false)}
+              className="btn-secondary mt-5 w-full"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
 
       {showLowRatingModal && (
         <div

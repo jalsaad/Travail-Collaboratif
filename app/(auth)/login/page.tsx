@@ -4,8 +4,18 @@ import { Reveal } from "@/components/reveal";
 import { CirculaireLink } from "@/components/circulaire-link";
 import { AboutUsSection } from "@/components/about-us-section";
 import { ReseauxEnseignementSection } from "@/components/reseaux-enseignement-section";
+import { SatisfactionSummary } from "@/components/satisfaction-summary";
+import { getPublicSatisfaction } from "@/lib/satisfaction";
 
-export default function LoginGatewayPage() {
+// La page lit la moyenne des avis en base : elle ne peut donc plus être
+// figée au build, qui n'a pas forcément accès à la base de données. Le coût
+// est d'une agrégation sur une table de quelques dizaines de lignes — moins
+// cher que n'importe laquelle des images de cette page.
+export const dynamic = "force-dynamic";
+
+export default async function LoginGatewayPage() {
+  const satisfaction = await getPublicSatisfaction();
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-brand-50 via-white to-teal-50/60 dark:from-stone-900 dark:via-stone-950 dark:to-stone-950">
       {/* Arrière-plan décoratif — purement esthétique, aucun impact sur le
@@ -152,6 +162,22 @@ export default function LoginGatewayPage() {
             Sans inscription, avec une école fictive — rien n&apos;y est enregistré.
           </p>
         </Reveal>
+
+        {/* Preuve par les pairs, placée juste après les démonstrations :
+            c'est l'instant où le visiteur se demande si l'outil vaut qu'on
+            s'y attarde. Rien n'est affiché tant que le nombre d'avis reste
+            trop faible pour qu'une moyenne veuille dire quelque chose (cf.
+            lib/satisfaction.ts::MIN_AVIS_PUBLIC). */}
+        {satisfaction && (
+          <Reveal className="relative mt-16 text-center">
+            <p className="text-sm font-medium uppercase tracking-wide text-stone-400 dark:text-stone-500">
+              Ce qu&apos;en disent les utilisateurs
+            </p>
+            <div className="mt-4">
+              <SatisfactionSummary moyenne={satisfaction.moyenne} total={satisfaction.total} />
+            </div>
+          </Reveal>
+        )}
 
         <ReseauxEnseignementSection />
         <AboutUsSection />

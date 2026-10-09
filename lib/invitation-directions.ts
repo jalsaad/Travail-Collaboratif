@@ -81,27 +81,38 @@ function marquer(url: string, source: string): string {
 }
 
 /// Deux liens de découverte, offerts à qui ne veut pas s'inscrire d'emblée :
-/// le site pour se faire une idée, le guide pour voir à quoi ressemble
-/// l'espace direction avant de créer quoi que ce soit. Le bouton principal
-/// mène à l'inscription ; ces liens-ci sont la porte basse.
+/// le site pour se faire une idée, la démonstration pour entrer dans
+/// l'espace direction sans rien créer. Le bouton principal mène à
+/// l'inscription ; ces liens-ci sont la porte basse.
+///
+/// CE QUI A CHANGÉ : le second lien menait à un guide de prise en main en
+/// HTML (public/guides/guide-direction.html). Les guides sont abandonnés au
+/// profit des démonstrations — on ne lit pas un mode d'emploi pour décider,
+/// on essaie. Le fichier a disparu de public/ : laisser son lien ici aurait
+/// posé un 404 dans chaque envoi, y compris dans les invitations déjà
+/// parties.
 ///
 /// Construits sur `baseUrl` plutôt qu'écrits en dur : l'adresse de la
 /// plateforme se règle par APP_ORIGIN, et un lien qui la contredirait
 /// enverrait les destinataires sur un autre hôte que le bouton.
 function liensDecouverte(baseUrl: string, source: string) {
   const site = marquer(baseUrl, source);
-  const guide = marquer(`${baseUrl}/guides/guide-direction.html`, source);
+  const demo = marquer(`${baseUrl}/login/direction?demo=1`, source);
   return {
     site,
-    guide,
+    demo,
     /// Sans le schéma : c'est l'usage dans un corps de texte, et cela raccourcit
     /// une ligne déjà longue.
     siteLabel: site.replace(/^https?:\/\//, ""),
-    texte: [`Découvrir la plateforme : ${site}`, `Guide de prise en main pour les directions : ${guide}`],
+    texte: [
+      `Découvrir la plateforme : ${site}`,
+      `Essayer la démonstration, sans inscription : ${demo}`,
+    ],
     html:
       `<p style="margin:0 0 12px;">Pour vous faire une idée avant de vous décider : ` +
       `<a href="${site}" style="color:${BRAND_600};">${escapeHtml(site.replace(/^https?:\/\//, ""))}</a>, ` +
-      `et le <a href="${guide}" style="color:${BRAND_600};">guide de prise en main destiné aux directions</a>.</p>`,
+      `ou la <a href="${demo}" style="color:${BRAND_600};">démonstration de l'espace direction</a>, ` +
+      `qui s'ouvre sans inscription.</p>`,
   };
 }
 

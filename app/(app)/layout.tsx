@@ -31,7 +31,13 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
   const pending = active && active.schoolStatus !== "APPROVED" && active.schoolStatus !== "PARTIAL";
 
   return (
-    <div className="min-h-screen bg-stone-50 pt-4 dark:bg-stone-950">
+    // Sur téléphone, la barre fixe du haut (menu, sélecteur d'école, thème,
+    // pastille de compte) occupe la bande 16 → 56 px sur TOUTE la largeur :
+    // le sélecteur d'école y passe au-dessus du centre, là où le logo est
+    // posé. Un `pt-4` faisait donc démarrer le logo SOUS ce sélecteur. Sur
+    // écran large, les contrôles se tiennent aux deux bords et laissent le
+    // centre libre : `sm:pt-4` y rétablit l'espacement d'origine.
+    <div className="min-h-screen bg-stone-50 pt-[4.5rem] dark:bg-stone-950 sm:pt-4">
       {session.isDemo && <DemoBanner />}
       <Nav
         session={session}
