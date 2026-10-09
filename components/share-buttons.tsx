@@ -44,6 +44,9 @@ function reseaux(message: string): Reseau[] {
   const url = PUBLIC_SITE_URL;
   const u = encodeURIComponent(url);
   const t = encodeURIComponent(message);
+  /// Le lien complet sur sa propre ligne, pour les canaux où le texte est le
+  /// seul véhicule. Voir le commentaire de WhatsApp ci-dessous.
+  const tEtUrl = encodeURIComponent(`${message}\n\n${url}`);
 
   return [
     {
@@ -64,10 +67,17 @@ function reseaux(message: string): Reseau[] {
     },
     {
       nom: "WhatsApp",
-      // Le message seul : WhatsApp n'a pas de paramètre d'URL distinct, et le
-      // domaine est déjà dans le texte. Y recoller le lien complet le ferait
-      // apparaître deux fois dans la même bulle.
-      href: `https://wa.me/?text=${t}`,
+      // L'URL COMPLÈTE est indispensable, même si le domaine figure déjà dans
+      // la phrase. WhatsApp n'a pas de paramètre de lien distinct : le texte
+      // est tout ce qui part. Or il ne reconnaît pas de façon fiable un
+      // domaine écrit sans protocole — « travail-collaboratif.be » restait du
+      // texte mort, sans lien cliquable, donc sans vignette à aller chercher.
+      //
+      // On avait d'abord retiré ce lien pour éviter que le domaine paraisse
+      // deux fois : l'économie cosmétique coûtait le lien ET l'aperçu. Il est
+      // donc remis, sur sa propre ligne — c'est là que WhatsApp va chercher
+      // les métadonnées de la vignette.
+      href: `https://wa.me/?text=${tEtUrl}`,
       couleur: "text-[#25D366]",
       survol: "hover:bg-[#25D366] hover:text-white hover:border-[#25D366]",
       chemin:
