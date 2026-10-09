@@ -184,9 +184,10 @@ export function Nav({
         </div>
       )}
 
-      {/* Le bouton de thème occupe `top-4` sur 36 px de haut (cf.
-          components/theme-toggle.tsx) : `top-16` se pose juste dessous. */}
-      <div className="fixed right-4 top-16 z-50">
+      {/* Dans le coin même. Le bouton de thème s'est décalé vers la gauche
+          (cf. components/theme-toggle.tsx) pour que les deux tiennent sur une
+          ligne : empilés, ils repoussaient la pastille loin dans la page. */}
+      <div className="fixed right-4 top-4 z-50">
         <AccountMenu
           name={session.user?.name ?? "Mon compte"}
           email={session.user?.email ?? null}

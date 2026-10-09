@@ -148,9 +148,19 @@ export async function invitePeerByEmail(params: {
       invitedName: params.invitedName ?? null,
     });
 
+    // Adresse de l'autrice du parrainage, pour le Reply-To : la personne
+    // invitée répond à la collègue, pas à la plateforme (cf. lib/mailer.ts).
+    // Lue ici plutôt que réclamée aux appelants — ils ont déjà l'identifiant,
+    // et cet envoi est de toute façon best effort.
+    const inviter = await prisma.user.findUnique({
+      where: { id: params.actorUserId },
+      select: { email: true },
+    });
+
     await sendPeerReferralEmail({
       to: params.to,
       inviterCivility: params.inviterCivility,
+      inviterEmail: inviter?.email ?? null,
       schoolName: params.schoolName,
       period: params.period ?? null,
       joinUrl: link,

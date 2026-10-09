@@ -25,6 +25,17 @@ export function ThemeToggle() {
     }
   }
 
+  // Décalée vers la gauche pour céder le coin à la pastille de compte (cf.
+  // components/nav.tsx) : les deux contrôles tiennent désormais sur UNE
+  // ligne, au lieu d'être empilés l'un sous l'autre.
+  //
+  // `top-[1.125rem]` plutôt que `top-4` : la pastille fait 40 px de haut
+  // contre 36 ici, et deux pixels d'écart entre deux pastilles voisines se
+  // voient. Ces 2 px recentrent celle-ci sur l'autre.
+  //
+  // Le décalage vaut aussi pour les pages publiques, qui n'ont pas de
+  // pastille : 72 px du bord au lieu de 16 n'y choque pas, et cela évite de
+  // monter ce bouton une fois par groupe de routes.
   return (
     <button
       type="button"
@@ -32,7 +43,7 @@ export function ThemeToggle() {
       role="switch"
       aria-checked={isDark}
       aria-label={isDark ? "Passer en mode clair" : "Passer en mode sombre"}
-      className="fixed right-4 top-4 z-50 flex h-9 w-16 shrink-0 items-center rounded-full border border-stone-300 bg-stone-100 p-1 shadow-lg transition dark:border-stone-600 dark:bg-stone-800"
+      className="fixed right-[4.5rem] top-[1.125rem] z-50 flex h-9 w-16 shrink-0 items-center rounded-full border border-stone-300 bg-stone-100 p-1 shadow-lg transition dark:border-stone-600 dark:bg-stone-800"
     >
       <span
         className={`flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r from-brand-600 to-brand-teal text-white shadow transition-transform duration-300 ${

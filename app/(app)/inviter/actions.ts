@@ -87,7 +87,9 @@ async function createPeerReferralImpl(
   if (parsed.data.inviteeEmail) {
     const actor = await prisma.user.findUnique({
       where: { id: session.userId },
-      select: { firstName: true, lastName: true, sex: true },
+      // `email` sert au Reply-To : la personne invitée répond à la collègue
+      // qui la parraine, pas à la plateforme (cf. lib/mailer.ts).
+      select: { firstName: true, lastName: true, sex: true, email: true },
     });
     // Best effort, comme les autres notifications de la plateforme : un SMTP
     // injoignable ne doit pas faire perdre le lien déjà généré, toujours
@@ -96,6 +98,7 @@ async function createPeerReferralImpl(
       await sendPeerReferralEmail({
         to: parsed.data.inviteeEmail,
         inviterCivility: actor ? civilityAndLastName(actor) : "Un·e collègue",
+        inviterEmail: actor?.email ?? null,
         schoolName: active.schoolName,
         period: periodForEmail,
         joinUrl: link,

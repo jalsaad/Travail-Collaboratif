@@ -40,7 +40,9 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
         satisfactionRating={currentUser?.satisfactionRating ?? null}
         schoolYearLabel={schoolYear?.label ?? null}
       />
-      {active && <SchoolLogoBadge />}
+      {active && (
+        <SchoolLogoBadge logoUrl={active.schoolLogoUrl} schoolName={active.schoolName} />
+      )}
       {/* Indépendant du statut de l'école : l'obligation d'information vaut
           pour tout compte, y compris en attente d'approbation. Jamais en
           démonstration : le compte partagé ne pourrait rien enregistrer et

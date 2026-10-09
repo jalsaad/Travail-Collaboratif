@@ -224,7 +224,10 @@ export async function notifyTeachersOfReminder(params: {
       prisma.school.findUnique({ where: { id: schoolId }, select: { name: true } }),
       prisma.user.findUnique({
         where: { id: senderUserId },
-        select: { firstName: true, lastName: true, sex: true },
+        // `email` sert au Reply-To : les réponses au rappel (« je serai
+        // absente », « j'ai déjà déclaré ») doivent parvenir à la direction
+        // qui l'a lancé, pas à la plateforme (cf. lib/mailer.ts).
+        select: { firstName: true, lastName: true, sex: true, email: true },
       }),
       // Exactement la cible de l'annonce (cf. AnnouncementTarget créé par
       // publishTeacherReminder) : les enseignant·es actives de CETTE école.
@@ -243,6 +246,7 @@ export async function notifyTeachersOfReminder(params: {
       recipients,
       schoolName: school.name,
       senderCivility: civilityAndLastName(sender),
+      senderEmail: sender.email,
       message,
       daysLeft,
       deadlineLabel: expiresAt.toLocaleDateString("fr-BE", {

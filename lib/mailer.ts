@@ -28,6 +28,27 @@ const SMTP_FROM = normalizeSender(
   process.env.SMTP_FROM || "Travail Collaboratif <no-reply@travail-collaboratif.be>"
 );
 
+// RÈGLE DE RÉPONSE : tout email provoqué par une personne porte l'adresse de
+// CETTE personne en `Reply-To`. Les emails purement système — réinitialisation
+// de mot de passe — n'en portent aucun.
+//
+// Sans cette règle, « Répondre » visait `no-reply@`, redirigé vers la boîte
+// d'administration : les enseignant·es qui croyaient répondre à la collègue
+// les ayant invité·es à valider une période écrivaient en réalité à la
+// plateforme, qui ne pouvait rien pour elles.
+//
+// Cela expose l'adresse de l'autre personne, et c'est assumé : elle est déjà
+// nommée dans le message, il s'agit d'un travail fait ensemble, et ces
+// adresses professionnelles circulent de toute façon entre collègues. À ne
+// pas confondre avec la copie cachée du rappel aux enseignant·es, qui protège
+// TOUS les destinataires les uns des autres — ici on n'en révèle qu'une, celle
+// de l'autrice du message.
+//
+// Les retours de non-livraison, eux, ne suivent PAS le `Reply-To` : ils
+// partent vers l'enveloppe SMTP (Return-Path) et restent côté plateforme.
+// C'est voulu : un rapport d'échec technique n'a rien à faire dans la boîte
+// d'une enseignante.
+
 // Construit l'URL absolue à partir des headers de la requête entrante plutôt
 // que d'une variable d'environnement dédiée — évite une désynchronisation
 // entre l'URL réellement servie (codespaces, prod...) et une valeur figée.
@@ -110,6 +131,8 @@ export async function sendSupportTicketNotification(params: {
   await transporter.sendMail({
     from: SMTP_FROM,
     to,
+    // Répondre au ticket atteint directement son auteur·rice.
+    replyTo: requesterEmail,
     subject: `[${categoryLabel}] ${subject}`,
     text:
       `${requesterName} <${requesterEmail}> a ouvert un ticket (${categoryLabel}) :\n\n${subject}\n\n${message}\n\n` +
@@ -144,6 +167,9 @@ export type ParticipationInvitationEmail = {
   to: string;
   /// « Madame Dubois » / « Monsieur Lefèvre » — cf. lib/civility.ts.
   inviterCivility: string;
+  /// Adresse de la collègue qui a déclaré la période : c'est elle qu'on doit
+  /// joindre en répondant, pas la plateforme.
+  inviterEmail: string;
   /// Durée déjà formatée à la française (cf. formatPeriodes).
   dureePeriodes: string;
   dateLabel: string;
@@ -161,6 +187,7 @@ export async function sendParticipationInvitationEmail(params: ParticipationInvi
   const {
     to,
     inviterCivility,
+    inviterEmail,
     dureePeriodes,
     dateLabel,
     horaire,
@@ -212,7 +239,14 @@ export async function sendParticipationInvitationEmail(params: ParticipationInvi
           Le lien ci-dessus est valable 30 jours ; passé ce délai, la validation reste possible sur la plateforme.`,
   });
 
-  await createTransport()!.sendMail({ from: SMTP_FROM, to, subject, text, html });
+  await createTransport()!.sendMail({
+    from: SMTP_FROM,
+    to,
+    replyTo: inviterEmail,
+    subject,
+    text,
+    html,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -223,6 +257,11 @@ export type PeerReferralEmail = {
   to: string;
   /// « Madame Dubois » / « Monsieur Lefèvre » — cf. lib/civility.ts.
   inviterCivility: string;
+  /// Adresse de la collègue qui parraine : « ignorez cet email si vous ne la
+  /// connaissez pas » n'a de sens que si l'on peut aussi lui écrire.
+  /// Nullable : l'appelant retombe déjà sur « Un·e collègue » quand le compte
+  /// est introuvable, et un Reply-To vide vaut mieux qu'un Reply-To faux.
+  inviterEmail: string | null;
   schoolName: string;
   /// Renseigné seulement quand le lien est rattaché à une période précise —
   /// cf. PeerReferral.periodId. Créer son compte via ce lien vaut alors
@@ -232,7 +271,7 @@ export type PeerReferralEmail = {
 };
 
 export async function sendPeerReferralEmail(params: PeerReferralEmail) {
-  const { to, inviterCivility, schoolName, period, joinUrl } = params;
+  const { to, inviterCivility, inviterEmail, schoolName, period, joinUrl } = params;
 
   const subject = period
     ? `${inviterCivility} vous invite à rejoindre ${schoolName} et valider votre participation`
@@ -283,7 +322,14 @@ export async function sendPeerReferralEmail(params: PeerReferralEmail) {
           ${escapeHtml(inviterCivility)}, vous pouvez ignorer cet email sans risque.`,
   });
 
-  await createTransport()!.sendMail({ from: SMTP_FROM, to, subject, text, html });
+  await createTransport()!.sendMail({
+    from: SMTP_FROM,
+    to,
+    ...(inviterEmail ? { replyTo: inviterEmail } : {}),
+    subject,
+    text,
+    html,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -343,7 +389,20 @@ export async function sendDirectionInvitationEmail(params: DirectionInvitationEm
     footerHtml: `L'inscription est gratuite et ne prend que quelques minutes.`,
   });
 
-  await createTransport()!.sendMail({ from: SMTP_FROM, to, subject, text, html });
+  await createTransport()!.sendMail({
+    from: SMTP_FROM,
+    to,
+    // SEULE EXCEPTION à la règle du Reply-To personnel : une direction qui
+    // répond ici ne s'adresse pas à la collègue qui a initié le cercle, mais
+    // à la plateforme — « est-ce officiel ? », « est-ce vraiment gratuit ? ».
+    // Lui renvoyer l'enseignante serait inutile, et la désignerait comme
+    // celle qui a parlé de l'école à un tiers. On pointe donc une boîte
+    // réelle, plutôt que le `no-reply` de l'en-tête From.
+    replyTo: platformNotificationRecipient(),
+    subject,
+    text,
+    html,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -417,6 +476,9 @@ export async function sendNewMemberNotification(params: NewMemberNotification) {
         subject,
         text: `${text}\n\n—\nNe plus recevoir ces emails : ${r.unsubscribe.page}`,
         html: html(r.unsubscribe.page),
+        // Répondre à la notification atteint le ou la nouvelle collègue —
+        // souhaiter la bienvenue ou demander une précision se fait d'un clic.
+        replyTo: memberEmail,
         // Désabonnement en un clic depuis la messagerie elle-même (Gmail,
         // Outlook…), RFC 8058 : le client envoie un POST à cette adresse,
         // traité par app/api/notifications/desabonnement/route.ts.
@@ -518,6 +580,7 @@ export async function sendMemberLeftNotification(params: MemberLeftNotification)
         subject,
         text: `${text}\n\n—\nNe plus recevoir ces emails : ${r.unsubscribe.page}`,
         html: html(r.unsubscribe.page),
+        replyTo: memberEmail,
         list: { unsubscribe: { url: r.unsubscribe.oneClick, comment: "Ne plus recevoir ces emails" } },
         headers: { "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
       })
@@ -601,7 +664,16 @@ export async function sendNewSchoolNotification(params: NewSchoolNotification) {
           à aucune fonctionnalité tant que la plateforme ne l'a pas approuvée.`,
   });
 
-  await transporter.sendMail({ from: SMTP_FROM, to, subject, text, html });
+  await transporter.sendMail({
+    from: SMTP_FROM,
+    to,
+    // Approuver ou refuser une école appelle souvent une question au
+    // fondateur : répondre doit le joindre, lui.
+    replyTo: founderEmail,
+    subject,
+    text,
+    html,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -616,6 +688,10 @@ export type TeacherReminderEmail = {
   schoolName: string;
   /// « Madame Dubois » / « Monsieur Lefèvre » — cf. lib/civility.ts.
   senderCivility: string;
+  /// Adresse de la direction qui lance le rappel. Indispensable ici : un
+  /// rappel appelle des réponses (« je serai absente », « j'ai déjà
+  /// déclaré »), et elles doivent lui parvenir à elle.
+  senderEmail: string;
   message: string;
   daysLeft: number;
   deadlineLabel: string;
@@ -627,6 +703,7 @@ export async function sendTeacherReminderEmail(params: TeacherReminderEmail) {
     recipients,
     schoolName,
     senderCivility,
+    senderEmail,
     message,
     daysLeft,
     deadlineLabel,
@@ -676,6 +753,10 @@ export async function sendTeacherReminderEmail(params: TeacherReminderEmail) {
     // copie cachée, aucun ne voit la liste des autres.
     to: SMTP_FROM,
     bcc: recipients,
+    // La copie cachée protège les enseignant·es les uns des autres ; le
+    // `Reply-To` ne révèle que la direction, qui signe déjà le message.
+    // « Je serai absente », « j'ai déjà déclaré » doivent lui parvenir.
+    replyTo: senderEmail,
     subject,
     text,
     html,

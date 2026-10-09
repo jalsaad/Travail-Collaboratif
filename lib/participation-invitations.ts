@@ -21,7 +21,9 @@ export async function notifyPendingParticipants(periodId: string): Promise<void>
     const period = await prisma.collaborativePeriod.findUnique({
       where: { id: periodId },
       include: {
-        createdBy: { select: { firstName: true, lastName: true, sex: true } },
+        // `email` sert au Reply-To : la collègue invitée répond à l'autrice
+        // de la déclaration, pas à la plateforme (cf. lib/mailer.ts).
+        createdBy: { select: { firstName: true, lastName: true, sex: true, email: true } },
         participants: {
           include: {
             user: { select: { id: true, email: true } },
@@ -68,6 +70,7 @@ export async function notifyPendingParticipants(periodId: string): Promise<void>
       await sendParticipationInvitationEmail({
         to: participant.user.email,
         inviterCivility,
+        inviterEmail: period.createdBy.email,
         dureePeriodes,
         dateLabel,
         horaire,
