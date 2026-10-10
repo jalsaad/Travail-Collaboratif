@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Manrope } from "next/font/google";
 import { OfferedByBadge } from "@/components/offered-by-badge";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { PUBLIC_SITE_URL } from "@/lib/public-url";
 import "./globals.css";
 
@@ -71,9 +70,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: noFlashScript }} />
       </head>
       <body className="bg-stone-50 font-sans text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100">
+        {/* La bascule de thème n'est PLUS montée ici. Chaque espace déclare
+            désormais la sienne : bouton flottant sur les pages publiques
+            (app/(auth)/layout.tsx) et dans l'espace plateforme
+            (app/admin/layout.tsx), ligne du menu de compte dans l'espace
+            enseignant (components/account-menu.tsx). Un bouton global aurait
+            fallu le masquer à partir d'une liste de chemins, qui aurait
+            vieilli à la première route ajoutée. */}
         {children}
         <OfferedByBadge />
-        <ThemeToggle />
       </body>
     </html>
   );

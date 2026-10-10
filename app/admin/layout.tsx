@@ -6,6 +6,7 @@ import { assertIsSuperAdmin } from "@/lib/admin-authorization";
 import { ForbiddenError } from "@/lib/school-authorization";
 import { AdminNav, type AdminNavTab } from "@/components/admin-nav";
 import { AdminLogoBadge } from "@/components/admin-logo-badge";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 
 const tabs: AdminNavTab[] = [
@@ -52,6 +53,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           le layout ignore de quelle école il s'agit. */}
       <AdminLogoBadge />
       <main className="mx-auto max-w-3xl px-4 py-8">{children}</main>
+      {/* L'espace plateforme n'a pas de pastille de compte — sa déconnexion
+          vit au pied du tiroir — la bascule y reste donc un bouton flottant,
+          seule dans son coin. */}
+      <ThemeToggle />
     </div>
   );
 }

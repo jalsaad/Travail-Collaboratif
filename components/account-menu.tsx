@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { signOutAction } from "@/app/(app)/actions";
 import { useMenuDismiss } from "@/components/use-menu-dismiss";
+import { ThemeMenuItem } from "@/components/theme-toggle";
 
 /// Pastille de compte, posée en permanence sous le bouton de thème.
 ///
@@ -76,6 +77,16 @@ export function AccountMenu({
             </svg>
             Mon profil
           </Link>
+
+          {/* La bascule de thème a quitté le coin de l'écran, où elle
+              doublait la pastille de compte, pour rejoindre ce menu.
+
+              Elle NE referme PAS le menu : on veut voir le changement
+              s'appliquer, et au besoin revenir en arrière sans rouvrir.
+              C'est le seul élément d'ici qui agit sur place au lieu de mener
+              ailleurs — même raison que les étoiles de satisfaction, qui ne
+              referment pas le tiroir (cf. components/nav.tsx). */}
+          <ThemeMenuItem />
 
           <div className="my-1 border-t border-stone-200 dark:border-stone-700" />
 
