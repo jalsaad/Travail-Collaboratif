@@ -535,6 +535,17 @@ model PeerReferral {
   /// Mémo libre pour le parrain seul (ex: "Sophie D.") — jamais montré à la
   /// personne qui utilise le lien, jamais utilisé pour valider quoi que ce soit.
   invitedName            String?
+  /// Adresse à laquelle le lien a été envoyé, quand il l'a été par email
+  /// (nulle pour un lien remis en main propre depuis /inviter).
+  ///
+  /// Indispensable au rattachement : sans elle, la participation déjà
+  /// déclarée pour cette personne restait suspendue à l'ouverture de CE lien
+  /// précis, et se perdait en silence dès qu'elle créait son compte par un
+  /// autre chemin — le code de rattachement de sa direction, typiquement
+  /// (cf. lib/peer-referral-reconcile.ts). Elle ne sert qu'à ce
+  /// rapprochement, jamais à accorder un droit : le jeton seul fait foi pour
+  /// entrer, et la participation rattachée part en attente de validation.
+  invitedEmail           String?
   tokenHash              String               @unique
   expiresAt              DateTime
   usedAt                 DateTime?

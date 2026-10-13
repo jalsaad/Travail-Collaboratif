@@ -135,6 +135,10 @@ export default async function EcolePage({
             include: { user: true },
           },
           externalParticipants: true,
+          // Comptage seul : la supervision a besoin de savoir qu'une période
+          // attend encore un collègue sans compte, pas de son adresse (cf.
+          // components/pending-invite-chips.tsx).
+          _count: { select: { peerReferrals: { where: { usedAt: null } } } },
         },
         orderBy: { date: "desc" },
         // +1 : une ligne de rab suffit à savoir s'il reste une suite, sans
@@ -160,6 +164,10 @@ export default async function EcolePage({
               ...porteePeriodes.participants,
               none: { membership: { schoolId: active.schoolId }, status: { not: "CONFIRMED" } },
             },
+            // Et aucune invitation en attente : une période à laquelle il
+            // manque un collègue jamais inscrit n'est pas complète, même si
+            // tous ceux qui y figurent ont confirmé.
+            peerReferrals: { none: { usedAt: null } },
           },
         }),
       ])

@@ -113,6 +113,11 @@ function loadPeriods(schoolYearId: string) {
           membership: { select: { id: true, schoolId: true, role: true } },
         },
       },
+      // Invitations encore ouvertes : l'archive doit dire « en attente » d'une
+      // période à laquelle il manque un collègue jamais inscrit, et non
+      // « validée » au seul vu des participants présents (cf.
+      // lib/period-status.ts). C'est une pièce à conservation légale.
+      _count: { select: { peerReferrals: { where: { usedAt: null } } } },
     },
     orderBy: { date: "asc" },
   });
@@ -215,7 +220,7 @@ export async function writeSchoolYearArchive(schoolYear: {
       objectifsPilotage: p.objectifsPilotage,
       createdByUserId: p.createdByUserId,
       createdAt: p.createdAt.toISOString(),
-      status: computePeriodStatus(p.participants),
+      status: computePeriodStatus(p.participants, p._count.peerReferrals),
       participants: p.participants.map((part) => ({
         userId: part.user.id,
         membershipId: part.membership.id,

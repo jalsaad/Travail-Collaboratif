@@ -14,6 +14,7 @@ import {
 } from "@/lib/school-notifications";
 import { getCurrentSchoolYear } from "@/lib/current-school-year";
 import { teacherIdentitySchema, createTeacherAccountAndMembership } from "@/lib/teacher-signup";
+import { reconcilePeerReferralsForMember } from "@/lib/peer-referral-reconcile";
 import { civilityAndLastName } from "@/lib/civility";
 import {
   hasAcceptedPrivacyPolicy,
@@ -144,6 +145,20 @@ async function joinViaCodeImpl(
   if (schoolYear) {
     await recomputeUserQuotas(created.user.id, schoolYear.id);
   }
+
+  // C'EST ICI que se joue le cas le plus fréquent : un collègue a déclaré des
+  // périodes avec cette personne avant qu'elle n'ait de compte, et elle
+  // s'inscrit avec le code que sa direction a diffusé, sans jamais ouvrir le
+  // lien reçu par email. Sans ce rattachement, ces périodes n'existent pour
+  // elle nulle part et manquent à son obligation annuelle (cf.
+  // lib/peer-referral-reconcile.ts). Elles arrivent en attente de validation
+  // dans /mes-periodes, où elle atterrit juste après.
+  await reconcilePeerReferralsForMember({
+    userId: created.user.id,
+    membershipId: created.membership.id,
+    schoolId: targetSchoolId,
+    email,
+  });
 
   // Avant signIn, qui redirige : rien ne s'exécuterait après. No-op tant
   // qu'aucun Admin/Direction n'existe (cas de toute école PARTIAL).

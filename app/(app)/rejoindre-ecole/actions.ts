@@ -24,6 +24,7 @@ import {
   resolveExistingSchoolTarget,
   type PartialSchoolNotice,
 } from "@/lib/school-join-target";
+import { reconcilePeerReferralsForMember } from "@/lib/peer-referral-reconcile";
 import { demoErrorState } from "@/lib/demo-mode";
 
 /// Consigne le motif du refus — jamais le code saisi — avec de quoi rappeler
@@ -212,6 +213,21 @@ async function joinSchoolWithCodeImpl(
   const schoolYear = await getCurrentSchoolYear();
   if (schoolYear) {
     await recomputeUserQuotas(session.userId, schoolYear.id);
+  }
+
+  // Même rattrapage que pour une première inscription (cf.
+  // app/(auth)/rejoindre/actions.ts) : une enseignante qui rejoint une
+  // seconde école peut très bien y avoir été nommée dans des périodes avant
+  // d'y être rattachée. Rien ici ne dépend du lien reçu par email.
+  // `initiation` exceptée : l'école vient d'être créée, elle ne peut porter
+  // aucune période antérieure.
+  if (!initiation && compte?.email) {
+    await reconcilePeerReferralsForMember({
+      userId: session.userId,
+      membershipId,
+      schoolId,
+      email: compte.email,
+    });
   }
 
   await notifySchoolDirectionOfNewMember(membershipId);

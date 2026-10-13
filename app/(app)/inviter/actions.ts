@@ -81,6 +81,9 @@ async function createPeerReferralImpl(
     actorUserId: session.userId,
     periodId,
     invitedName: parsed.data.invitedName,
+    // Nulle quand le lien est remis en main propre : on ne conserve que
+    // l'adresse à laquelle on écrit réellement (cf. createPeerReferralLink).
+    invitedEmail: parsed.data.inviteeEmail,
   });
   const qrDataUrl = await QRCode.toDataURL(link, { errorCorrectionLevel: "M", margin: 1 });
 

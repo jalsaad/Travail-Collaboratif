@@ -12,6 +12,7 @@ import { periodTypeLabel, participantStatusLabel } from "@/lib/period-labels";
 import { formatPeriodSchedule } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
 import { ExternalParticipantChips } from "@/components/external-participant-chips";
+import { PendingInviteChips, type InvitationEnAttente } from "@/components/pending-invite-chips";
 import { ParticipationActions } from "@/components/participation-actions";
 import { DeletePeriodButton } from "@/components/delete-period-button";
 import { Reveal } from "@/components/reveal";
@@ -25,6 +26,9 @@ type ParticipantWithRelations = PeriodParticipant & {
 type PeriodWithParticipants = CollaborativePeriod & {
   participants: ParticipantWithRelations[];
   externalParticipants: ExternalParticipant[];
+  /// Parrainages de cette période encore ouverts — la requête appelante les
+  /// filtre sur `usedAt: null` (cf. app/(app)/mes-periodes/page.tsx).
+  peerReferrals: InvitationEnAttente[];
 };
 
 export function PeriodCard({
@@ -36,7 +40,7 @@ export function PeriodCard({
   currentUserId: string;
   index?: number;
 }) {
-  const status = computePeriodStatus(period.participants);
+  const status = computePeriodStatus(period.participants, period.peerReferrals.length);
   const myParticipation = period.participants.find((p) => p.userId === currentUserId);
 
   return (
@@ -100,6 +104,8 @@ export function PeriodCard({
       </ul>
 
       <ExternalParticipantChips participants={period.externalParticipants} />
+
+      <PendingInviteChips invitations={period.peerReferrals} />
 
       {myParticipation && myParticipation.status === "PENDING" && (
         <div className="mt-4">

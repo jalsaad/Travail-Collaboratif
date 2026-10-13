@@ -48,6 +48,16 @@ export default async function MesPeriodesPage({
             include: { user: true, membership: { include: { school: true } } },
           },
           externalParticipants: true,
+          // Invitations encore ouvertes : des collègues nommés à la
+          // déclaration qui n'ont pas de participation, faute de compte à ce
+          // moment-là. Sans elles, la carte affichait « validée » une période
+          // à laquelle il manquait quelqu'un (cf. lib/period-status.ts).
+          // `select` et non l'objet entier : le hash du jeton n'a rien à
+          // faire dans les données de rendu, même côté serveur.
+          peerReferrals: {
+            where: { usedAt: null },
+            select: { id: true, invitedName: true, invitedEmail: true, expiresAt: true },
+          },
         },
         orderBy: { date: "desc" },
         // +1 : détecte une suite sans payer un comptage (cf.
@@ -103,6 +113,30 @@ export default async function MesPeriodesPage({
           <VoirPlusPeriodes limiteSuivante={limiteSuivante} affichees={periods.length} />
         )}
       </div>
+
+      {/* Les périodes déclarées AVANT la création du compte sont désormais
+          rattachées automatiquement (cf. lib/peer-referral-reconcile.ts), mais
+          rien ne peut l'être pour les invitations émises avant que la
+          plateforme ne conserve l'adresse de destination : celles-là n'ont
+          laissé aucune trace exploitable. Cette note donne la marche à suivre
+          plutôt que de laisser ouvrir un ticket — c'est par un ticket que le
+          défaut a été découvert. */}
+      <details className="card p-5 text-sm text-stone-600 dark:text-stone-400">
+        <summary className="cursor-pointer font-semibold text-stone-800 dark:text-stone-200">
+          Une période déclarée par un collègue n&apos;apparaît pas ici ?
+        </summary>
+        <p className="mt-3">
+          Cela arrive pour les activités déclarées avant la création de votre compte. Demandez à la
+          personne qui l&apos;a déclarée d&apos;ouvrir sa période dans « Mes périodes », de cliquer sur{" "}
+          <span className="font-semibold">Modifier</span>, puis de vous cocher dans la liste des
+          collègues de l&apos;école — vous y figurez depuis que votre compte existe. Vous recevrez
+          alors l&apos;invitation à valider, et la période comptera dans votre total annuel.
+        </p>
+        <p className="mt-2 text-xs text-stone-500 dark:text-stone-500">
+          À savoir : cette modification remet les autres participants en attente de validation, ils
+          devront revalider.
+        </p>
+      </details>
     </div>
   );
 }

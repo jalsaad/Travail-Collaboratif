@@ -7,6 +7,7 @@ import { computePeriodStatus } from "@/lib/period-status";
 import { periodTypeLabel, participantStatusLabel } from "@/lib/period-labels";
 import { formatPeriodSchedule } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
+import { PendingInviteSummary } from "@/components/pending-invite-chips";
 import { deletePeriodAsAdmin } from "@/app/admin/periodes/[periodId]/actions";
 import { APP_TIME_ZONE } from "@/lib/time-zone";
 
@@ -17,6 +18,10 @@ type ParticipantWithUser = PeriodParticipant & { user: User };
 type PeriodWithParticipants = Omit<CollaborativePeriod, "dureePeriodes"> & {
   dureePeriodes: string;
   participants: ParticipantWithUser[];
+  /// Invitations encore ouvertes, en nombre seul : une période peut attendre
+  /// un collègue qui n'a pas de participation, faute de compte au moment de
+  /// la déclaration (cf. lib/peer-referral-reconcile.ts).
+  _count: { peerReferrals: number };
 };
 
 export function AdminPeriodList({
@@ -42,7 +47,7 @@ export function AdminPeriodList({
   return (
     <div className="space-y-3">
       {periods.map((period) => {
-        const status = computePeriodStatus(period.participants);
+        const status = computePeriodStatus(period.participants, period._count.peerReferrals);
         return (
           <article key={period.id} className="card p-5">
             <div className="flex items-start justify-between gap-3">
@@ -97,6 +102,9 @@ export function AdminPeriodList({
                 </li>
               ))}
             </ul>
+
+            <PendingInviteSummary count={period._count.peerReferrals} />
+
             <div className="mt-4 flex items-center gap-2 border-t border-stone-100 pt-3.5 dark:border-stone-800">
               <Link
                 href={`/admin/periodes/${period.id}/modifier?schoolId=${schoolId}`}

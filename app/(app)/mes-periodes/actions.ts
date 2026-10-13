@@ -10,6 +10,7 @@ import { periodesBetween } from "@/lib/period-duration";
 import { notifyPendingParticipants } from "@/lib/participation-invitations";
 import { zipExternalParticipants } from "@/lib/external-participants";
 import { inviteColleaguesOnPeriod } from "@/lib/peer-referrals";
+import { consumePeerReferralsForPeriod } from "@/lib/peer-referral-reconcile";
 import { demoErrorState, tolerateDemoWrite } from "@/lib/demo-mode";
 
 // Invariant d'autorisation (cf. permissions.md > assertCanConfirmParticipation) :
@@ -90,12 +91,16 @@ async function updatePeriodImpl(
 
   // Même défense que createPeriod : ne fait confiance qu'aux memberships
   // réellement actives de l'école active, pas au formulaire.
+  //
+  // L'email vient en plus ici : il sert à refermer l'invitation en attente de
+  // la personne qu'on vient de cocher (cf. plus bas).
   const colleagues = await prisma.membership.findMany({
     where: {
       id: { in: parsed.data.colleagueMembershipIds },
       schoolId: active.schoolId,
       status: "ACTIVE",
     },
+    include: { user: { select: { email: true } } },
   });
 
   await prisma.$transaction(async (tx) => {
@@ -154,15 +159,26 @@ async function updatePeriodImpl(
         })),
       });
     }
-  });
 
-  // Après réédition, TOUS les intervenants sont repassés en attente : ils
-  // doivent être prévenus, sans quoi la période resterait bloquée.
-  await notifyPendingParticipants(periodId);
+    // C'est le geste de dépannage : une collègue invitée avant d'avoir un
+    // compte s'est inscrite depuis, et l'auteur la coche enfin dans la liste.
+    // Son invitation n'a plus d'objet — sans cette fermeture, la période
+    // porterait pour toujours la mention « compte pas encore créé » et ne
+    // pourrait jamais repasser en validée (cf. lib/period-status.ts).
+    await consumePeerReferralsForPeriod(
+      tx,
+      periodId,
+      colleagues.map((c) => c.user.email)
+    );
+  });
 
   // Un·e collègue oublié·e à la déclaration, ou arrivé·e depuis : la
   // modification doit permettre de l'inviter, sans quoi il faudrait
   // supprimer la période et la refaire.
+  //
+  // Avant la notification : cet appel peut créer des participations, pour une
+  // adresse qui se révèle être celle d'un membre existant (cf.
+  // lib/peer-referrals.ts).
   await inviteColleaguesOnPeriod({
     formData,
     period: {
@@ -176,6 +192,10 @@ async function updatePeriodImpl(
     referredByMembershipId: active.membershipId,
     actorUserId: session.userId,
   });
+
+  // Après réédition, TOUS les intervenants sont repassés en attente : ils
+  // doivent être prévenus, sans quoi la période resterait bloquée.
+  await notifyPendingParticipants(periodId);
 
   revalidatePath("/mes-periodes");
   redirect("/mes-periodes");

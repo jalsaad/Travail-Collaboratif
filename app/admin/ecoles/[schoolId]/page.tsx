@@ -41,7 +41,12 @@ export default async function AdminSchoolDetailPage({
     }),
     prisma.collaborativePeriod.findMany({
       where: { participants: { some: { membership: { schoolId } } } },
-      include: { participants: { include: { user: true } } },
+      include: {
+        participants: { include: { user: true } },
+        // Invitations encore ouvertes, en nombre seul (cf.
+        // components/pending-invite-chips.tsx).
+        _count: { select: { peerReferrals: { where: { usedAt: null } } } },
+      },
       orderBy: { date: "desc" },
       take: limite + 1,
     }),

@@ -93,8 +93,10 @@ async function createPeriodImpl(
     },
   });
 
-  await notifyPendingParticipants(created.id);
-
+  // AVANT la notification : une adresse saisie dans « collègues pas encore
+  // inscrits » qui se révèle être celle d'un membre existant devient une
+  // participation en attente, et doit être prévenue dans la même passe que
+  // les collègues cochés (cf. lib/peer-referrals.ts).
   await inviteColleaguesOnPeriod({
     formData,
     period: created,
@@ -103,6 +105,8 @@ async function createPeriodImpl(
     referredByMembershipId: active.membershipId,
     actorUserId: session.userId,
   });
+
+  await notifyPendingParticipants(created.id);
 
   redirect("/mes-periodes");
 }

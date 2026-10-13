@@ -45,6 +45,11 @@ export async function createPeerReferralLink(params: {
   actorUserId: string;
   periodId?: string | null;
   invitedName?: string | null;
+  /// Renseignée dès que le lien part par email : c'est elle qui permettra de
+  /// retrouver la participation si la personne s'inscrit sans ouvrir ce lien
+  /// (cf. lib/peer-referral-reconcile.ts). Nulle pour un lien remis en main
+  /// propre, qui n'a alors que son jeton pour se faire reconnaitre.
+  invitedEmail?: string | null;
 }): Promise<{ referralId: string; link: string }> {
   const { rawToken, tokenHash } = generatePeerReferralToken();
   const referral = await prisma.peerReferral.create({
@@ -53,6 +58,7 @@ export async function createPeerReferralLink(params: {
       referredByMembershipId: params.referredByMembershipId,
       periodId: params.periodId ?? null,
       invitedName: params.invitedName ?? null,
+      invitedEmail: params.invitedEmail?.trim() || null,
       tokenHash,
       expiresAt: new Date(Date.now() + PEER_REFERRAL_TTL_MS),
     },
@@ -80,6 +86,10 @@ export async function createPeerReferralLink(params: {
 /// Toujours appelé APRÈS l'écriture de la période : le lien porte son
 /// identifiant. Best effort par invitation (cf. invitePeerByEmail) — un
 /// email qui ne part pas ne doit pas faire perdre la période déjà écrite.
+///
+/// Et toujours AVANT notifyPendingParticipants : une adresse qui se révèle
+/// être celle d'un membre existant devient une participation en attente, qu'il
+/// faut notifier dans la même passe que les collègues cochés.
 export async function inviteColleaguesOnPeriod(params: {
   formData: FormData;
   period: { id: string; date: Date; type: PeriodType; description: string };
@@ -110,6 +120,41 @@ export async function inviteColleaguesOnPeriod(params: {
   };
 
   for (const invite of invites) {
+    // L'adresse appartient-elle à quelqu'un qui est DÉJÀ membre de cette
+    // école ? Le champ est libre, rien n'empêche d'y saisir une collègue
+    // qu'on n'a pas vue dans le sélecteur juste au-dessus. Lui envoyer un
+    // lien de création de compte serait alors une impasse — elle en a un —
+    // et l'invitation resterait ouverte pour toujours, la période restant
+    // « en attente » sans que personne ne puisse la débloquer (cf.
+    // lib/period-status.ts). On la rattache donc directement : c'est une
+    // participation à valider, pas un compte à créer.
+    const dejaMembre = await prisma.membership.findFirst({
+      where: {
+        schoolId: params.schoolId,
+        status: "ACTIVE",
+        // La casse des emails n'est pas normalisée à l'inscription.
+        user: { email: { equals: invite.email, mode: "insensitive" } },
+      },
+      select: { id: true, userId: true },
+    });
+
+    if (dejaMembre) {
+      // skipDuplicates : la personne peut déjà figurer parmi les collègues
+      // cochés, ou être l'auteur·rice elle-même.
+      await prisma.periodParticipant.createMany({
+        data: [
+          {
+            periodId: params.period.id,
+            userId: dejaMembre.userId,
+            membershipId: dejaMembre.id,
+            status: "PENDING" as const,
+          },
+        ],
+        skipDuplicates: true,
+      });
+      continue;
+    }
+
     await invitePeerByEmail({
       to: invite.email,
       schoolId: params.schoolId,
@@ -146,6 +191,10 @@ export async function invitePeerByEmail(params: {
       actorUserId: params.actorUserId,
       periodId: params.periodId ?? null,
       invitedName: params.invitedName ?? null,
+      // L'adresse de destination est conservée sur le parrainage : la
+      // participation déclarée pour cette personne pourra lui être rattachée
+      // même si elle s'inscrit sans jamais ouvrir ce lien.
+      invitedEmail: params.to,
     });
 
     // Adresse de l'autrice du parrainage, pour le Reply-To : la personne

@@ -24,7 +24,12 @@ export default async function AdminDashboardPage() {
     // « Validée » = aucun participant qui ne soit pas encore confirmé, soit
     // exactement ce que calcule computePeriodStatus, mais côté base.
     prisma.collaborativePeriod.count({
-      where: { participants: { none: { status: { not: "CONFIRMED" } } } },
+      where: {
+        participants: { none: { status: { not: "CONFIRMED" } } },
+        // Même réserve qu'à l'écran : une invitation encore ouverte signale un
+        // participant qui n'a pas de ligne du tout (cf. lib/period-status.ts).
+        peerReferrals: { none: { usedAt: null } },
+      },
     }),
     prisma.user.findMany({
       where: { lastLoginAt: { not: null } },

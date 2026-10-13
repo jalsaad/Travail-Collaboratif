@@ -9,6 +9,7 @@ import { periodTypeLabel, participantStatusLabel } from "@/lib/period-labels";
 import { formatPeriodSchedule } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
 import { ExternalParticipantChips } from "@/components/external-participant-chips";
+import { PendingInviteSummary } from "@/components/pending-invite-chips";
 import { Reveal } from "@/components/reveal";
 import { APP_TIME_ZONE } from "@/lib/time-zone";
 
@@ -16,6 +17,9 @@ type ParticipantWithUser = PeriodParticipant & { user: User };
 type PeriodWithParticipants = CollaborativePeriod & {
   participants: ParticipantWithUser[];
   externalParticipants: ExternalParticipant[];
+  /// Nombre d'invitations encore ouvertes, sans les identités : cet écran de
+  /// supervision doit savoir qu'une période attend quelqu'un, pas qui.
+  _count: { peerReferrals: number };
 };
 
 // Lecture seule pour le tableau de bord direction/référent — volontairement
@@ -29,7 +33,7 @@ export function SchoolPeriodList({ periods }: { periods: PeriodWithParticipants[
   return (
     <div className="space-y-3">
       {periods.map((period, index) => {
-        const status = computePeriodStatus(period.participants);
+        const status = computePeriodStatus(period.participants, period._count.peerReferrals);
         return (
           <Reveal
             key={period.id}
@@ -90,6 +94,8 @@ export function SchoolPeriodList({ periods }: { periods: PeriodWithParticipants[
             </ul>
 
             <ExternalParticipantChips participants={period.externalParticipants} />
+
+            <PendingInviteSummary count={period._count.peerReferrals} />
           </Reveal>
         );
       })}
