@@ -26,9 +26,10 @@ export default async function AdminDashboardPage() {
     prisma.collaborativePeriod.count({
       where: {
         participants: { none: { status: { not: "CONFIRMED" } } },
-        // Même réserve qu'à l'écran : une invitation encore ouverte signale un
+        // Même réserve qu'à l'écran : une invitation encore valable signale un
         // participant qui n'a pas de ligne du tout (cf. lib/period-status.ts).
-        peerReferrals: { none: { usedAt: null } },
+        // Périmée, elle n'attend plus personne et ne retient plus le statut.
+        peerReferrals: { none: { usedAt: null, expiresAt: { gt: new Date() } } },
       },
     }),
     prisma.user.findMany({

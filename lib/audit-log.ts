@@ -19,6 +19,10 @@ export const AuditAction = {
   /// de parrainage une fois connecté — distinct de JOIN_VIA_PEER_REFERRAL,
   /// qui crée le compte du même geste.
   ATTACH_VIA_PEER_REFERRAL: "ATTACH_VIA_PEER_REFERRAL",
+  /// Invitation retirée par l'auteur·rice de la période : la personne n'est
+  /// jamais venue, ou est arrivée par un autre chemin. Le lien envoyé cesse
+  /// de fonctionner.
+  DISMISS_PEER_REFERRAL: "DISMISS_PEER_REFERRAL",
   /// Participations retrouvées à l'entrée dans l'école, pour un parrainage
   /// jamais ouvert : la personne s'est inscrite par un autre chemin (cf.
   /// lib/peer-referral-reconcile.ts). Journalisé à part, car ce rattachement

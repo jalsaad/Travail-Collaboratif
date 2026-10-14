@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { logAudit, AuditAction } from "@/lib/audit-log";
 import { resolveActiveMembership } from "@/lib/active-school";
 import { createPeriodSchema } from "@/app/(app)/declarer/schema";
 import { periodesBetween } from "@/lib/period-duration";
@@ -201,6 +202,55 @@ async function updatePeriodImpl(
   redirect("/mes-periodes");
 }
 
+/// Retire une invitation restée ouverte sur une période.
+///
+/// Indispensable, et pas seulement confortable : les parrainages émis avant
+/// que la plateforme ne conserve l'adresse de destination ne peuvent être
+/// rapprochés de personne (cf. la migration 20261013090000). Celui qui a fini
+/// par s'inscrire et se faire cocher à la main laisse derrière lui une
+/// invitation que RIEN ne peut refermer — la période garderait sa mention
+/// « compte pas encore créé » pour toujours. C'est l'auteur·rice qui tranche,
+/// elle seule sait si la personne est arrivée autrement.
+///
+/// `usedAt` plutôt qu'une suppression : le lien envoyé cesse du même coup de
+/// fonctionner, ce qui est bien l'effet attendu d'un retrait, et la trace de
+/// l'invitation reste au journal d'audit.
+async function dismissPeriodInvitationImpl(formData: FormData) {
+  const session = await auth();
+  if (!session) throw new Error("Non authentifié.");
+
+  const referralId = String(formData.get("referralId") ?? "").trim();
+  if (!referralId) return;
+
+  // Jamais à partir d'un identifiant fourni par le client sans revérifier à
+  // quoi il appartient : on remonte à la période, puis on applique la même
+  // garde que la modification — seule l'initiateur·rice décide.
+  const referral = await prisma.peerReferral.findUnique({
+    where: { id: referralId },
+    select: { id: true, periodId: true, schoolId: true, usedAt: true },
+  });
+  if (!referral?.periodId) return;
+  if (referral.usedAt) return;
+
+  await assertCanEditPeriod(session.userId, referral.periodId);
+
+  await prisma.peerReferral.updateMany({
+    where: { id: referral.id, usedAt: null },
+    data: { usedAt: new Date() },
+  });
+
+  await logAudit({
+    schoolId: referral.schoolId,
+    actorId: session.userId,
+    action: AuditAction.DISMISS_PEER_REFERRAL,
+    targetType: "PeerReferral",
+    targetId: referral.id,
+    metadata: { periodId: referral.periodId },
+  });
+
+  revalidatePath("/mes-periodes");
+}
+
 async function deletePeriodImpl(periodId: string) {
   const session = await auth();
   if (!session) throw new Error("Non authentifié.");
@@ -241,4 +291,8 @@ export async function declineParticipation(periodId: string) {
 
 export async function deletePeriod(periodId: string) {
   await tolerateDemoWrite(() => deletePeriodImpl(periodId));
+}
+
+export async function dismissPeriodInvitation(formData: FormData) {
+  await tolerateDemoWrite(() => dismissPeriodInvitationImpl(formData));
 }

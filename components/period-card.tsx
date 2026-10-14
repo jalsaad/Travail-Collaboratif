@@ -12,7 +12,11 @@ import { periodTypeLabel, participantStatusLabel } from "@/lib/period-labels";
 import { formatPeriodSchedule } from "@/lib/period-duration";
 import { collaborativeActivityLabel } from "@/lib/collaborative-activities";
 import { ExternalParticipantChips } from "@/components/external-participant-chips";
-import { PendingInviteChips, type InvitationEnAttente } from "@/components/pending-invite-chips";
+import {
+  PendingInviteChips,
+  invitationsBloquantes,
+  type InvitationEnAttente,
+} from "@/components/pending-invite-chips";
 import { ParticipationActions } from "@/components/participation-actions";
 import { DeletePeriodButton } from "@/components/delete-period-button";
 import { Reveal } from "@/components/reveal";
@@ -40,7 +44,9 @@ export function PeriodCard({
   currentUserId: string;
   index?: number;
 }) {
-  const status = computePeriodStatus(period.participants, period.peerReferrals.length);
+  // Seules les invitations encore valables retiennent le statut : une
+  // invitation périmée n'attend plus personne (cf. invitationsBloquantes).
+  const status = computePeriodStatus(period.participants, invitationsBloquantes(period.peerReferrals));
   const myParticipation = period.participants.find((p) => p.userId === currentUserId);
 
   return (
@@ -105,7 +111,10 @@ export function PeriodCard({
 
       <ExternalParticipantChips participants={period.externalParticipants} />
 
-      <PendingInviteChips invitations={period.peerReferrals} />
+      <PendingInviteChips
+        invitations={period.peerReferrals}
+        dismissible={period.createdByUserId === currentUserId}
+      />
 
       {myParticipation && myParticipation.status === "PENDING" && (
         <div className="mt-4">

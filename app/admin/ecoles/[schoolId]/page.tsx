@@ -45,7 +45,7 @@ export default async function AdminSchoolDetailPage({
         participants: { include: { user: true } },
         // Invitations encore ouvertes, en nombre seul (cf.
         // components/pending-invite-chips.tsx).
-        _count: { select: { peerReferrals: { where: { usedAt: null } } } },
+        _count: { select: { peerReferrals: { where: { usedAt: null, expiresAt: { gt: new Date() } } } } },
       },
       orderBy: { date: "desc" },
       take: limite + 1,

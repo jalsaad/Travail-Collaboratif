@@ -117,7 +117,7 @@ function loadPeriods(schoolYearId: string) {
       // période à laquelle il manque un collègue jamais inscrit, et non
       // « validée » au seul vu des participants présents (cf.
       // lib/period-status.ts). C'est une pièce à conservation légale.
-      _count: { select: { peerReferrals: { where: { usedAt: null } } } },
+      _count: { select: { peerReferrals: { where: { usedAt: null, expiresAt: { gt: new Date() } } } } },
     },
     orderBy: { date: "asc" },
   });

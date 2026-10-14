@@ -55,7 +55,7 @@ export default async function MemberDetailPage({
           // Comme le tableau de bord direction : une période qui attend encore
           // un collègue sans compte ne doit pas s'afficher « validée » (cf.
           // lib/period-status.ts).
-          _count: { select: { peerReferrals: { where: { usedAt: null } } } },
+          _count: { select: { peerReferrals: { where: { usedAt: null, expiresAt: { gt: new Date() } } } } },
         },
         orderBy: { date: "desc" },
       })
